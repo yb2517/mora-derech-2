@@ -1,6 +1,6 @@
 {
   "source": "doc-module-map-v3 סעיף 4.2 (הפעולות), 4.3 (רשימת המותר), 4.4 (טבלת פעולות המסכים)",
-  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורות tool-simulator עם allowed=false.",
+  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורות tool-simulator של הייצור עם allowed=false. שורה עם is_demo היא נתון הדגמה שמוסר בשלב 7.",
   "rows": [
     {
       "from": "screen-veto",
@@ -199,6 +199,13 @@
       "module": "BE-07",
       "action": "export",
       "allowed": true
+    },
+    {
+      "from": "tool-simulator",
+      "module": "test-echo",
+      "action": "echo",
+      "allowed": true,
+      "is_demo": true
     }
   ]
 }

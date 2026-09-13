@@ -87,6 +87,20 @@ export function createRepository(driver) {
       return copy(table?.rows) ?? [];
     },
 
+    /**
+     * שמות הפונים של הרשימה הסגורה, מפה 4.1.
+     *
+     * נגזרים מטבלת המודולים: שם הפונה הוא תכונה של המודול, ולכן
+     * הוספת מסך היא שורה בנתונים ולא שינוי קוד (מפה 4.3, מבחן מבנה 06).
+     * קיים מפני שצעד 2 ב-BL-11 זקוק לו, ורק CORE-04 קורא נתונים.
+     */
+    listCallers() {
+      const table = driver.readTable(MODULES);
+      return (table?.modules ?? [])
+        .map((module) => module.caller)
+        .filter((caller) => typeof caller === 'string' && caller !== '');
+    },
+
     /** שורת מודול לפי מזהה, CORE-03. undefined למודול שאינו רשום. */
     getModule(id) {
       const table = driver.readTable(MODULES);

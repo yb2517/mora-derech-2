@@ -98,8 +98,11 @@ function freshRepository() {
   const { repository } = freshRepository();
   const names = Object.keys(repository).sort();
 
-  check('הממשק מונה בדיוק את פעולות שורה 5 בתוכנית, ועוד הקריאה ליומן', names, [
-    'appendAudit', 'getModule', 'getRef', 'listAllowed', 'listAudit',
+  // ארבע הפעולות של שורה 5 בתוכנית, ועוד שתיים שבדיקות הקבלה מחייבות:
+  // listAudit (שורה 5: "appendAudit ואז קריאה") ו-listCallers (שורה 6:
+  // "from ברשימה הסגורה", ורק CORE-04 קורא נתונים).
+  check('הממשק מונה בדיוק את שש הפעולות', names, [
+    'appendAudit', 'getModule', 'getRef', 'listAllowed', 'listAudit', 'listCallers',
   ]);
 
   check(
@@ -183,7 +186,19 @@ function liveDriver() {
 
 {
   const { repository } = freshRepository();
-  check('listAllowed מחזיר את 33 השורות', repository.listAllowed().length, 33);
+  // 33 שורות המפה ועוד שורת ההדגמה של משימה 7, שמוסרת בשלב 7.
+  check('listAllowed מחזיר את כל השורות', repository.listAllowed().length, 34);
+  check(
+    'מהן 33 שאינן הדגמה, כמספר צירופי 4.2',
+    repository.listAllowed().filter((r) => !r.is_demo).length,
+    33,
+  );
+  check('listCallers מחזיר את עשרת הפונים של 4.1', repository.listCallers().length, 10);
+  check(
+    'מודול הדמה אינו פונה ולכן אינו ברשימה',
+    repository.listCallers().includes('test-echo'),
+    false,
+  );
   check('getModule על מודול קיים', repository.getModule('BE-05').handler, 'services/governance.js');
   check('getModule על מודול בלי פעולות', repository.getModule('CORE-02').actions, []);
   check('getModule על מזהה שאינו רשום', repository.getModule('BE-99'), undefined);

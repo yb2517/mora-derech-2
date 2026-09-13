@@ -1,29 +1,34 @@
 {
-  "source": "doc-module-map-v3 סעיף 3 (המודולים) וסעיף 4.2 (הפעולות); handler לפי CLAUDE.md סעיף 5",
-  "note": "handler הוא יעד הניתוב של CORE-02. null פירושו שהמודול אינו מקבל בקשות, ואין לו שורה ב-4.2.",
+  "source": "doc-module-map-v3 סעיף 3 (המודולים), 4.1 (שמות הפונים) ו-4.2 (הפעולות); handler לפי CLAUDE.md סעיף 5",
+  "note": "handler הוא יעד הניתוב של CORE-02. null פירושו שהמודול אינו מקבל בקשות. caller הוא שם המודול במעטפה, לפי הרשימה הסגורה של 4.1, ו-null למודול שאינו פונה. שורה עם is_demo היא נתון הדגמה שמוסר בשלב 7.",
   "modules": [
     {
       "id": "CORE-01",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "CORE-02",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "CORE-03",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "CORE-04",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "BE-05",
+      "caller": null,
       "handler": "services/governance.js",
       "actions": [
         "submit",
@@ -44,6 +49,7 @@
     },
     {
       "id": "BE-06",
+      "caller": null,
       "handler": "services/gate.js",
       "actions": [
         "get_gate",
@@ -53,6 +59,7 @@
     },
     {
       "id": "BE-04",
+      "caller": "module-retrieval",
       "handler": "services/retrieval.js",
       "actions": [
         "retrieve"
@@ -60,6 +67,7 @@
     },
     {
       "id": "BE-03",
+      "caller": "module-dialogue",
       "handler": "services/dialogue.js",
       "actions": [
         "ask"
@@ -67,6 +75,7 @@
     },
     {
       "id": "FE-04",
+      "caller": "module-delivery",
       "handler": "services/delivery.js",
       "actions": [
         "arrive",
@@ -76,6 +85,7 @@
     },
     {
       "id": "BE-07",
+      "caller": null,
       "handler": "services/log.js",
       "actions": [
         "session_start",
@@ -88,63 +98,84 @@
     },
     {
       "id": "FE-06",
+      "caller": "screen-veto",
       "handler": null,
       "actions": []
     },
     {
       "id": "FE-05",
+      "caller": "screen-traveler",
       "handler": null,
       "actions": []
     },
     {
       "id": "FE-07",
+      "caller": "screen-content",
       "handler": null,
       "actions": []
     },
     {
       "id": "FE-08",
+      "caller": "screen-owner",
       "handler": null,
       "actions": []
     },
     {
       "id": "CONN-01",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "CONN-02",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "CONN-03",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "AUTO-01",
+      "caller": "module-geofence",
       "handler": null,
       "actions": []
     },
     {
       "id": "AUTO-02",
+      "caller": "system-timer",
       "handler": null,
       "actions": []
     },
     {
       "id": "GW-01",
+      "caller": null,
       "handler": null,
       "actions": []
     },
     {
       "id": "TOOL-01",
+      "caller": "tool-simulator",
       "handler": null,
       "actions": []
     },
     {
       "id": "DESIGN-01",
+      "caller": null,
       "handler": null,
       "actions": []
+    },
+    {
+      "id": "test-echo",
+      "caller": null,
+      "handler": "tests/helpers/echo-module.js",
+      "actions": [
+        "echo"
+      ],
+      "is_demo": true
     }
   ]
 }

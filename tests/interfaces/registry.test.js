@@ -21,8 +21,13 @@ function check(name, actual, expected) {
   }
 }
 
-const modules = modulesFile.modules;
-const rows = allowFile.rows;
+// נתוני הדגמה מסומנים ב-is_demo ומוסרים בשלב 7 (מסמך הבנייה סעיף 7).
+// ההצלבה מול המפה נעשית על השורות שאינן הדגמה, כדי שמודול הדמה של
+// משימה 7 לא יזהם אותה, וכדי שההסרה בשלב 7 תהיה מחיקת שורות בלבד.
+const allModules = modulesFile.modules;
+const allRows = allowFile.rows;
+const modules = allModules.filter((m) => !m.is_demo);
+const rows = allRows.filter((r) => !r.is_demo);
 
 // ---------------------------------------------------------------
 // הנתונים שמולם מצליבים, מוקלדים כאן ביד מתוך המפה.
@@ -44,6 +49,20 @@ const FROM_LIST_IN_MAP = [
   'module-dialogue', 'module-delivery', 'module-retrieval',
   'module-geofence', 'system-timer', 'tool-simulator',
 ];
+
+// מפה 4.1 ו-3.3: שם הפונה של כל מודול שהוא פונה
+const CALLER_OF_MODULE = {
+  'BE-03': 'module-dialogue',
+  'FE-04': 'module-delivery',
+  'BE-04': 'module-retrieval',
+  'AUTO-01': 'module-geofence',
+  'AUTO-02': 'system-timer',
+  'TOOL-01': 'tool-simulator',
+  'FE-06': 'screen-veto',
+  'FE-05': 'screen-traveler',
+  'FE-07': 'screen-content',
+  'FE-08': 'screen-owner',
+};
 
 // מפה 4.2, הפעולה לכל מודול
 const ACTIONS_IN_MAP = {
@@ -106,15 +125,57 @@ const ROWS_IN_MAP = [
 // ---------------------------------------------------------------
 
 check('המפה מונה עשרים ושניים מודולים', MODULE_IDS_IN_MAP.length, 22);
-check('הקובץ מונה עשרים ושניים מודולים', modules.length, 22);
+check('הקובץ מונה עשרים ושניים מודולים שאינם הדגמה', modules.length, 22);
 
 const idsInFile = modules.map((m) => m.id);
 check('המזהים והסדר זהים למפה', idsInFile, MODULE_IDS_IN_MAP);
 check('אין מזהה כפול', idsInFile.length - new Set(idsInFile).size, 0);
 
 check(
-  'לכל מודול שלושה שדות בלבד: id, handler, actions',
-  modules.filter((m) => JSON.stringify(Object.keys(m)) !== JSON.stringify(['id', 'handler', 'actions'])),
+  'לכל מודול ארבעה שדות: id, caller, handler, actions',
+  modules
+    .filter((m) => JSON.stringify(Object.keys(m)) !== JSON.stringify(['id', 'caller', 'handler', 'actions']))
+    .map((m) => m.id),
+  [],
+);
+
+// --- שמות הפונים, מפה 4.1 ---
+
+check(
+  'עשרה פונים, כמספר הרשימה הסגורה של 4.1',
+  modules.filter((m) => m.caller !== null).length,
+  10,
+);
+
+check(
+  'שם הפונה של כל מודול זהה למפה',
+  Object.entries(CALLER_OF_MODULE)
+    .filter(([id, caller]) => modules.find((m) => m.id === id)?.caller !== caller)
+    .map(([id]) => id),
+  [],
+);
+
+check(
+  'מודול שאינו פונה במפה מגיע עם caller ריק',
+  modules.filter((m) => !(m.id in CALLER_OF_MODULE) && m.caller !== null).map((m) => m.id),
+  [],
+);
+
+check(
+  'אין שם פונה כפול',
+  (() => {
+    const names = modules.map((m) => m.caller).filter(Boolean);
+    return names.length - new Set(names).size;
+  })(),
+  0,
+);
+
+// כל from ברשימת המותר הוא caller של מודול רשום. זה מה שמאפשר
+// ל-CORE-02 לגזור את הרשימה הסגורה מהנתונים ולא מהקוד.
+check(
+  'כל from ברשימת המותר הוא caller של מודול',
+  [...new Set(rows.map((r) => r.from))]
+    .filter((from) => !modules.some((m) => m.caller === from)),
   [],
 );
 
@@ -201,7 +262,7 @@ check(
 // ---------------------------------------------------------------
 
 check(
-  'שורות tool-simulator עם allowed=false',
+  'שורות tool-simulator של הייצור עם allowed=false',
   rows.filter((r) => r.from === 'tool-simulator').map((r) => `${r.action}=${r.allowed}`),
   ['arrive=false', 'leave=false'],
 );
@@ -226,6 +287,48 @@ check(
   'הוספת שורה למסך חדש אינה דורשת שדה שאינו קיים',
   Object.keys({ from: 'screen-new', module: 'BE-06', action: 'get_gate', allowed: true }),
   ['from', 'module', 'action', 'allowed'],
+);
+
+// ---------------------------------------------------------------
+// נתוני ההדגמה של משימה 7, ומה שלב 7 יצטרך למחוק
+// ---------------------------------------------------------------
+
+check(
+  'מודול דמה אחד, מסומן is_demo',
+  allModules.filter((m) => m.is_demo).map((m) => m.id),
+  ['test-echo'],
+);
+
+check(
+  'שורת הדגמה אחת ברשימת המותר, מסומנת',
+  allRows.filter((r) => r.is_demo).map((r) => `${r.from}|${r.module}|${r.action}`),
+  ['tool-simulator|test-echo|echo'],
+);
+
+check(
+  'למודול הדמה handler ופעולה אחת',
+  (() => {
+    const demo = allModules.find((m) => m.id === 'test-echo');
+    return [demo.handler, demo.actions];
+  })(),
+  ['tests/helpers/echo-module.js', ['echo']],
+);
+
+check(
+  'מודול הדמה אינו פונה',
+  allModules.find((m) => m.id === 'test-echo').caller,
+  null,
+);
+
+// שלב 7: שאילתה על is_demo מחזירה אפס אחרי ההסרה. כאן נבדק שההסרה
+// היא מחיקת שורות מסומנות ולא עבודת ידיים.
+check(
+  'הסרת כל המסומן מחזירה בדיוק את מצב המפה',
+  [
+    allModules.filter((m) => !m.is_demo).length,
+    allRows.filter((r) => !r.is_demo).length,
+  ],
+  [22, 33],
 );
 
 // --- סיכום ---
