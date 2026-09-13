@@ -1,0 +1,150 @@
+{
+  "source": "doc-module-map-v3 סעיף 3 (המודולים) וסעיף 4.2 (הפעולות); handler לפי CLAUDE.md סעיף 5",
+  "note": "handler הוא יעד הניתוב של CORE-02. null פירושו שהמודול אינו מקבל בקשות, ואין לו שורה ב-4.2.",
+  "modules": [
+    {
+      "id": "CORE-01",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "CORE-02",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "CORE-03",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "CORE-04",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "BE-05",
+      "handler": "services/governance.js",
+      "actions": [
+        "submit",
+        "approve",
+        "reject",
+        "return",
+        "register_mou",
+        "register_institute",
+        "register_source",
+        "create_item",
+        "edit_item",
+        "verify_anchor",
+        "register_exit_point",
+        "lock_site",
+        "listApprovedByStop",
+        "nearestExitPoint"
+      ]
+    },
+    {
+      "id": "BE-06",
+      "handler": "services/gate.js",
+      "actions": [
+        "get_gate",
+        "get_lock_readiness",
+        "set_enforce"
+      ]
+    },
+    {
+      "id": "BE-04",
+      "handler": "services/retrieval.js",
+      "actions": [
+        "retrieve"
+      ]
+    },
+    {
+      "id": "BE-03",
+      "handler": "services/dialogue.js",
+      "actions": [
+        "ask"
+      ]
+    },
+    {
+      "id": "FE-04",
+      "handler": "services/delivery.js",
+      "actions": [
+        "arrive",
+        "leave",
+        "release"
+      ]
+    },
+    {
+      "id": "BE-07",
+      "handler": "services/log.js",
+      "actions": [
+        "session_start",
+        "session_end",
+        "log",
+        "close_stale",
+        "compute_metrics",
+        "export"
+      ]
+    },
+    {
+      "id": "FE-06",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "FE-05",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "FE-07",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "FE-08",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "CONN-01",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "CONN-02",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "CONN-03",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "AUTO-01",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "AUTO-02",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "GW-01",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "TOOL-01",
+      "handler": null,
+      "actions": []
+    },
+    {
+      "id": "DESIGN-01",
+      "handler": null,
+      "actions": []
+    }
+  ]
+}
