@@ -1,3 +1,5 @@
+import { ERROR_CODES } from './errors.js';
+
 // CORE-01: שתי המעטפות של החוזה.
 //
 // המקור: doc-module-map-v3 סעיף 4.1 (המעטפות), BL-11 צעד 1 (סדר בדיקת הפונה),
@@ -6,12 +8,19 @@
 // הקובץ הזה אינו מייבא דבר, אינו נוגע באחסון, ואינו מכיר שום מודול.
 // אף מודול אינו מגדיר מעטפה משלו: שתיהן כאן (חוק ברזל 1 במסמך הבנייה).
 
-// שני הקודים שהקובץ הזה מחזיר, מתוך הרשימה הסגורה במפה 4.5.
-// משימה 2 בתוכנית השלב מרכזת את 22 הקודים ב-/core/errors.js; משם והלאה
-// שני אלה ייובאו ולא יוגדרו כאן. שני הקבצים הם CORE-01, ולכן אין כאן
-// ייבוא בין מודולים (חוק ברזל 7).
-const E_FROM_MISSING = 'E-FROM-MISSING';
-const E_ENVELOPE_INVALID = 'E-ENVELOPE-INVALID';
+// שני הקודים שהקובץ הזה מחזיר. הרשימה הסגורה יושבת ב-/core/errors.js,
+// ושני הקבצים הם CORE-01, ולכן זהו ייבוא בתוך מודול אחד ולא בין מודולים
+// (חוק ברזל 7). הבדיקה נעשית בטעינת הקובץ, כך שטעות כתיב נופלת מיד
+// במקום להיזרק כקוד שאינו במפה (חוק ברזל 8).
+function closedCode(code) {
+  if (!Object.prototype.hasOwnProperty.call(ERROR_CODES, code)) {
+    throw new Error(`קוד שגיאה שאינו ברשימה הסגורה של מפה 4.5: ${code}`);
+  }
+  return code;
+}
+
+const E_FROM_MISSING = closedCode('E-FROM-MISSING');
+const E_ENVELOPE_INVALID = closedCode('E-ENVELOPE-INVALID');
 
 // מעטפת הבקשה, מפה 4.1: { from, module, action, payload, lang }
 export const REQUEST_FIELDS = Object.freeze([
