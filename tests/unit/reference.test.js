@@ -54,14 +54,12 @@ const DECIDED_IN_MAP = {
   enforce_gate_b: false,
   crossing_clear_seconds: 15,
   battery_warn_percent: 20,
+  battery_block_percent: 5,
+  battery_resume_percent: 20,
 };
 
 // מפתחות שאין להם ערך מוכרע במסמך מאושר.
-const EXPECTED_EMPTY = [
-  'voice_id', 'voice_rate',
-  'battery_block_percent', 'battery_resume_percent', 'battery_block_text',
-  'safety_opening_text', 'model_tier',
-];
+const EXPECTED_EMPTY = ['voice_id', 'voice_rate', 'model_tier'];
 
 // --- המפתחות מול 2.4 ---
 
@@ -165,6 +163,38 @@ check(
 
 // model_tier ריק בכוונה, וזה מה שמאפשר את בדיקת הקבלה של שלב 6
 check('model_tier ריק, לפי 2.4: אין AI ב-v1', values.model_tier, null);
+
+// --- שני הנוסחים שנקלטו מהמסמכים ---
+
+check(
+  'safety_opening_text כנוסח של usecase-f-13 סעיף 3',
+  values.safety_opening_text,
+  'הליכה בטוחה קודמת לתוכן. באזורי חצייה וצמתים המערכת תשתוק. '
+    + 'המערכת אינה מזהה סכנה ואינה מחליפה השגחה.',
+);
+
+check(
+  'safety_opening_text מצהיר במפורש שהמערכת אינה מזהה סכנה, לפי קריטריון הקבלה של F-13',
+  values.safety_opening_text.includes('אינה מזהה סכנה'),
+  true,
+);
+
+check(
+  'battery_block_text כתבנית של תיקון 1, עם שלושת המשתנים',
+  [
+    values.battery_block_text.includes('[נקודת ציון]'),
+    values.battery_block_text.includes('[מטרים]'),
+    values.battery_block_text.includes('[רוח השמיים]'),
+  ],
+  [true, true, true],
+);
+
+// BL-20: החסימה ב-battery_block_percent, החידוש מעל battery_resume_percent
+check(
+  'סף החסימה נמוך מסף החידוש, לפי BL-20',
+  values.battery_block_percent < values.battery_resume_percent,
+  true,
+);
 
 // --- סיכום ---
 
