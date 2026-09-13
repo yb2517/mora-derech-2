@@ -25,22 +25,10 @@ export const REQUEST_FIELDS = Object.freeze([
 // מעטפת התשובה, מפה 4.1: { ok, data, error }
 export const RESPONSE_FIELDS = Object.freeze(['ok', 'data', 'error']);
 
-// הרשימה הסגורה של הפונים, מפה 4.1 כלשונה.
-// validate אינו בודק אותה: זהו צעד 2 ב-BL-11, והוא יושב ב-CORE-02
-// ומחזיר E-FROM-UNKNOWN לפי 4.5. הרשימה יושבת כאן מפני שסעיף 4.1
-// הוא סעיף המעטפות, וסעיף 5 במסמך הבנייה ממפה אותו לקובץ הזה.
-export const FROM_LIST = Object.freeze([
-  'screen-veto',
-  'screen-traveler',
-  'screen-content',
-  'screen-owner',
-  'module-dialogue',
-  'module-delivery',
-  'module-retrieval',
-  'module-geofence',
-  'system-timer',
-  'tool-simulator',
-]);
+// הרשימה הסגורה של הפונים (מפה 4.1) אינה יושבת כאן ואינה יושבת בשום קוד:
+// מפה 4.3 קובעת "הוספת מסך או פונה: שורה, לא קוד", ומבחן מבנה 06 בודק
+// בדיוק את זה. הרשימה נגזרת מנתוני CORE-03 (משימה 3), ובדיקתה היא צעד 2
+// ב-BL-11 שיושב ב-CORE-02 (משימה 6) ומחזיר E-FROM-UNKNOWN לפי 4.5.
 
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -88,8 +76,9 @@ export function validate(request) {
     return rejected(E_ENVELOPE_INVALID, 'payload');
   }
 
-  // lang הוא שדה חובה בסעיף 4.1. המפה אינה מגדירה רשימה סגורה של ערכים,
-  // ולכן הבדיקה כאן היא בדיקת קיום בלבד ואינה ממציאה רשימה. פער מדווח.
+  // lang הוא שדה חובה בסעיף 4.1. הרשימה הסגורה של ערכיו: [טרם נקבע].
+  // כל מקרי השימוש משתמשים ב-he בלבד, אך אף מסמך מאושר אינו קובע רשימה,
+  // ולכן הבדיקה כאן היא בדיקת קיום ואינה ממציאה רשימה. פער מדווח.
   if (!isFilledString(request.lang)) {
     return rejected(E_ENVELOPE_INVALID, 'lang');
   }

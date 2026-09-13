@@ -10,8 +10,8 @@ import {
   errorResponse,
   REQUEST_FIELDS,
   RESPONSE_FIELDS,
-  FROM_LIST,
 } from '../../core/contract.js';
+import * as contractModule from '../../core/contract.js';
 
 let passed = 0;
 const failures = [];
@@ -178,18 +178,13 @@ check('שדות מעטפת הבקשה זהים ל-4.1', [...REQUEST_FIELDS], [
 
 check('שדות מעטפת התשובה זהים ל-4.1', [...RESPONSE_FIELDS], ['ok', 'data', 'error']);
 
-check('הרשימה הסגורה של הפונים זהה ל-4.1', [...FROM_LIST], [
-  'screen-veto',
-  'screen-traveler',
-  'screen-content',
-  'screen-owner',
-  'module-dialogue',
-  'module-delivery',
-  'module-retrieval',
-  'module-geofence',
-  'system-timer',
-  'tool-simulator',
-]);
+// מבחן מבנה 06 ומפה 4.3: הוספת פונה היא שורה בנתונים, לא שינוי קוד.
+// לכן אסור ש-CORE-01 יחזיק רשימת פונים כלשהי.
+check(
+  'CORE-01 אינו מחזיק רשימת פונים בקוד, לפי מפה 4.3 ומבחן מבנה 06',
+  Object.keys(contractModule).filter((name) => /FROM_LIST|CALLERS|SCREENS/.test(name)),
+  [],
+);
 
 // --- CORE-01 אינו מייצר קוד שאינו ברשימה הסגורה (חוק ברזל 8) ---
 
