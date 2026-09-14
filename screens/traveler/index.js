@@ -164,11 +164,14 @@ export function create({ host, from, reference, send }) {
       : createElement('div', { class: 'message message--error' },
         errorText({ code: 'E-REF-EMPTY' })));
 
-    // משפט הפרטיות. 2.2 מחייב אותו, ואין לו מפתח בטבלת ה-reference.
-    // איני ממציא נוסח, ולכן המסך מציג את מה שהמערכת מציגה על ערך
-    // חסר. הפער מדווח בדוח השלב.
-    children.push(createElement('div', { class: 'message message--warn' },
-      errorText({ code: 'E-REF-EMPTY' })));
+    // משפט הפרטיות, PRD סעיף 25. פער 31 הוסיף את המפתח למפה 2.4
+    // בהכרעת בעלת הפרויקט, והנוסח עצמו ממתין לאישורה. עד אז המסך
+    // מציג ערך חסר עם שם המפתח, ואינו ממציא נוסח למשפחה.
+    const privacy = reference?.privacy_opening_text;
+    children.push(typeof privacy === 'string' && privacy !== ''
+      ? createElement('p', {}, privacy)
+      : createElement('div', { class: 'message message--warn' },
+        errorText({ code: 'E-REF-EMPTY', data: { key: 'privacy_opening_text' } })));
 
     // שגיאה שנוצרה לפני תחילת הסשן, למשל סף סוללה חסר, נראית כאן.
     // בלי השורה הזאת היא נכתבת למצב ואינה מגיעה לעין.

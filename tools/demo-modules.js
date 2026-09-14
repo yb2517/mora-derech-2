@@ -87,8 +87,14 @@ const RESPONSES = {
 
     listApprovals: () => ({ approvals: rowsOf(demo.approvals), is_demo: true }),
 
+    // getSite בלי site_id מחזיר את המסלול היחיד. מפה 1 קובעת
+    // "ממשק חד מסלולי על מודל נתונים רב מסלולי", ואין במפה פעולה
+    // שמודיעה למסך על איזה מסלול הוא עובד. ההנחה הזאת מדווחת
+    // בדוח השלב ומוכרעת בשלב 3, כש-BE-05 האמיתי נכנס.
     getSite: (payload) => ({
-      site: rowsOf(demo.sites).find((row) => row.site_id === payload?.site_id) ?? null,
+      site: payload?.site_id === undefined
+        ? rowsOf(demo.sites)[0] ?? null
+        : rowsOf(demo.sites).find((row) => row.site_id === payload.site_id) ?? null,
       is_demo: true,
     }),
 
@@ -103,6 +109,17 @@ const RESPONSES = {
         .filter((row) => row.site_id === payload?.site_id),
       is_demo: true,
     }),
+
+    // פעולות הכתיבה של מסך הניהול, משימה 7. אישור קבלה כמו השאר:
+    // היצירה, העריכה והנעילה האמיתיות הן של BE-05 בשלבים 3 ו-4.
+    create_item: (payload) => acknowledged('create_item', payload),
+    edit_item: (payload) => acknowledged('edit_item', payload),
+    verify_anchor: (payload) => acknowledged('verify_anchor', payload),
+    register_source: (payload) => acknowledged('register_source', payload),
+    register_exit_point: (payload) => acknowledged('register_exit_point', payload),
+    register_mou: (payload) => acknowledged('register_mou', payload),
+    register_institute: (payload) => acknowledged('register_institute', payload),
+    lock_site: (payload) => acknowledged('lock_site', payload),
   },
 
   'BE-06': {
@@ -113,6 +130,12 @@ const RESPONSES = {
       mou: rowsOf(demo.rights_mou),
       is_demo: true,
     }),
+
+    // טבלת המוכנות יושבת בנתוני ההדגמה ואינה מחושבת כאן. החישוב
+    // של L1 עד L4 הוא BL-06, והוא של BE-06 בשלב 4.
+    get_lock_readiness: () => ({ conditions: rowsOf(demo.lock_readiness), is_demo: true }),
+
+    set_enforce: (payload) => acknowledged('set_enforce', payload),
   },
 
   'BE-03': {
@@ -131,6 +154,20 @@ const RESPONSES = {
     session_start: (payload) => acknowledged('session_start', payload),
     session_end: (payload) => acknowledged('session_end', payload),
     log: (payload) => acknowledged('log', payload),
+
+    // המדדים יושבים בנתוני ההדגמה. חישוב החציון ושיעור ההשלמה הוא
+    // של BE-07 בשלב 4, והוא שינוי ליבה מבוקר לפי מקרה שימוש F-09.
+    compute_metrics: () => ({ metrics: rowsOf(demo.metrics), is_demo: true }),
+
+    // הייצוא הוא שורות היומן, בלי נתוני הדגמה שמתחזים לייצוא אמיתי.
+    export: () => ({
+      rows: rowsOf(demo.sessions).map((session) => ({
+        session_id: session.session_id,
+        completed: session.completed,
+        questions: demo.interactions.filter((i) => i.session_id === session.session_id).length,
+      })),
+      is_demo: true,
+    }),
   },
 };
 

@@ -39,6 +39,7 @@
   import demoHandler, { DEMO_MODULE_IDS } from './tools/demo-modules.js';
   import { create as createVetoScreen } from './screens/veto/index.js';
   import { create as createTravelerScreen } from './screens/traveler/index.js';
+  import { create as createAdminScreen } from './screens/admin/index.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
@@ -172,11 +173,18 @@
 
     // הגשת מסך: המסך מקבל את הכתובת האחת, את שם הפונה שלו ואת
     // ערכיו, ואינו מקבל את ה-Repository ואינו מקבל את ה-Orchestrator.
-    function mountScreen({ moduleId, refKeys = [], create }) {
+    //
+    // מסך נושא בדרך כלל מזהה מודול אחד. מסך הניהול נושא שניים,
+    // מפני שהוא מאחד את FE-07 ואת FE-08 (הוכרע 12.09), ורשימת
+    // המותר ממשיכה להבחין ביניהם לפי from. לכן from יכול להיות
+    // שם אחד, או מפה ממזהה מודול לשם.
+    function mountScreen({ moduleId, moduleIds, refKeys = [], create }) {
       const host = document.createElement('div');
       create({
         host,
-        from: callerOf(moduleId),
+        from: moduleIds
+          ? Object.freeze(Object.fromEntries(moduleIds.map((id) => [id, callerOf(id)])))
+          : callerOf(moduleId),
         reference: referenceFor(refKeys),
         send,
       });
@@ -193,10 +201,15 @@
       {
         moduleId: 'FE-05',
         refKeys: [
-          'error_human_text', 'safety_opening_text', 'battery_block_text',
+          'error_human_text', 'safety_opening_text', 'privacy_opening_text', 'battery_block_text',
           'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
         ],
         create: createTravelerScreen,
+      },
+      {
+        moduleIds: ['FE-07', 'FE-08'],
+        refKeys: ['error_human_text'],
+        create: createAdminScreen,
       },
     ];
 

@@ -200,7 +200,7 @@ check('listExitPoints על מסלול אחר מחזיר ריק', read('listExitP
 
 checkThrows(
   'פעולה שאינה בטבלה נופלת ואינה מחזירה ok',
-  () => demoHandler({ module: 'BE-05', action: 'lock_site', payload: {} }),
+  () => demoHandler({ module: 'BE-05', action: 'listApprovedByStop', payload: {} }),
 );
 
 checkThrows(

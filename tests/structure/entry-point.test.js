@@ -42,6 +42,7 @@ check(
     './core/orchestrator.js',
     './repository/driver-browser.js',
     './repository/index.js',
+    './screens/admin/index.js',
     './screens/endpoint.js',
     './screens/traveler/index.js',
     './screens/veto/index.js',
