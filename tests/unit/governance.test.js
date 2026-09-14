@@ -11,7 +11,10 @@ const { check, checkThrows, report } = createChecker('BE-05 governance');
 
 // Repository מזויף: אותם שמות עסקיים, בזיכרון. הוא מאפשר להכשיל
 // כתיבה אחת בדיוק, וזו בדיקת הקבלה של BL-01.
-function fakeRepository({ failApprovals = false, failStatus = false, siteStatus = 'open' } = {}) {
+function fakeRepository({
+  failApprovals = false, failStatus = false, siteStatus = 'open',
+  reference = { note_max_chars: 200 },
+} = {}) {
   const data = {
     // page ו-audience נוספו במשימה 3 של שלב 4: מרגע ש-edit_item
     // בודק שלמות (usecase-f-08 צעד 3), פריט בלי עמוד אינו שלם.
@@ -44,6 +47,7 @@ function fakeRepository({ failApprovals = false, failStatus = false, siteStatus 
 
   return {
     data,
+    getRef: (key) => reference[key],
     getItem: (id) => data.items.find((row) => row.item_id === id) ?? null,
     listItems: ({ site_id: siteId, stop_id: stopId, status } = {}) => data.items
       .filter((row) => siteId === undefined || row.site_id === siteId)
@@ -217,11 +221,11 @@ const envelope = (action, payload = {}, from = 'screen-veto') => ({
   handle(envelope('reject', { item_id: 'i-pending' }));
   check('דחייה בלי הערה נרשמת, וההערה ריקה', repository.data.approvals[0].note, '');
 
-  // פער 38: usecase-f-07 צעד 6 כותב "עד 200 תווים", ואין למספר הזה
-  // מפתח בטבלת ה-reference. הבדיקה מתעדת את ההתנהגות בפועל, שהיא
-  // שמירה בלי קיצוץ, ואינה מקבעת גבול שאיש לא הכריע.
+  // פער 38 נסגר במפה גרסה 3.4 במפתח note_max_chars, והאכיפה נכנסה
+  // במשימה 10 של שלב 4: ההערה נקצצת לגבול שבטבלה. הבדיקה המפורטת
+  // יושבת בסעיף של משימה 10 למטה.
   handle(envelope('return', { item_id: 'i-approved', note: 'א'.repeat(250) }));
-  check('הערה ארוכה נשמרת כפי שהגיעה', repository.data.approvals[1].note.length, 250);
+  check('הערה ארוכה נקצצת לגבול שבטבלה', repository.data.approvals[1].note.length, 200);
 }
 
 // --- רישום ההסכם (usecase-f-07 צעדים 12 ו-13) ---
@@ -558,6 +562,60 @@ const ITEM = {
   check('ועם audience מפורש הוא עובר',
     ask({ site_id: 's-1', stop_id: 'st-1', audience: 'מבוגרים בלבד' }).data.items.map((row) => row.item_id),
     ['i-adults', 'i-all']);
+}
+
+// ---------------------------------------------------------------------
+// משימה 10 בתוכנית שלב 4: אכיפת note_max_chars (פער 38, הכרעה 15)
+// ---------------------------------------------------------------------
+
+{
+  const repository = fakeRepository();
+  const handle = create(options(repository));
+  const short = 'הערה קצרה.';
+  handle(envelope('reject', { item_id: 'i-pending', note: short }, 'screen-veto'));
+
+  check('הערה בתוך הגבול נשמרת במלואה', repository.data.approvals[0].note, short);
+}
+
+{
+  const repository = fakeRepository();
+  const handle = create(options(repository));
+  const long = 'א'.repeat(250);
+  handle(envelope('reject', { item_id: 'i-pending', note: long }, 'screen-veto'));
+
+  check('הערה ארוכה נקצצת', repository.data.approvals[0].note.length, 200);
+  check('ולא נדחית', repository.data.approvals.length, 1);
+  check('והפריט עבר', repository.getItem('i-pending').status, 'rejected');
+  check('והקיצוץ הוא מההתחלה', repository.data.approvals[0].note, long.slice(0, 200));
+}
+
+{
+  const repository = fakeRepository();
+  const handle = create(options(repository));
+  const exact = 'א'.repeat(200);
+  handle(envelope('reject', { item_id: 'i-pending', note: exact }, 'screen-veto'));
+  check('הערה באורך הגבול בדיוק אינה נגעת', repository.data.approvals[0].note, exact);
+}
+
+{
+  // הגבול נקרא מהטבלה ולא מהקוד: טבלה אחרת, גבול אחר.
+  const repository = fakeRepository({ reference: { note_max_chars: 10 } });
+  const handle = create(options(repository));
+  handle(envelope('reject', { item_id: 'i-pending', note: 'א'.repeat(50) }, 'screen-veto'));
+  check('ערך אחר בטבלה משנה את הקיצוץ', repository.data.approvals[0].note.length, 10);
+}
+
+{
+  // חוק ברזל 5, בגבולותיו: המפתח נדרש רק כשיש הערה.
+  const repository = fakeRepository({ reference: { note_max_chars: null } });
+  const handle = create(options(repository));
+
+  check('מעבר בלי הערה עובר גם כשהמפתח ריק',
+    handle(envelope('approve', { item_id: 'i-pending' }, 'screen-veto')).ok, true);
+
+  const withNote = handle(envelope('return', { item_id: 'i-pending', note: 'הערה' }, 'screen-veto'));
+  check('מעבר עם הערה מחזיר E-REF-EMPTY', withNote.error.code, 'E-REF-EMPTY');
+  check('ו-error.data נושא את שם ההגדרה', withNote.error.data.key, 'note_max_chars');
 }
 
 // ---------------------------------------------------------------------

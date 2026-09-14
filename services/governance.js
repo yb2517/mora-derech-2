@@ -49,12 +49,18 @@ const ITEM_REQUIRED = Object.freeze(['text', 'page', 'stop_id', 'source_id']);
 // משתנה: מפה 2.4 אינה מגדירה לו מפתח ב-reference.
 const EVERYONE = 'כולם';
 
-// **אורך ההערה אינו נאכף כאן, וזה פער ולא השמטה** (פער 38).
-// usecase-f-07 צעד 6 כותב "הערה עד 200 תווים", למפה 2.4 אין מפתח
-// לאורך הזה, ו-BL-12 אוסר ערך משתנה בקוד. שלושת המסמכים אינם
-// מאפשרים לאכוף את הגבול בשום מקום בלי להמציא מפתח או להפר כלל,
-// ולכן ההערה נשמרת כפי שהגיעה, הפער מדווח, והתיקון הוא מפתח
-// בטבלה בהכרעת בעלת הפרויקט.
+// שם המפתח, ולא הערך. הערך יושב בטבלת ה-reference (BL-12).
+const NOTE_MAX_KEY = 'note_max_chars';
+
+// אורך ההערה נאכף מאז משימה 10 של שלב 4. פער 38, שנפתח בשלב 3,
+// נסגר במפה גרסה 3.4 במפתח note_max_chars, והאכיפה נדחתה במפורש
+// לשלב הזה (doc-stage-03-gap-decisions סעיף 6 פריט 3).
+//
+// **הכרעה 15 בתוכנית שלב 4, בהכרעת בעלת הפרויקט**: הערה ארוכה
+// מהגבול נקצצת, ואינה נדחית. אין ברשימה הסגורה של 4.5 קוד ל"הערה
+// ארוכה מדי", וקוד חדש אינו מומצא (חוק ברזל 8). המסך מגביל את
+// השדה מראש מאותו מפתח, ולכן הקיצוץ כאן הוא רשת ביטחון ולא הדרך
+// הרגילה.
 
 function defaultNewId() {
   return globalThis.crypto.randomUUID();
@@ -120,7 +126,9 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
       return failed(verdict.code, verdict.data);
     }
 
-    const note = typeof payload.note === 'string' ? payload.note : '';
+    const trimmed = trimNote(payload.note);
+    if (trimmed.missing) return trimmed.missing;
+    const note = trimmed.note;
 
     const record = buildApprovalRecord({
       approval_id: `appr-${newId()}`,
@@ -189,6 +197,25 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
       return failed('E-APPROVAL-WRITE-FAILED', { target: record.target, action: record.action });
     }
     return apply(record);
+  }
+
+  /**
+   * קוצץ את ההערה לפי note_max_chars (מפה 2.4).
+   *
+   * המפתח נדרש רק כשיש הערה: הערה היא רשות (usecase-f-07 צעד 8),
+   * ומעבר מצב בלי הערה אינו זקוק לגבול. חוק ברזל 5 חל על ערך
+   * שהמערכת אינה יכולה לתפקד בלעדיו, וכאן היא יכולה.
+   */
+  function trimNote(note) {
+    const text = typeof note === 'string' ? note : '';
+    if (text === '') return { note: '' };
+
+    const max = repository.getRef(NOTE_MAX_KEY);
+    if (max === undefined || max === null) {
+      return { missing: failed('E-REF-EMPTY', { key: NOTE_MAX_KEY }) };
+    }
+
+    return { note: text.length > max ? text.slice(0, max) : text, trimmed: text.length > max };
   }
 
   function approvalFor({ who, target, action, from, to, note = '' }) {
@@ -511,13 +538,16 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
 
       if (status === 'draft') return apply();
 
+      const noted = trimNote(payload.note);
+      if (noted.missing) return noted.missing;
+
       const record = approvalFor({
         who: from,
         target: item.item_id,
         action: move.action,
         from: status,
         to,
-        note: typeof payload.note === 'string' ? payload.note : '',
+        note: noted.note,
       });
       return recordThen(record, apply);
     },
@@ -551,6 +581,9 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         return failed('E-ANCHOR-OUT-OF-BOUNDS', { lat, lng, bounds: site.bounds });
       }
 
+      const noted = trimNote(payload.note);
+      if (noted.missing) return noted.missing;
+
       const at = now();
       const record = approvalFor({
         who: from,
@@ -558,7 +591,7 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         action: 'verify_anchor',
         from: anchor.verified === true ? 'מאומת' : 'לא מאומת',
         to: 'מאומת',
-        note: typeof payload.note === 'string' ? payload.note : '',
+        note: noted.note,
       });
 
       return recordThen(record, () => ok({
@@ -635,6 +668,9 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         });
       }
 
+      const noted = trimNote(payload.note);
+      if (noted.missing) return noted.missing;
+
       const version = nextCorpusVersion(site);
       const at = now();
       const record = approvalFor({
@@ -643,7 +679,7 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         action: 'lock_site',
         from: site.status,
         to: 'locked',
-        note: typeof payload.note === 'string' ? payload.note : '',
+        note: noted.note,
       });
       // corpus_version אינו שדה של APPROVALS במפה 2.1, ו-usecase-f-08
       // סעיף 4 דורש ש-L5 יירשם עם "מי, מתי, ומספר גרסת קורפוס".

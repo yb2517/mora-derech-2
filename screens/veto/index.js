@@ -63,6 +63,10 @@ export function create({ host, from, reference, send }) {
 
   const errorText = (error) => humanError(reference?.error_human_text, error);
 
+  // מפתח בלי ערך מוכרע אינו הופך למספר מומצא: השדה פשוט אינו מוגבל
+  // במסך, ו-BE-05 מחזיר E-REF-EMPTY אם תישלח בו הערה (חוק ברזל 5).
+  const noteMax = typeof reference?.note_max_chars === 'number' ? reference.note_max_chars : null;
+
   // כל בקשה יוצאת מכאן, ולכן שם הפונה מוצהר בנקודה אחת.
   async function ask(module, action, payload) {
     return send({ from: from, module, action, payload });
@@ -226,7 +230,14 @@ export function create({ host, from, reference, send }) {
 
     const field = createElement('div', { class: 'field' }, [
       createElement('label', { class: 'field__label', for: 'veto-note' }, 'הערה, רשות'),
-      createElement('textarea', { class: 'field__control', id: 'veto-note', rows: '2' }),
+      // הגבול מגיע מטבלת ה-reference ואינו כתוב כאן (BL-12, מפה 2.4,
+      // המפתח note_max_chars). המסך מגביל את השדה, ו-BE-05 קוצץ מאחוריו.
+      createElement('textarea', {
+        class: 'field__control',
+        id: 'veto-note',
+        rows: '2',
+        ...(noteMax === null ? {} : { maxlength: String(noteMax) }),
+      }),
     ]);
     const control = field.querySelector('textarea');
     control.value = view.note;

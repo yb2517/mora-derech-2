@@ -229,7 +229,13 @@
     // הפונה נגזר ממנו בטבלת המודולים. לכן החלפת שם פונה היא עריכת
     // תא בנתונים (מפה 4.3, מבחן מבנה 06).
     const SCREENS = [
-      { moduleId: 'FE-06', refKeys: ['error_human_text'], create: createVetoScreen },
+      {
+        moduleId: 'FE-06',
+        // note_max_chars נוסף במשימה 10 של שלב 4: מפה 2.4 מונה את
+        // FE-06 בין קוראי המפתח, והמסך מגביל בו את שדה ההערה.
+        refKeys: ['error_human_text', 'note_max_chars'],
+        create: createVetoScreen,
+      },
       {
         moduleId: 'FE-05',
         refKeys: [
