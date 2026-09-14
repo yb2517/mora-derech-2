@@ -53,12 +53,34 @@ check('מקור אחד', demo.sources.length, 1);
 check('מכון אחד', demo.institutes.length, 1);
 check('הסכם אחד', demo.rights_mou.length, 1);
 check('נקודת יציאה אחת', demo.exit_points.length, 1);
-check('שלושה סשנים', demo.sessions.length, 3);
+// ארבעה סשנים מאז משימה 11 של שלב 4: שלושה למדגם, ורביעי שנושא
+// את דגל partial_log כדי שיהיה לו מדגים בלי לגרוע אחד מהשלושה
+// (BL-16 גורע סשן מסומן מהמדגם).
+check('ארבעה סשנים', demo.sessions.length, 4);
 
 check(
-  'הסשנים נושאים שתיים, שלוש וחמש שאלות',
-  demo.sessions.map((s) => demo.interactions.filter((i) => i.session_id === s.session_id).length),
+  'שלושת סשני המדגם נושאים שתיים, שלוש וחמש שאלות',
+  demo.sessions
+    .filter((s) => (s.flags ?? []).length === 0)
+    .map((s) => demo.interactions
+      .filter((i) => i.session_id === s.session_id && i.type === 'initiated').length),
   [2, 3, 5],
+);
+
+// כלל המדגם של usecase-f-09 צעד 9: סשן נספר אם רשם לפחות הגעה
+// אחת. בלי השורות האלה שלושת הסשנים נגרעים, ו-M-01 = 3 שמסמך
+// הבנייה סעיף 7 מתאר אינו ניתן להדגמה.
+check(
+  'לכל סשן יש לפחות שורת הגעה אחת',
+  demo.sessions.every((s) => demo.interactions
+    .some((i) => i.session_id === s.session_id && i.type === 'pushed')),
+  true,
+);
+
+check(
+  'ולסשן אחד דגל יומן חלקי',
+  demo.sessions.filter((s) => (s.flags ?? []).includes('partial_log')).length,
+  1,
 );
 
 // המערך נבחר כדי לכסות תצוגה, ולכן שני המקרים שהמסכים צריכים

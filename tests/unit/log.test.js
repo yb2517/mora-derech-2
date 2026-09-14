@@ -105,11 +105,32 @@ const envelope = (action, payload = {}, from = 'screen-traveler') => ({
   check('והחידוש מדווח', resumed.data.resumed, true);
   check('ולא נוצר סשן שני', repository.data.sessions.length, 1);
 
+  // בלי מזהה כלל: הסשן הפתוח של המסלול נמצא מהנתונים, וזה מה
+  // שהופך טעינת דף לאירוע שאינו קיים במודל (הכרעה 2).
+  const blind = handle(envelope('session_start', { site_id: 's-1' }));
+  check('בלי מזהה, הסשן הפתוח נמצא מהנתונים', blind.data.session.session_id, first.session_id);
+  check('וגם הוא חידוש', blind.data.resumed, true);
+  check('ועדיין סשן אחד', repository.data.sessions.length, 1);
+
   handle(envelope('session_end', { session_id: first.session_id }));
   const after = handle(envelope('session_start', { site_id: 's-1', session_id: first.session_id }));
   check('סשן שנסגר פותח סשן חדש', after.data.session.session_id !== first.session_id, true);
   check('והוא מצביע על הקודם', after.data.session.previous_session_id, first.session_id);
   check('ושניהם במאגר', repository.data.sessions.length, 2);
+
+  // אחרי שהראשון נסגר, סשן חדש בלי מזהה מוצא את השני הפתוח.
+  const third = handle(envelope('session_start', { site_id: 's-1' }));
+  check('החידוש מוצא את הפתוח ולא את הסגור', third.data.session.session_id, after.data.session.session_id);
+}
+
+{
+  // מסלול אחר אינו מחדש סשן של מסלול זה.
+  const repository = fakeRepository();
+  const handle = create(options(repository));
+  const first = handle(envelope('session_start', { site_id: 's-1' })).data.session;
+  const other = handle(envelope('session_start', { site_id: 's-2' })).data.session;
+  check('סשן של מסלול אחר נפתח בנפרד', other.session_id !== first.session_id, true);
+  check('ואינו חידוש', other.previous_session_id, null);
 }
 
 // הכרעה 7: completed נגזר מהגעה לתחנה האחרונה.

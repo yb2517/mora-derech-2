@@ -145,7 +145,20 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
      * BL-18: session_id אקראי. אין שם, אין חשבון, ואין מזהה מכשיר.
      */
     session_start: ({ payload = {} }) => {
-      const existing = payload.session_id ? repository.getSession(payload.session_id) : null;
+      // הפונה נושא מזהה כשהוא יודע אותו. כשאינו יודע, למשל אחרי
+      // טעינת דף, הסשן הפתוח של המסלול נמצא כאן מהנתונים.
+      //
+      // **מדוע לא מהמסך**: הכרעה 2 ניסחה את החידוש כך שהמסך יחזיק
+      // את המזהה באחסון הדפדפן, וחוק ברזל 3 קובע שרק CORE-04 נוגע
+      // באחסון. הכוונה נשמרת והמנגנון השתנה: הסשן הפתוח נמצא
+      // בנתונים, שהם ממילא המקום היחיד ששורד טעינה. **מדווח כפער**,
+      // מפני שבמכשיר משותף שני מטיילים יתחלקו בסשן אחד, וזה נפתח
+      // מחדש בשלב 5 עם הענן.
+      const byId = payload.session_id ? repository.getSession(payload.session_id) : null;
+      const open = byId ?? repository.listSessions({ site_id: payload.site_id })
+        .filter((row) => row.ended_at === null)
+        .at(-1) ?? null;
+      const existing = open;
 
       if (existing && existing.ended_at === null) {
         return ok({ session: existing, resumed: true });

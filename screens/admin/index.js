@@ -45,6 +45,8 @@ const ITEM_FIELDS = [
 export function create({ host, from, reference, send }) {
   const view = {
     role: ROLES[0].role,
+    ready: false,
+    sample: null,
     site: null,
     items: [],
     sources: [],
@@ -125,8 +127,11 @@ export function create({ host, from, reference, send }) {
 
   async function loadOwner(siteId) {
     const [institutes, mou, readiness, metrics] = await Promise.all([
-      ask('BE-05', 'listInstitutes', { site_id: siteId }),
-      ask('BE-05', 'listMou', { site_id: siteId }),
+      // חוב טכני 12 של דוח שלב 3: שתי הפעולות אינן מסננות לפי
+      // מסלול, ואין ב-4.2 סינון מוגדר להן. המסך הפסיק לשלוח
+      // site_id שאינו מסנן דבר, במקום להיראות כאילו הוא מסנן.
+      ask('BE-05', 'listInstitutes', {}),
+      ask('BE-05', 'listMou', {}),
       ask('BE-06', 'get_lock_readiness', { site_id: siteId }),
       ask('BE-07', 'compute_metrics', { site_id: siteId }),
     ]);
@@ -139,11 +144,26 @@ export function create({ host, from, reference, send }) {
     view.mou = mou.data?.mou ?? [];
 
     view.panelErrors = {};
-    if (readiness.ok) view.readiness = readiness.data?.conditions ?? [];
-    else { view.readiness = []; view.panelErrors.readiness = readiness.error; }
+    // BE-06 מחזיר { readiness: { conditions, ready, failed } }. עד
+    // שלב 3 ההדגמה החזירה conditions בשורש, מפני שהחישוב לא היה
+    // קיים (משימה 11 בתוכנית שלב 4).
+    if (readiness.ok) {
+      view.readiness = readiness.data?.readiness?.conditions ?? [];
+      view.ready = readiness.data?.readiness?.ready === true;
+    } else {
+      view.readiness = [];
+      view.ready = false;
+      view.panelErrors.readiness = readiness.error;
+    }
 
-    if (metrics.ok) view.metrics = metrics.data?.metrics ?? [];
-    else { view.metrics = []; view.panelErrors.metrics = metrics.error; }
+    if (metrics.ok) {
+      view.metrics = metrics.data?.metrics ?? [];
+      view.sample = { n: metrics.data?.n ?? 0, small: metrics.data?.sample_small === true };
+    } else {
+      view.metrics = [];
+      view.sample = null;
+      view.panelErrors.metrics = metrics.error;
+    }
   }
 
   async function switchRole(role) {
@@ -155,10 +175,18 @@ export function create({ host, from, reference, send }) {
 
   // --- פעולות ---
 
+  /**
+   * פעולה שמשנה נתונים, ואז טעינה מחדש.
+   *
+   * עד שלב 3 הפעולות נענו בהדגמה ולא שינו דבר, ולכן די היה
+   * בהודעה. משלב 4 הן משנות מצב, והמסך חייב להראות את מה שקרה
+   * ולא רק לומר ששלח (משימה 11 בתוכנית שלב 4).
+   */
   async function act(module, action, payload) {
     const response = await ask(module, action, payload);
     if (!absorb(response)) return render();
-    view.message = `הפעולה ${response.data?.acknowledged ?? action} נשלחה.`;
+    await load();
+    view.message = `הפעולה ${action} בוצעה.`;
     render();
   }
 
@@ -448,7 +476,7 @@ export function create({ host, from, reference, send }) {
 
   function readinessPanel() {
     const rows = view.readiness.map((condition) => createElement('tr', {}, [
-      createElement('td', {}, condition.condition),
+      createElement('td', {}, condition.id ?? condition.condition),
       createElement('td', {}, condition.name),
       createElement('td', {}, [
         createElement('span', { class: condition.passes ? 'status status--approved' : 'status status--rejected' },
@@ -477,11 +505,12 @@ export function create({ host, from, reference, send }) {
     const rows = view.metrics.map((metric) => createElement('tr', {}, [
       createElement('td', {}, metric.metric),
       createElement('td', {}, metric.name),
-      createElement('td', {}, String(metric.value)),
+      // ערך null הוא "אין נתון" ולא אפס: מדגם ריק אינו חציון אפס.
+      createElement('td', {}, metric.value === null ? 'אין נתון' : String(metric.value)),
       createElement('td', {}, [
         createElement('span', { class: metric.passes ? 'status status--approved' : 'status status--rejected' },
           metric.passes ? 'עובר' : 'לא עובר'),
-        createElement('span', { class: 'list__meta' }, `מדגם ${metric.sample}`),
+        createElement('span', { class: 'list__meta' }, `סף ${metric.threshold}`),
       ]),
     ]));
 
@@ -490,6 +519,14 @@ export function create({ host, from, reference, send }) {
 
     return createElement('div', {}, [
       panelNotice('metrics'),
+      // usecase-f-09 צעד 11: מדגם קטן מהסף מסומן. מספר שמחושב על
+      // מדגם קטן אינו שקר, אבל הוא אינו מכריע שער.
+      view.sample
+        ? createElement('p', { class: view.sample.small ? 'message message--warn' : 'text-sm text-muted' },
+          view.sample.small
+            ? `המדגם קטן מהסף: ${view.sample.n} סשנים`
+            : `מדגם: ${view.sample.n} סשנים`)
+        : null,
       createElement('table', { class: 'table' }, rows),
       // 2.4: ההכרעה Go או No-Go אינה במערכת. המסך מציג ואינו נועל.
       createElement('p', { class: 'text-sm text-muted' },

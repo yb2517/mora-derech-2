@@ -94,7 +94,10 @@ export function create({ host, from, reference, send }) {
     const siteId = view.site?.site_id;
     const [items, approvals] = await Promise.all([
       ask('BE-05', 'listItems', { site_id: siteId }),
-      ask('BE-05', 'listApprovals', { site_id: siteId }),
+      // חוב טכני 12 של דוח שלב 3: listApprovals מסננת לפי target
+      // בלבד, ואין ב-4.2 סינון לפי מסלול. המסך הפסיק לשלוח site_id
+      // שאינו מסנן דבר, במקום להיראות כאילו הוא מסנן (משימה 11).
+      ask('BE-05', 'listApprovals', {}),
     ]);
 
     if (!items.ok) return showError(items.error);
