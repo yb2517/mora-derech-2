@@ -19,7 +19,7 @@
 // בכל קריאה ואינו נשמר.
 
 import { error } from '../core/errors.js';
-import { gateB, mouCoverage } from '../core/business-logic.js';
+import { gateB, lockReadiness, mouCoverage } from '../core/business-logic.js';
 
 // המפתח בטבלת ה-reference, מפה 2.4. שם המפתח אינו ערך משתנה: הוא
 // שם השדה שקוראים אותו.
@@ -91,12 +91,65 @@ export function create({ repository, now = defaultNow } = {}) {
         checked_at: at,
       });
     },
+
+    /**
+     * טבלת המוכנות לנעילה, usecase-f-08 צעד 9.
+     *
+     * BE-06 קורא את הנתונים, והליבה מכריעה: אותה פונקציה בדיוק
+     * שרצה בתוך lock_site של BE-05 (משימה 4). זה מכוון, ולא שכפול
+     * שנחסך במקרה: מסך שמראה "מוכן" ונעילה שנדחית אחריו הם שני
+     * חישובים שנפרדו.
+     *
+     * **המודול אינו כותב דבר** (מפה 3.2, שורת BE-06: "כותב: אין"),
+     * וגם אינו נועל: הנעילה היא פעולת BE-05, והיא פעולת אדם.
+     */
+    get_lock_readiness: ({ payload = {} }) => {
+      const site = repository.getSite(payload.site_id);
+      const at = now();
+
+      const readiness = lockReadiness({
+        site,
+        items: repository.listItems({ site_id: site?.site_id }),
+        anchors: repository.listAnchors({ site_id: site?.site_id }),
+        approvals: repository.listApprovals(),
+        sources: repository.listSources(),
+        mou: repository.listMou(),
+        at,
+      });
+
+      return ok({ site, readiness, checked_at: at });
+    },
+
+    /**
+     * מתג האכיפה, usecase-f-07 זרימה ו.
+     *
+     * **פער 40**: זו כתיבה לטבלת ה-reference, ו-BL-09 אינו מונה לה
+     * כותב. מפה 4.2 נותנת את הפעולה ל-BE-06 ולו בלבד, ולכן זה
+     * הכותב היחיד של המפתח הזה בפועל. המודול אינו כותב מפתח אחר,
+     * ואין לו דרך: ההפניה היא לשם המפתח הקבוע בראש הקובץ.
+     *
+     * הפעולה מחליפה את הערך הקיים ואינה ממציאה אחד: מפתח בלי ערך
+     * מוכרע מחזיר E-REF-EMPTY, כמו ב-get_gate (חוק ברזל 5).
+     */
+    set_enforce: ({ payload = {} }) => {
+      const current = repository.getRef(ENFORCE_KEY);
+      if (current === undefined || current === null) {
+        return { ok: false, error: error('E-REF-EMPTY', { key: ENFORCE_KEY }) };
+      }
+
+      // בלי ערך מפורש בבקשה, הפעולה היא מתג: זה מה שהמסך שולח
+      // כשלוחצים על הכפתור, ומה ש-usecase-f-07 זרימה ו מתארת.
+      const next = typeof payload.enforce === 'boolean' ? payload.enforce : !current;
+      repository.setRef(ENFORCE_KEY, next);
+
+      return ok({ key: ENFORCE_KEY, enforce: next, was: current });
+    },
   };
 
   return function handle(request) {
     const handler = ACTIONS[request?.action];
     if (typeof handler !== 'function') {
-      throw new Error(`BE-06 אינו מממש את הפעולה ${request?.action} בשלב הזה`);
+      throw new Error(`BE-06 אינו מממש את הפעולה ${request?.action}`);
     }
     return handler(request);
   };
