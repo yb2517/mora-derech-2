@@ -1,11 +1,17 @@
-// System: פאנל ה-Veto על נתוני הדגמה. משימה 5 בתוכנית שלב 2.
+// System: פאנל ה-Veto. משימה 5 בתוכנית שלב 2, ומשימה 6 בתוכנית
+// שלב 3.
 //
 // המקור: מפה 6.3 (בדיקות System לפי מקרי השימוש), F-07,
-// doc-build-03-interfaces סעיף 2.1, ובדיקת הקבלה של משימה 5.
+// doc-build-03-interfaces סעיף 2.1, ובדיקות הקבלה של שתי המשימות.
 //
 // זו הרמה הראשונה מסוג System בפרויקט. היא מרכיבה את אותה שרשרת
 // שנקודת הכניסה מרכיבה, ומפעילה את המסך כמו שמשתמש מפעיל אותו:
 // לחיצה על שורה, הקלדה בשדה, לחיצה על כפתור.
+//
+// מה השתנה בשלב 3: השרשרת כאן אינה עוברת עוד במודול ההדגמה. BE-05
+// ו-BE-06 האמיתיים מורכבים בדיוק כפי שנקודת הכניסה מרכיבה אותם,
+// והמסך מדבר איתם. מסך שנבדק מול הדגמה שאינה מה שרץ באפליקציה
+// בודק משהו אחר.
 //
 // מה היא אינה בודקת: שהטקסט נראה, שהצבע נכון ושהפריסה מסתדרת.
 // אלה נבדקים בדפדפן ומדווחים ככאלה בדוח השלב.
@@ -24,7 +30,9 @@ const { createBrowserDriver } = await import('../../repository/driver-browser.js
 const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
-const { default: demoHandler, DEMO_MODULE_IDS } = await import('../../tools/demo-modules.js');
+const { DEMO_SEED } = await import('../../tools/demo-modules.js');
+const { create: createGovernance } = await import('../../services/governance.js');
+const { create: createGate } = await import('../../services/gate.js');
 const { create } = await import('../../screens/veto/index.js');
 
 const modulesFile = (await import('../../registry/modules.json', { with: { type: 'json' } })).default;
@@ -45,11 +53,14 @@ const repository = createRepository(createBrowserDriver({
     modules: modulesFile,
     allow_list: allowFile,
     reference: referenceFile.values,
+    ...DEMO_SEED,
   },
 }));
 
-const handlers = {};
-for (const id of DEMO_MODULE_IDS) handlers[id] = demoHandler;
+const handlers = {
+  'BE-05': createGovernance({ repository }),
+  'BE-06': createGate({ repository }),
+};
 
 const orchestrator = createOrchestrator({ repository, handlers });
 const send = createEndpoint({ handle: (envelope) => orchestrator.handle(envelope) });
@@ -86,6 +97,17 @@ check('כל בקשה יצאה בשם הפונה של המסך', [...new Set(sent
 check('פס השערים מוצג', dom.host.querySelectorAll('.gate').length, 1);
 check('הרשימה מציגה שמונה פריטים', rows().length, 8);
 check('יומן ההחלטות מוצג', dom.host.querySelectorAll('.log__entry').length, 5);
+
+// פס השערים מציג את M-06 שחושב מרשומה, ואת מה שחסר כדי לפתוח.
+// נתוני ההדגמה נושאים הסכם אחד בתוקף שמכסה את המקור היחיד, ולכן
+// M-06 = 1, והשער חסום מפני שהמסלול אינו נעול (BL-08, פער 34).
+{
+  const strip = dom.host.querySelector('.gate').textContent;
+  check('M-06 מוצג', strip.includes('M-06: 1'), true);
+  check('השער חסום', strip.includes('השער חסום'), true);
+  check('והסיבה מוצגת', strip.includes('המסלול אינו נעול'), true);
+  check('והאכיפה הכבויה מוצהרת', strip.includes('אכיפת שער B כבויה'), true);
+}
 
 // ספירת המצבים בכותרת הפאנל, לפי 2.1
 check('ספירה לכל אחד מארבעת המצבים', dom.host.querySelectorAll('.panel__counts .status').length, 4);
@@ -130,8 +152,18 @@ check(
   buttons().find((b) => labelOf(b) === 'דחייה').click();
   await settle();
 
-  check('הלחיצה השנייה נשלחה', sent.at(-1).action, 'reject');
+  // המעבר עצמו, ואחריו טעינה מחדש: הפריטים, היומן והשער. לכן
+  // המעטפה האחרונה אינה בהכרח זו של הפעולה.
+  const rejected = sent.slice(before).find((e) => e.action === 'reject');
+  check('הלחיצה השנייה נשלחה', Boolean(rejected), true);
   check('אישור הקבלה מוצג', dom.host.querySelectorAll('.message--done').length, 1);
+  check('ההודעה אומרת מאיזה מצב לאיזה', dom.host.querySelector('.message--done').textContent.includes('מ-הוגש ל-נדחה'), true);
+
+  // בדיקת הקבלה של המשימה: הרשומה נוספה ליומן ההחלטות שעל המסך.
+  check('יומן ההחלטות גדל בשורה', dom.host.querySelectorAll('.log__entry').length, 6);
+  const last = repository.listApprovals().at(-1);
+  check('הרשומה נושאת מבצע, מצב קודם וחדש', [last.who, last.from_status, last.to_status], [caller, 'pending', 'rejected']);
+  check('ויש לה זמן', typeof last.time, 'string');
 }
 
 // --- הערה שהוקלדה נוסעת במעטפה ---
@@ -140,13 +172,30 @@ check(
   rows().find((row) => row.textContent.includes('התחנה בלי פריט מאושר')).click();
   await settle();
 
+  const before = sent.length;
   dom.host.querySelector('textarea').type('נימוק הבדיקה');
   buttons().find((b) => labelOf(b) === 'דחייה').click();
   await settle();
 
+  const rejected = sent.slice(before).find((e) => e.action === 'reject');
   check('עם הערה אין תזכורת', dom.host.querySelectorAll('.message--warn').length, 0);
-  check('ההערה נשלחה במעטפה', sent.at(-1).payload.note, 'נימוק הבדיקה');
-  check('הפריט נשלח במעטפה', typeof sent.at(-1).payload.item_id, 'string');
+  check('ההערה נשלחה במעטפה', rejected.payload.note, 'נימוק הבדיקה');
+  check('הפריט נשלח במעטפה', typeof rejected.payload.item_id, 'string');
+
+  // ההערה נשמרה ברשומה, וזה מה שהחוקר יראה בפעם הבאה.
+  check('ההערה נשמרה ביומן', repository.listApprovals().at(-1).note, 'נימוק הבדיקה');
+}
+
+// --- מעבר שאינו בטבלה נדחה, והמצב אינו משתנה (זרימה ד) ---
+
+{
+  const approvalsBefore = repository.listApprovals().length;
+  const denied = await send({
+    from: caller, module: 'BE-05', action: 'approve', payload: { item_id: 'item-demo-5' }, lang: 'he',
+  });
+  check('approve על פריט שנדחה נדחה', denied.error.code, 'E-TRANSITION-DENIED');
+  check('המצב לא השתנה', repository.getItem('item-demo-5').status, 'rejected');
+  check('ולא נוספה רשומה', repository.listApprovals().length, approvalsBefore);
 }
 
 // --- המסך מבצע את פעולותיו ואותן בלבד ---
@@ -176,7 +225,9 @@ check(
   const all = repository.listAudit();
   const ids = [...new Set(all.map((row) => row.request_id))];
   check('לכל בקשה שתי שורות', ids.every((id) => all.filter((r) => r.request_id === id).length === 2), true);
-  check('מספר הבקשות שווה למספר המעטפות שיצאו', ids.length, sent.length + 1);
+  // שתי מעטפות נוספות נשלחו ישירות דרך הכתובת ולא מהמסך: המעבר
+  // האסור של זרימה ד, והפעולה שאינה של המסך.
+  check('מספר הבקשות שווה למספר המעטפות שיצאו', ids.length, sent.length + 2);
 }
 
 // --- מה שהוסר במפורש ---

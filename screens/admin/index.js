@@ -55,8 +55,21 @@ export function create({ host, from, reference, send }) {
     metrics: [],
     open: null,
     form: {},
+    // טפסי הרישום של בעלת הפרויקט, משימה 7 בתוכנית שלב 3. שדות
+    // RIGHTS_MOU ו-INSTITUTES לפי מפה 2.1.
+    mouForm: {
+      institute_id: '', scope: [], signed_at: '', valid_until: '',
+      // הוכרע 12.09.2026: ההסכם מכסה אישור וגם תרומת תוכן. השדה
+      // קיים בישות (מפה 2.1), ולכן הוא נשאל ואינו נכתב בשקט.
+      covers_content_contribution: true,
+    },
+    instituteForm: { name: '' },
     message: null,
     error: null,
+    // שגיאה שנוגעת לפאנל אחד בלבד. פאנל שהמודול שלו טרם נבנה אינו
+    // מפיל את שאר המסך: הוא אומר מה חסר במקומו (הכרעה 3 בתוכנית
+    // שלב 3).
+    panelErrors: {},
   };
 
   const errorText = (error) => humanError(reference?.error_human_text, error);
@@ -117,11 +130,20 @@ export function create({ host, from, reference, send }) {
       ask('BE-06', 'get_lock_readiness', { site_id: siteId }),
       ask('BE-07', 'compute_metrics', { site_id: siteId }),
     ]);
-    if (!absorb(institutes) || !absorb(mou) || !absorb(readiness) || !absorb(metrics)) return;
+
+    // שתי הראשונות הן ליבת המסך של בעלת הפרויקט, ובלעדיהן אין מה
+    // להציג. שתי האחרונות הן פאנלים נפרדים, וכשהמודול שלהן טרם
+    // נבנה הפאנל אומר זאת והשאר ממשיך לעבוד.
+    if (!absorb(institutes) || !absorb(mou)) return;
     view.institutes = institutes.data?.institutes ?? [];
     view.mou = mou.data?.mou ?? [];
-    view.readiness = readiness.data?.conditions ?? [];
-    view.metrics = metrics.data?.metrics ?? [];
+
+    view.panelErrors = {};
+    if (readiness.ok) view.readiness = readiness.data?.conditions ?? [];
+    else { view.readiness = []; view.panelErrors.readiness = readiness.error; }
+
+    if (metrics.ok) view.metrics = metrics.data?.metrics ?? [];
+    else { view.metrics = []; view.panelErrors.metrics = metrics.error; }
   }
 
   async function switchRole(role) {
@@ -136,7 +158,7 @@ export function create({ host, from, reference, send }) {
   async function act(module, action, payload) {
     const response = await ask(module, action, payload);
     if (!absorb(response)) return render();
-    view.message = response.data?.acknowledged ?? action;
+    view.message = `הפעולה ${response.data?.acknowledged ?? action} נשלחה.`;
     render();
   }
 
@@ -150,6 +172,33 @@ export function create({ host, from, reference, send }) {
     if (!absorb(response)) return render();
     view.open = response.data ?? null;
     view.form = { ...(response.data?.item ?? {}) };
+    render();
+  }
+
+  // רישום ההסכם, usecase-f-07 צעדים 12 ו-13. המסך אוסף את השדות
+  // שמפה 2.1 מגדירה לישות RIGHTS_MOU, ושולח. השלמות נאכפת ב-BE-05
+  // ומוחזרת כ-E-ITEM-INCOMPLETE עם שם השדה, ולכן אין כאן בדיקה
+  // מקבילה: שני מקומות שבודקים הם שני מקומות שנפרדים.
+  async function registerMou() {
+    const response = await ask('BE-05', 'register_mou', { ...view.mouForm });
+    if (!absorb(response)) return render();
+    view.mouForm = {
+      institute_id: '', scope: [], signed_at: '', valid_until: '',
+      covers_content_contribution: true,
+    };
+    // הטעינה קודמת להודעה: load מנקה את ההודעה הקודמת, והודעה
+    // שתיקבע לפניה תימחק בדרך.
+    await load();
+    view.message = 'ההסכם נרשם, ומצב השער חושב מחדש.';
+    render();
+  }
+
+  async function registerInstitute() {
+    const response = await ask('BE-05', 'register_institute', { ...view.instituteForm });
+    if (!absorb(response)) return render();
+    view.instituteForm = { name: '' };
+    await load();
+    view.message = 'המכון נרשם.';
     render();
   }
 
@@ -288,6 +337,83 @@ export function create({ host, from, reference, send }) {
     ]);
   }
 
+  // שדה בטופס רישום, עם סימון השדה שחזר חסר מ-BE-05.
+  function formField(name, label, control) {
+    const invalid = view.error?.code === 'E-ITEM-INCOMPLETE' && view.error?.data?.field === name;
+    return createElement('div', { class: invalid ? 'field field--invalid' : 'field' }, [
+      createElement('label', { class: 'field__label', for: `mou-${name}` }, label),
+      control,
+      invalid ? createElement('span', { class: 'field__error' }, errorText(view.error)) : null,
+    ]);
+  }
+
+  function mouFormPanel() {
+    const institute = createElement('select', { class: 'field__control', id: 'mou-institute_id' }, [
+      createElement('option', { value: '' }, 'בחירת מכון'),
+      ...view.institutes.map((row) => createElement('option', { value: row.institute_id }, row.name)),
+    ]);
+    institute.value = view.mouForm.institute_id;
+    institute.addEventListener('input', () => { view.mouForm.institute_id = institute.value; });
+
+    // ההיקף הוא רשימת המקורות שההסכם מכסה (מפה 2.1). התצוגה מראה
+    // את כל מקורות המסלול, כדי שההשוואה בין ההיקף לבין מה שהמסלול
+    // צריך תהיה גלויה (usecase-f-07 סעיף 6).
+    const scope = createElement('div', { class: 'btn-row' }, view.sources.map((source) => {
+      const chosen = view.mouForm.scope.includes(source.source_id);
+      const button = createElement(
+        'button',
+        { class: chosen ? 'btn btn--primary' : 'btn', type: 'button' },
+        source.name,
+      );
+      button.addEventListener('click', () => {
+        view.mouForm.scope = chosen
+          ? view.mouForm.scope.filter((id) => id !== source.source_id)
+          : [...view.mouForm.scope, source.source_id];
+        render();
+      });
+      return button;
+    }));
+
+    function dateField(name, label) {
+      const control = createElement('input', { class: 'field__control', id: `mou-${name}`, type: 'date' });
+      control.value = view.mouForm[name];
+      control.addEventListener('input', () => { view.mouForm[name] = control.value; });
+      return formField(name, label, control);
+    }
+
+    // הוכרע 12.09.2026: ההסכם מכסה אישור וגם תרומת תוכן. ברירת
+    // המחדל היא כן, ובעלת הפרויקט יכולה לכבות אותה להסכם שאינו כזה.
+    const covers = createElement(
+      'button',
+      { class: view.mouForm.covers_content_contribution ? 'btn btn--primary' : 'btn', type: 'button' },
+      view.mouForm.covers_content_contribution ? 'מכסה גם תרומת תוכן' : 'אישור בלבד',
+    );
+    covers.addEventListener('click', () => {
+      view.mouForm.covers_content_contribution = !view.mouForm.covers_content_contribution;
+      render();
+    });
+
+    const submit = createElement('button', { class: 'btn btn--primary', type: 'button' }, 'רישום הסכם');
+    submit.addEventListener('click', registerMou);
+
+    const name = createElement('input', { class: 'field__control', id: 'mou-name', type: 'text' });
+    name.value = view.instituteForm.name;
+    name.addEventListener('input', () => { view.instituteForm.name = name.value; });
+    const addInstitute = createElement('button', { class: 'btn', type: 'button' }, 'רישום מכון');
+    addInstitute.addEventListener('click', registerInstitute);
+
+    return createElement('div', {}, [
+      formField('institute_id', 'המכון', institute),
+      formField('scope', `היקף ההסכם: ${view.mouForm.scope.length} מתוך ${view.sources.length} מקורות`, scope),
+      dateField('signed_at', 'תאריך חתימה'),
+      dateField('valid_until', 'תאריך תוקף'),
+      createElement('div', { class: 'btn-row' }, [covers]),
+      createElement('div', { class: 'btn-row' }, [submit]),
+      formField('name', 'מכון חדש', name),
+      createElement('div', { class: 'btn-row' }, [addInstitute]),
+    ]);
+  }
+
   function rightsPanel() {
     const rows = view.mou.map((mou) => {
       const institute = view.institutes.find((i) => i.institute_id === mou.institute_id);
@@ -297,12 +423,6 @@ export function create({ host, from, reference, send }) {
         createElement('td', {}, mou.valid_until ?? ''),
       ]);
     });
-
-    const registerMou = createElement('button', { class: 'btn', type: 'button' }, 'רישום הסכם');
-    registerMou.addEventListener('click', () => act('BE-05', 'register_mou', {}));
-
-    const registerInstitute = createElement('button', { class: 'btn', type: 'button' }, 'רישום מכון');
-    registerInstitute.addEventListener('click', () => act('BE-05', 'register_institute', {}));
 
     // מתג האכיפה. 2.4 דורש שיוצג מה ייחסם, ולא רק המתג עצמו.
     const toggle = createElement('button', { class: 'btn', type: 'button' }, 'החלפת מצב האכיפה');
@@ -314,8 +434,16 @@ export function create({ host, from, reference, send }) {
         : createElement('p', { class: 'empty' }, 'אין הסכמים רשומים.'),
       createElement('p', { class: 'text-sm text-muted' },
         'הדלקת האכיפה חוסמת את מסך המטייל כל עוד המסלול אינו נעול.'),
-      createElement('div', { class: 'btn-row' }, [registerInstitute, registerMou, toggle]),
+      createElement('div', { class: 'btn-row' }, [toggle]),
     ]);
+  }
+
+  // פאנל שהמודול שלו טרם נבנה מציג את הנוסח לאדם של הקוד שחזר,
+  // במקום טבלה ריקה שנראית כאילו אין נתונים. הנוסח מגיע מטבלת
+  // ה-reference (BL-12), ולא מכאן.
+  function panelNotice(key) {
+    const error = view.panelErrors[key];
+    return error ? createElement('div', { class: 'message message--error' }, errorText(error)) : null;
   }
 
   function readinessPanel() {
@@ -339,6 +467,7 @@ export function create({ host, from, reference, send }) {
     }));
 
     return createElement('div', {}, [
+      panelNotice('readiness'),
       createElement('table', { class: 'table' }, rows),
       createElement('div', { class: 'btn-row' }, [lock]),
     ]);
@@ -360,6 +489,7 @@ export function create({ host, from, reference, send }) {
     exportButton.addEventListener('click', () => act('BE-07', 'export', {}));
 
     return createElement('div', {}, [
+      panelNotice('metrics'),
       createElement('table', { class: 'table' }, rows),
       // 2.4: ההכרעה Go או No-Go אינה במערכת. המסך מציג ואינו נועל.
       createElement('p', { class: 'text-sm text-muted' },
@@ -372,8 +502,7 @@ export function create({ host, from, reference, send }) {
     const children = [roleSwitch()];
 
     if (view.message) {
-      children.push(createElement('div', { class: 'message message--done' },
-        `הפעולה ${view.message} נשלחה.`));
+      children.push(createElement('div', { class: 'message message--done' }, view.message));
     }
     if (view.error && view.error.code !== 'E-ITEM-INCOMPLETE') {
       children.push(createElement('div', { class: 'message message--error' }, errorText(view.error)));
@@ -389,6 +518,7 @@ export function create({ host, from, reference, send }) {
       ]
       : [
         panel('מכונים והסכמים', rightsPanel()),
+        panel('רישום הסכם', mouFormPanel()),
         panel('מוכנות לנעילה', readinessPanel()),
         panel('המדדים', metricsPanel()),
       ];

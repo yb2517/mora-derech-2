@@ -78,16 +78,29 @@ function freshRepository() {
   const { repository } = freshRepository();
   const names = Object.keys(repository).sort();
 
-  // ארבע הפעולות של שורה 5 בתוכנית, ועוד שתיים שבדיקות הקבלה מחייבות:
-  // listAudit (שורה 5: "appendAudit ואז קריאה") ו-listCallers (שורה 6:
-  // "from ברשימה הסגורה", ורק CORE-04 קורא נתונים).
-  check('הממשק מונה בדיוק את שש הפעולות', names, [
-    'appendAudit', 'getModule', 'getRef', 'listAllowed', 'listAudit', 'listCallers',
+  // שש פעולות המערכת של שלב 1, ושתים עשרה פעולות הישויות העסקיות
+  // שנוספו במשימה 2 של שלב 3 (usecase-f-07 סעיף 8: השמות עסקיים).
+  check('הממשק מונה בדיוק את שמונה עשרה הפעולות', names, [
+    'appendApproval', 'appendAudit', 'appendInstitute', 'appendMou', 'appendSource',
+    'getItem', 'getModule', 'getRef', 'getSite',
+    'listAllowed', 'listApprovals', 'listAudit', 'listCallers', 'listInstitutes',
+    'listItems', 'listMou', 'listSources', 'setStatus',
   ]);
 
+  // setStatus היא הכתיבה היחידה שאינה הוספה, והיא מותרת: מפה 2.1
+  // מגדירה את status כעמודה שמשתנה, וכותבה היחיד הוא BE-05 (BL-09).
+  // כל השאר חייבות להיות קריאה או הוספה.
   check(
     'אין פעולה שנשמעת כמחיקה או כדריסה',
-    names.filter((n) => /delete|remove|drop|clear|truncate|reset|write|update|set/i.test(n)),
+    names
+      .filter((n) => n !== 'setStatus')
+      .filter((n) => /delete|remove|drop|clear|truncate|reset|write|update|set/i.test(n)),
+    [],
+  );
+
+  check(
+    'אין פעולה שמעדכנת או מוחקת רשומת ביקורת',
+    names.filter((n) => /(approval|audit)/i.test(n) && !/^(append|list)/.test(n)),
     [],
   );
 }
@@ -104,6 +117,12 @@ function liveDriver() {
     tables,
     readTable: (name) => tables[name],
     appendRow: (name, row) => { tables[name].push(row); return row; },
+    updateRow: (name, key, id, patch) => {
+      const index = (tables[name] ?? []).findIndex((row) => row[key] === id);
+      if (index === -1) return undefined;
+      tables[name][index] = { ...tables[name][index], ...patch };
+      return tables[name][index];
+    },
   };
 }
 
@@ -189,8 +208,17 @@ function liveDriver() {
 
 {
   const { driver, storage } = freshRepository();
-  check('הדרייבר מכיר ארבע טבלאות', [...TABLE_NAMES], ['modules', 'allow_list', 'audit_log', 'reference']);
-  check('ארבע הטבלאות נזרעו באחסון', storage.size, 4);
+  // ארבע טבלאות המערכת של שלב 1, ושש הישויות העסקיות של מפה 2.1
+  // שנוספו במשימה 2 של שלב 3.
+  check('הדרייבר מכיר עשר טבלאות', [...TABLE_NAMES], [
+    'modules', 'allow_list', 'reference',
+    'audit_log', 'approvals',
+    'content_items', 'sites', 'sources', 'institutes', 'rights_mou',
+  ]);
+  // עשר: שלוש טבלאות הנתונים מהזריעה, ושבע שנפתחות ריקות. טבלה
+  // בלי זריעה נפתחת כרשימה ריקה, מלבד reference: מפתח חסר בה הוא
+  // E-REF-EMPTY ולא ערך ריק, ולכן היא אינה נוצרת מעצמה.
+  check('הטבלאות נזרעו באחסון', storage.size, 10);
   check(
     'כל מפתח באחסון נושא את התחילית של המערכת',
     storage.keys().filter((k) => !k.startsWith('mora-derech/')),
@@ -202,6 +230,8 @@ function liveDriver() {
   // וההוספה נראית חסומה גם כשאינה. הטענה היא שהטבלה אינה משתנה,
   // ושהשגיאה היא של השומר ולא תקלה מקרית.
   for (const table of ['modules', 'allow_list', 'reference']) {
+    // שלוש טבלאות הנתונים נזרעות ואינן נכתבות בזמן ריצה. הטבלאות
+    // העסקיות כן נכתבות, ולכן הן נבדקות בנפרד למטה.
     const before = JSON.stringify(driver.readTable(table));
     let message = '';
     try {
@@ -212,11 +242,101 @@ function liveDriver() {
     }
     check(
       `הוספת שורה ל-${table} נחסמת בידי השומר`,
-      message.includes('הוספת שורה מותרת ל-audit_log בלבד'),
+      message.includes('נזרעת ואינה נכתבת בזמן ריצה'),
       true,
     );
     check(`הטבלה ${table} לא השתנתה`, JSON.stringify(driver.readTable(table)), before);
   }
+
+  // עדכון שורה מותר בישויות העסקיות בלבד. יומן שאפשר לעדכן אינו יומן.
+  for (const table of ['audit_log', 'approvals']) {
+    let message = '';
+    try {
+      driver.updateRow(table, 'id', 'X', { note: 'שונה' });
+      message = 'לא נזרק';
+    } catch (thrown) {
+      message = thrown.message;
+    }
+    check(
+      `עדכון שורה ב-${table} נחסם`,
+      message.includes('עדכון שורה אינו מותר'),
+      true,
+    );
+  }
+}
+
+// --- הישויות העסקיות, משימה 2 בתוכנית שלב 3 ---
+
+{
+  const storage = memoryStorage();
+  const repository = createRepository(createBrowserDriver({
+    storage,
+    seed: {
+      ...seed,
+      content_items: [
+        { item_id: 'i-1', site_id: 's-1', stop_id: 'st-1', status: 'pending', source_id: 'src-1' },
+        { item_id: 'i-2', site_id: 's-1', stop_id: 'st-2', status: 'draft', source_id: 'src-2' },
+        { item_id: 'i-3', site_id: 's-2', stop_id: 'st-9', status: 'approved', source_id: 'src-3' },
+      ],
+      sites: [{ site_id: 's-1', name: 'מסלול', status: 'open' }],
+      sources: [
+        { source_id: 'src-1', name: 'מקור א' },
+        { source_id: 'src-2', name: 'מקור ב' },
+        { source_id: 'src-3', name: 'מקור של מסלול אחר' },
+      ],
+      institutes: [{ institute_id: 'inst-1', name: 'מכון' }],
+      rights_mou: [],
+    },
+  }));
+
+  check('getItem מחזיר פריט', repository.getItem('i-1').status, 'pending');
+  check('getItem על מזהה שאינו קיים מחזיר null ולא שגיאה', repository.getItem('i-9'), null);
+  check('listItems לפי מסלול', repository.listItems({ site_id: 's-1' }).map((i) => i.item_id), ['i-1', 'i-2']);
+  check('listItems לפי מצב', repository.listItems({ status: 'draft' }).map((i) => i.item_id), ['i-2']);
+  check('listItems לפי תחנה', repository.listItems({ stop_id: 'st-2' }).map((i) => i.item_id), ['i-2']);
+  check('listItems בלי סינון מחזיר הכל', repository.listItems().length, 3);
+
+  check('setStatus משנה את המצב', repository.setStatus('i-2', 'pending').status, 'pending');
+  check('והשינוי נקרא מהאחסון', repository.getItem('i-2').status, 'pending');
+  check('setStatus על פריט שאינו קיים מחזיר null', repository.setStatus('i-9', 'approved'), null);
+
+  repository.appendApproval({
+    approval_id: 'a-1', time: 't1', who: 'w', target: 'i-1',
+    action: 'approve', from_status: 'pending', to_status: 'approved', note: '',
+  });
+  repository.appendApproval({
+    approval_id: 'a-2', time: 't2', who: 'w', target: 'i-2',
+    action: 'submit', from_status: 'draft', to_status: 'pending', note: '',
+  });
+
+  check('listApprovals מחזיר את שתי הרשומות', repository.listApprovals().length, 2);
+  check('סינון לפי target', repository.listApprovals({ target: 'i-1' }).map((r) => r.approval_id), ['a-1']);
+  checkThrows('רשומת APPROVALS בלי מזהה נדחית', () => repository.appendApproval({ target: 'i-1' }));
+  checkThrows('רשומת APPROVALS שאינה אובייקט נדחית', () => repository.appendApproval('a'));
+
+  check('getSite בלי מזהה מחזיר את המסלול היחיד', repository.getSite().site_id, 's-1');
+  check('getSite על מזהה שאינו קיים מחזיר null', repository.getSite('s-9'), null);
+
+  check('listSources מחזיר הכל', repository.listSources().length, 3);
+  check(
+    'listSources לפי מסלול מחזיר את המקורות שהפריטים מפנים אליהם',
+    repository.listSources({ site_id: 's-1' }).map((s) => s.source_id),
+    ['src-1', 'src-2'],
+  );
+
+  check('listInstitutes', repository.listInstitutes().map((i) => i.institute_id), ['inst-1']);
+  check('listMou פותח ריק', repository.listMou(), []);
+  repository.appendMou({ mou_id: 'mou-1', institute_id: 'inst-1', scope: ['src-1'] });
+  check('appendMou ואז listMou', repository.listMou().map((m) => m.mou_id), ['mou-1']);
+  repository.appendInstitute({ institute_id: 'inst-2', name: 'מכון שני' });
+  check('appendInstitute', repository.listInstitutes().length, 2);
+  repository.appendSource({ source_id: 'src-4', name: 'מקור חדש' });
+  check('appendSource', repository.listSources().length, 4);
+
+  // אותה הגנה של שלב 1: מה שיוצא הוא העתק.
+  const items = repository.listItems();
+  items.length = 0;
+  check('שינוי במה שהוחזר אינו נוגע בנתונים', repository.listItems().length, 3);
 }
 
 // --- זריעה חוזרת אינה דורסת ---
@@ -242,6 +362,12 @@ function liveDriver() {
   const fakeCloudDriver = {
     readTable: (name) => tables[name],
     appendRow: (name, row) => { tables[name].push(row); return row; },
+    updateRow: (name, key, id, patch) => {
+      const index = (tables[name] ?? []).findIndex((row) => row[key] === id);
+      if (index === -1) return undefined;
+      tables[name][index] = { ...tables[name][index], ...patch };
+      return tables[name][index];
+    },
   };
   const repository = createRepository(fakeCloudDriver);
   repository.appendAudit({ request_id: 'req-008', phase: 'request' });
