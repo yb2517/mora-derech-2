@@ -523,3 +523,43 @@ export const SITE_REOPENING_ACTIONS = Object.freeze(['create_item', 'edit_item']
 export function siteReopensOn({ site_status: siteStatus, action } = {}) {
   return siteStatus === 'locked' && SITE_REOPENING_ACTIONS.includes(action);
 }
+
+/**
+ * מרחק בין שתי נקודות במטרים, על כדור הארץ.
+ *
+ * זהו פרימיטיב חישובי ולא חוק עסקי, והוא יושב כאן מפני ששני מקומות
+ * זקוקים בדיוק לאותו חישוב: nearestExitPoint של BE-05 (F-13 תיקון 1)
+ * ו-BL-15 של AUTO-01, שנכנס בשלב 5 עם המרחק לעוגנים ובחירת הקרוב.
+ * שני חישובי מרחק נפרדים היו נותנים שתי תשובות שונות לאותה שאלה.
+ *
+ * **BL-15 עצמו אינו כאן**: סף הדיוק, הרדיוס ושולי היציאה הם ערכים
+ * מטבלת ה-reference, וההכרעה מה לעשות איתם היא של AUTO-01 בשלב 5.
+ */
+export function distanceMeters(a, b) {
+  const R = 6371000;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * האם הנקודה בתוך גבולות המסלול.
+ *
+ * **פער 39**: usecase-f-08 צעד 3 שולח את הגבולות לטבלת ה-reference,
+ * ומפה 2.1 מעמידה אותם כשדה bounds ברשומת SITES ומסמנת [הצעה].
+ * המפה גוברת (כלל העל של CLAUDE.md), ולכן הגבולות נקראים מהמסלול.
+ * מסלול בלי bounds מחזיר null, כלומר "אין מה לבדוק", ולא false:
+ * דחיית פריט על סמך גבול שאיש לא קבע היא המצאה, ואישורו בשקט הוא
+ * הסתרה. המודול שמעליו הוא שמחליט מה לעשות עם "אין מה לבדוק".
+ */
+export function withinBounds({ bounds, lat, lng } = {}) {
+  if (!bounds) return null;
+  const { min_lat: minLat, max_lat: maxLat, min_lng: minLng, max_lng: maxLng } = bounds;
+  if (![minLat, maxLat, minLng, maxLng].every((value) => Number.isFinite(value))) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+}
