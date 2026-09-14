@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מורה הדרך 2.0</title>
+<link rel="stylesheet" href="design/tokens.css">
+<link rel="stylesheet" href="design/components/index.css">
+</head>
+<body>
+
+<header class="app-bar">
+  <h1 class="app-bar__title">מורה הדרך 2.0</h1>
+  <p class="app-bar__note">מסלול רחוב יפו, ירושלים</p>
+</header>
+
+<main class="layout" id="app"></main>
+
+<!--
+  נקודת הכניסה. מסמך הבנייה גרסה 2.2 סעיף 5, ופער 21 של שלב 1
+  בהכרעת בעלת הפרויקט: הקובץ היחיד הוא גם יעד ההרצה של decision-04
+  וגם המקום שמרכיב את המערכת, ולכן אין קובץ הרכבה נפרד.
+
+  מה הקובץ הזה עושה, ואת זה בלבד:
+    1. קורא את שלוש טבלאות הנתונים.
+    2. בונה את דרייבר האחסון, את ה-Repository ואת ה-Orchestrator.
+    3. מגיש את המסכים, ומזריק לכל אחד את שם הפונה שלו ואת ערכי
+       ה-reference שהוא צריך.
+
+  מה הוא אינו עושה: אינו מכיל לוגיקה עסקית, אינו נוגע באחסון (חוק
+  ברזל 3: רק הדרייבר), ואינו מחזיק שם פונה או ערך משתנה ככתוב בקוד.
+  שניהם נקראים מהנתונים, ולכן מסך חדש הוא שורה בטבלה (מפה 4.3).
+-->
+<script type="module">
+  import { createBrowserDriver } from './repository/driver-browser.js';
+  import { createRepository } from './repository/index.js';
+  import { createOrchestrator } from './core/orchestrator.js';
+
+  // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
+  const TABLE_SOURCES = {
+    modules: './registry/modules.json',
+    allow_list: './registry/allow-list.json',
+    reference: './data/reference.json',
+  };
+
+  // שני מצבי טעינה, ואותם נתונים בשניהם.
+  //
+  // בפיתוח הקבצים נטענים מ-Localhost (decision-04 ב2, ותוכנית שלב 1
+  // סעיף 2 דרך ב). במסירה, סקריפט האיחוד של משימה 9 מזריק את אותם
+  // נתונים כבלוקים בגוף הקובץ, מפני שדפדפן שנפתח מ-file:// חוסם
+  // טעינת קבצים. הקוד כאן אינו יודע באיזה מצב הוא רץ: הוא מעדיף
+  // בלוק בגוף הקובץ אם יש, ואם אין הוא טוען.
+  async function loadTable(name) {
+    const inline = document.querySelector(`script[type="application/json"][data-table="${name}"]`);
+    if (inline) return JSON.parse(inline.textContent);
+    const response = await fetch(TABLE_SOURCES[name]);
+    if (!response.ok) throw new Error(`הטבלה ${name} לא נטענה: ${response.status}`);
+    return response.json();
+  }
+
+  async function loadTables() {
+    const [modules, allowList, reference] = await Promise.all(
+      ['modules', 'allow_list', 'reference'].map(loadTable),
+    );
+    // צורת הזריעה של הדרייבר: הטבלה היא מה שה-Repository קורא,
+    // ולכן reference נזרעת בערכים עצמם ולא במעטפת הקובץ.
+    return { modules, allow_list: allowList, reference: reference.values };
+  }
+
+  function render(node) {
+    const app = document.getElementById('app');
+    app.replaceChildren(node);
+  }
+
+  function panel(title, body) {
+    const element = document.createElement('section');
+    element.className = 'panel';
+    const head = document.createElement('div');
+    head.className = 'panel__head';
+    const heading = document.createElement('h2');
+    heading.textContent = title;
+    head.append(heading);
+    const content = document.createElement('div');
+    content.className = 'panel__body';
+    content.append(body);
+    element.append(head, content);
+    return element;
+  }
+
+  function failure(message) {
+    const element = document.createElement('div');
+    element.className = 'message message--error';
+    element.textContent = message;
+    return element;
+  }
+
+  async function boot() {
+    const seed = await loadTables();
+    const driver = createBrowserDriver({ seed });
+    const repository = createRepository(driver);
+
+    // מפת ה-handlers של ה-Orchestrator: מזהה מודול לפונקציה.
+    // ריקה בשלב הזה. מודול ההדגמה של משימה 4 נכנס לכאן, ומודולי
+    // השירות האמיתיים מחליפים אותו בשלבים 3 ו-4.
+    const handlers = {};
+
+    const orchestrator = createOrchestrator({ repository, handlers });
+
+    // שם הפונה של מסך אינו כתוב כאן: הוא תכונה של המודול בטבלת
+    // המודולים, ולכן הוספת מסך היא שורה בנתונים (מפה 4.3, מבחן
+    // מבנה 06). מודול בלי שם פונה אינו יכול לשלוח מעטפה.
+    function callerOf(moduleId) {
+      const row = repository.getModule(moduleId);
+      if (!row || typeof row.caller !== 'string' || row.caller === '') {
+        throw new Error(`למודול ${moduleId} אין שם פונה בטבלת המודולים`);
+      }
+      return row.caller;
+    }
+
+    // ערכי ה-reference שמסך צריך, מוזרקים בזמן ההרכבה.
+    //
+    // מפה 2.4 מטילה על FE-05 לקרוא את מפתחות הסוללה ואת משפט
+    // הבטיחות, אבל מסך אינו קורא ל-Repository (doc-build-03-interfaces
+    // סעיף 5), ואין ב-4.2 פעולה שמחזירה ערכי reference. ההזרקה כאן
+    // פותרת את השניים בלי פעולה חדשה ובלי שורה חדשה ברשימת המותר:
+    // המסך מקבל ערכים, ולא גישה.
+    //
+    // ערך חסר עובר כמות שהוא, null או undefined, ואינו מומצא כאן.
+    // המסך שאינו יכול לתפקד בלעדיו הוא שמחזיר E-REF-EMPTY (מפה 4.5:
+    // "היכן נזרק: הליבה"; חוק ברזל 5).
+    function referenceFor(keys) {
+      return Object.freeze(Object.fromEntries(keys.map((key) => [key, repository.getRef(key)])));
+    }
+
+    // הגשת מסך: המסך מקבל את הכתובת האחת, את שם הפונה שלו ואת
+    // ערכיו, ואינו מקבל את ה-Repository ואינו מקבל את ה-Orchestrator.
+    function mountScreen({ moduleId, refKeys = [], create }) {
+      const host = document.createElement('div');
+      create({
+        host,
+        from: callerOf(moduleId),
+        reference: referenceFor(refKeys),
+        send: (envelope) => orchestrator.handle(envelope),
+      });
+      return host;
+    }
+
+    // שלושת משטחי המסך. FE-06 במשימה 5, FE-05 במשימה 6, ומסך
+    // הניהול המאוחד במשימה 7. עד אז הרשימה ריקה, וההרכבה מדווחת
+    // על עצמה.
+    const SCREENS = [];
+
+    if (SCREENS.length > 0) {
+      const shell = document.createElement('div');
+      shell.append(...SCREENS.map(mountScreen));
+      render(shell);
+      return;
+    }
+
+    render(panel('ההרכבה', compositionReport(repository, seed)));
+  }
+
+  // דוח ההרכבה: מה נטען ומה נרשם. אינו שולח מעטפה ואינו כותב שורה,
+  // מפני ש-audit_log הוא יומן append-only של המערכת, ובדיקה עצמית
+  // שרצה בכל טעינת דף הייתה מזהמת אותו. הפרק הזה מוחלף בהגשת
+  // המסכים במשימה 5.
+  function compositionReport(repository, seed) {
+    const rows = [
+      ['מודולים רשומים', seed.modules.modules.length],
+      ['שורות ברשימת המותר', seed.allow_list.rows.length],
+      ['מפתחות בטבלת ה-reference', Object.keys(seed.reference).length],
+      ['פונים מוכרים', repository.listCallers().length],
+      ['שורות ביומן הבקשות', repository.listAudit().length],
+    ];
+
+    const table = document.createElement('table');
+    table.className = 'table';
+    for (const [label, value] of rows) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.textContent = label;
+      const td = document.createElement('td');
+      td.textContent = String(value);
+      tr.append(th, td);
+      table.append(tr);
+    }
+
+    const note = document.createElement('p');
+    note.className = 'text-sm text-muted';
+    note.textContent = 'אין עדיין מסכים. ההרכבה עצמה נבדקת כאן, והמסכים נכנסים במשימות 5 עד 7.';
+
+    const wrapper = document.createElement('div');
+    wrapper.append(table, note);
+    return wrapper;
+  }
+
+  boot().catch((thrown) => {
+    render(failure(`ההרכבה נכשלה: ${thrown.message}`));
+  });
+</script>
+
+</body>
+</html>
