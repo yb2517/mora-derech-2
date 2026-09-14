@@ -21,23 +21,23 @@
 export const ITEM_STATUSES = Object.freeze(['draft', 'pending', 'approved', 'rejected']);
 
 /**
- * טבלת המעברים, מפה 2.2, שורה לשורה.
+ * טבלת המעברים, מפה 2.2, שורה לשורה. from_status הוא null לפריט חדש.
  *
- * from_status הוא null לפריט חדש. caller הוא עמודת "מי רשאי" שבמפה,
- * והוא **תיעוד ולא אכיפה**: מי רשאי לבקש פעולה נאכף בשורה ברשימת
- * המותר ובידי CORE-02, ושני מקומות שאוכפים את אותו דבר הם שני
- * מקומות שנפרדים זה מזה. הוא נשמר כאן כדי שהטבלה תהיה ניתנת
- * להצלבה מול המפה, וזה בדיוק מה שהבדיקה עושה.
+ * **עמודת "מי רשאי" שבמפה אינה כאן**, וזו לא השמטה. הניסיון הראשון
+ * החזיק אותה, ומבחן מבנה 06 תפס אותו מיד: שם פונה בקוד המערכת הופך
+ * שינוי שם פונה משורה בנתונים לעריכת קוד. מי רשאי לבקש פעולה נאכף
+ * בשורה ברשימת המותר ובידי CORE-02, ושם בלבד. הטבלה כאן עונה על
+ * שאלה אחרת: לאיזה מצב הפריט רשאי לעבור.
  */
 export const TRANSITIONS = Object.freeze([
-  { action: 'create_item', from_status: null, to_status: 'draft', caller: 'screen-content', requires_completeness: true },
-  { action: 'submit', from_status: 'draft', to_status: 'pending', caller: 'screen-veto', requires_completeness: true },
-  { action: 'approve', from_status: 'pending', to_status: 'approved', caller: 'screen-veto', requires_completeness: false },
-  { action: 'reject', from_status: 'pending', to_status: 'rejected', caller: 'screen-veto', requires_completeness: false },
-  { action: 'return', from_status: 'approved', to_status: 'pending', caller: 'screen-veto', requires_completeness: false },
-  { action: 'return', from_status: 'rejected', to_status: 'pending', caller: 'screen-veto', requires_completeness: false },
-  { action: 'revert', from_status: 'approved', to_status: 'draft', caller: 'BE-05', requires_completeness: false },
-  { action: 'edit_item', from_status: 'rejected', to_status: 'draft', caller: 'screen-content', requires_completeness: false },
+  { action: 'create_item', from_status: null, to_status: 'draft', requires_completeness: true },
+  { action: 'submit', from_status: 'draft', to_status: 'pending', requires_completeness: true },
+  { action: 'approve', from_status: 'pending', to_status: 'approved', requires_completeness: false },
+  { action: 'reject', from_status: 'pending', to_status: 'rejected', requires_completeness: false },
+  { action: 'return', from_status: 'approved', to_status: 'pending', requires_completeness: false },
+  { action: 'return', from_status: 'rejected', to_status: 'pending', requires_completeness: false },
+  { action: 'revert', from_status: 'approved', to_status: 'draft', requires_completeness: false },
+  { action: 'edit_item', from_status: 'rejected', to_status: 'draft', requires_completeness: false },
 ].map((row) => Object.freeze(row)));
 
 /**

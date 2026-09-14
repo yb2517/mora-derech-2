@@ -21,22 +21,29 @@ const { check, report } = createChecker('הליבה: החוקים העסקיים
 // בעצמה, ולכן שינוי בקוד בלי שינוי במפה נתפס, וזה כל תפקידה.
 
 const FROM_MAP = [
-  ['create_item', null, 'draft', 'screen-content'],
-  ['submit', 'draft', 'pending', 'screen-veto'],
-  ['approve', 'pending', 'approved', 'screen-veto'],
-  ['reject', 'pending', 'rejected', 'screen-veto'],
-  ['return', 'approved', 'pending', 'screen-veto'],
-  ['return', 'rejected', 'pending', 'screen-veto'],
-  ['revert', 'approved', 'draft', 'BE-05'],
-  ['edit_item', 'rejected', 'draft', 'screen-content'],
+  ['create_item', null, 'draft'],
+  ['submit', 'draft', 'pending'],
+  ['approve', 'pending', 'approved'],
+  ['reject', 'pending', 'rejected'],
+  ['return', 'approved', 'pending'],
+  ['return', 'rejected', 'pending'],
+  ['revert', 'approved', 'draft'],
+  ['edit_item', 'rejected', 'draft'],
 ];
 
 check('ארבעת המצבים הקנוניים, ואין חמישי', [...ITEM_STATUSES], ['draft', 'pending', 'approved', 'rejected']);
 check('שמונה שורות בטבלה, כמו במפה 2.2', TRANSITIONS.length, FROM_MAP.length);
 check(
-  'כל שורה זהה למפה: פעולה, מצב קודם, מצב חדש, מי רשאי',
-  TRANSITIONS.map((r) => [r.action, r.from_status, r.to_status, r.caller]),
+  'כל שורה זהה למפה: פעולה, מצב קודם, מצב חדש',
+  TRANSITIONS.map((r) => [r.action, r.from_status, r.to_status]),
   FROM_MAP,
+);
+// מבחן מבנה 06 תפס את עמודת "מי רשאי" כשהיא הייתה כאן. הטענה
+// שומרת עליה בחוץ: האכיפה היא ברשימת המותר, ולא בקוד הליבה.
+check(
+  'אין שם פונה בשורות הטבלה',
+  TRANSITIONS.filter((r) => 'caller' in r),
+  [],
 );
 check(
   'כל מצב יעד הוא אחד מארבעת המצבים',
