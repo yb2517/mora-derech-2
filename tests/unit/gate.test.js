@@ -12,12 +12,19 @@ const { check, checkThrows, report } = createChecker('BE-06 gate');
 
 const NOW = '2026-09-14T12:00:00.000Z';
 
-// שני מקורות למסלול, ופריט לכל אחד: הכיסוי נמדד מול המקורות
-// שהמסלול משתמש בהם בפועל.
-function fakeRepository({ mou = [], siteStatus = 'open', enforce = false, sources = ['src-1', 'src-2'] } = {}) {
+// שני מקורות למסלול, ופריט מאושר לכל אחד: הכיסוי נמדד מול המקורות
+// שפריטי ה-approved של המסלול מפנים אליהם (הכרעה 17 בתוכנית שלב 4).
+function fakeRepository({
+  mou = [], siteStatus = 'open', enforce = false, sources = ['src-1', 'src-2'], items,
+} = {}) {
+  const rows = items ?? sources.map((sourceId, index) => ({
+    item_id: `item-${index + 1}`, site_id: 's-1', stop_id: 'stop-1',
+    source_id: sourceId, status: 'approved',
+  }));
   return {
     getRef: (key) => (key === 'enforce_gate_b' ? enforce : undefined),
     getSite: () => ({ site_id: 's-1', name: 'מסלול', status: siteStatus }),
+    listItems: () => rows.map((row) => ({ ...row })),
     listSources: () => sources.map((source_id) => ({ source_id })),
     listMou: () => mou.map((row) => ({ ...row })),
   };
@@ -79,6 +86,40 @@ const validMou = {
   check(
     'מסלול בלי מקורות אינו מייצר כיסוי',
     askGate(fakeRepository({ mou: [validMou], sources: [] })).data.coverage.m06,
+    0,
+  );
+}
+
+// --- הכרעה 17: הבסיס הוא פריטי ה-approved ---
+
+{
+  // מקור שרק פריט draft מפנה אליו אינו נדרש בכיסוי. זה מה שהכרעת
+  // בעלת הפרויקט שינתה מול שלב 3, וזה מה ש-L4 של F-08 מודד.
+  const items = [
+    { item_id: 'item-1', site_id: 's-1', stop_id: 'stop-1', source_id: 'src-1', status: 'approved' },
+    { item_id: 'item-2', site_id: 's-1', stop_id: 'stop-1', source_id: 'src-2', status: 'draft' },
+  ];
+  const response = askGate(fakeRepository({ mou: [{ ...validMou, scope: ['src-1'] }], items }));
+  check('מקור של פריט draft אינו נדרש', response.data.coverage.required, ['src-1']);
+  check('ולכן הכיסוי מלא', response.data.coverage.m06, 1);
+  check('ואין מקור לא מכוסה', response.data.coverage.uncovered, []);
+}
+
+{
+  // הצד השני: מקור של פריט approved שאף הסכם בתוקף אינו מכסה חוזר
+  // בשם, כדי ש-L4 יוכל לומר מה חסר.
+  const response = askGate(fakeRepository({ mou: [{ ...validMou, scope: ['src-1'] }] }));
+  check('מקור לא מכוסה חוזר בשמו', response.data.coverage.uncovered, ['src-2']);
+}
+
+{
+  // מסלול שכל פריטיו pending: אין מה לכסות, ולכן אין כיסוי.
+  const items = [
+    { item_id: 'item-1', site_id: 's-1', stop_id: 'stop-1', source_id: 'src-1', status: 'pending' },
+  ];
+  check(
+    'מסלול בלי פריט מאושר אינו מייצר כיסוי',
+    askGate(fakeRepository({ mou: [validMou], items })).data.coverage.m06,
     0,
   );
 }

@@ -19,7 +19,7 @@
 // בכל קריאה ואינו נשמר.
 
 import { error } from '../core/errors.js';
-import { gateB } from '../core/business-logic.js';
+import { gateB, mouCoverage } from '../core/business-logic.js';
 
 // המפתח בטבלת ה-reference, מפה 2.4. שם המפתח אינו ערך משתנה: הוא
 // שם השדה שקוראים אותו.
@@ -44,46 +44,23 @@ export function create({ repository, now = defaultNow } = {}) {
   }
 
   /**
-   * האם ההסכם בתוקף במועד הנתון.
+   * M-06 והכיסוי (usecase-f-07 צעד 14).
    *
-   * מפה 2.1 מסמנת את שם שדה התוקף [טרם נקבע, decision-02], והנתונים
-   * כותבים valid_until. הסכם בלי תאריך תוקף, או עם תאריך שאינו
-   * ניתן לקריאה, אינו נספר: היעדר ראיה לתוקף אינו ראיה לתוקף, ושער
-   * שנפתח על סמך רשומה חסרה הוא בדיוק הפגם ש-F-07 בא למנוע.
-   */
-  function inEffect(mou, at) {
-    const until = Date.parse(mou?.valid_until);
-    return Number.isNaN(until) ? false : until >= Date.parse(at);
-  }
-
-  /**
-   * M-06: מספר המכונים עם הסכם בתוקף שמכסה 100% ממקורות המסלול
-   * (usecase-f-07 צעד 14).
+   * הכלל עצמו יושב בליבה מאז משימה 2 של שלב 4, מפני ש-L4 של F-08
+   * שואל את אותה שאלה, ושתי הגדרות של אותו כלל נפרדות ביום שמישהו
+   * משנה אחת מהן. מה שנשאר כאן הוא מה שמפה 3.2 מטילה על BE-06:
+   * לקרוא את הנתונים ולהחזיר את התשובה.
    *
-   * הכיסוי נמדד מול המקורות שפריטי המסלול מפנים אליהם בפועל, ולא
-   * מול כלל המקורות במערכת: הסכם צריך לכסות את המסלול הזה.
-   * מסלול בלי מקורות כלל אינו מייצר כיסוי, מפני ש"כיסוי של כלום"
-   * אינו הסכם שמישהו חתם עליו.
+   * **שינוי מול שלב 3**: הבסיס צומצם למקורות שפריטי ה-approved של
+   * המסלול מפנים אליהם, במקום כל פריטי המסלול (הכרעה 17 בתוכנית
+   * שלב 4, בהכרעת בעלת הפרויקט 14.09.2026, שסוגרת את חוב טכני 14).
    */
   function coverage(siteId, at) {
-    const required = repository.listSources({ site_id: siteId }).map((row) => row.source_id);
-    const inEffectMou = repository.listMou().filter((mou) => inEffect(mou, at));
-
-    const covering = required.length === 0
-      ? []
-      : inEffectMou.filter((mou) => {
-        const scope = new Set(mou.scope ?? []);
-        return required.every((sourceId) => scope.has(sourceId));
-      });
-
-    const institutes = [...new Set(covering.map((mou) => mou.institute_id))];
-
-    return {
-      required,
-      institutes,
-      m06: institutes.length,
-      mou_in_effect: inEffectMou.length,
-    };
+    return mouCoverage({
+      items: repository.listItems({ site_id: siteId }),
+      mou: repository.listMou(),
+      at,
+    });
   }
 
   const ACTIONS = {
