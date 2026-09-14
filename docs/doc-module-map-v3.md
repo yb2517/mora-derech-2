@@ -1,6 +1,6 @@
 # מפת המודולים: מורה הדרך 2.0, מסלול יפו
 
-סטטוס: גרסה 3.3, מאושרת 14.09.2026. גרסה 1 אושרה 11.09.2026; גרסה 2 (DESIGN-01 והמיפוי שורה לשורה) לא הובאה לאישור בנפרד ונבלעה בגרסה 3, שאושרה 12.09.2026.
+סטטוס: גרסה 3.4, מאושרת 14.09.2026. גרסה 1 אושרה 11.09.2026; גרסה 2 (DESIGN-01 והמיפוי שורה לשורה) לא הובאה לאישור בנפרד ונבלעה בגרסה 3, שאושרה 12.09.2026.
 תאריך: 12.09.2026
 מה נוסף בגרסה 3: ההכרעות של doc-decision-round-01 שאושרו 12.09; דרישת הבטיחות F-13 ותיקון הסוללה; ישות EXIT_POINTS; רישום דחיית F-14 מ-v1.
 נוצר לפי: template-module-map.md (פריט 47, גרסה 1.2), חלק ב, ולפי guide-use-case-creation.md (פריט 55) חלק ד: קיבוץ צעדי מקרי השימוש לפי סוג הרכיב. זהו מסמך האב של הארכיטקטורה. שלושת מסמכי הבן (אוטומציה, סוכנים בקוד, ממשקים) נגזרים ממנו.
@@ -31,7 +31,7 @@
 | SOURCES (המקור) | source_id, name, file, publisher | אין מצב | נכתב ב-create של screen-content דרך BE-05 |
 | INSTITUTES (המכון) | institute_id, name | אין מצב | screen-owner דרך BE-05 |
 | RIGHTS_MOU (ההסכם) | mou_id, institute_id, scope (רשימת source_id), signed_at, valid_until [שם השדה טרם נקבע, decision-02], covers_content_contribution (הוכרע 12.09: ההסכם מכסה אישור וגם תרומת תוכן) | בתוקף, פג | screen-owner דרך BE-05 (usecase-f-07 צעד 12) |
-| APPROVALS (יומן ההחלטות) | approval_id, time, who, target (item_id או site_id), action, from_status, to_status, note | append-only, אין מצב | נכתב בלבד, בידי BE-05, בכל מעבר מצב. אין עריכה ואין מחיקה |
+| APPROVALS (יומן ההחלטות) | approval_id, time, who (ב-v1: שם הפונה מהמעטפה, אחרי אימות מול רשימת המותר, ולא זהות אדם), target (item_id או site_id), action, from_status, to_status, note | append-only, אין מצב | נכתב בלבד, בידי BE-05, בכל מעבר מצב. אין עריכה ואין מחיקה |
 | ADMIN_USERS (המשתמשים המנהליים) | user_id, role (researcher, owner, content), institute_id | אין מצב | screen-owner. אימות זהות: אין ב-v1 (הוכרע 12.09), סיסמה לפני שהפאנל יוצא למכון |
 | SESSIONS (הסשן) | session_id (אקראי), site_id, started_at, ended_at, completed, last_stop_id, flags (no_location, no_hebrew_voice, simulator, partial_log, low_battery_warned, ended_on_battery, ended_on_battery_block), previous_session_id | open, closed | open ל-closed: BE-07, בפעולת session_end של screen-traveler, בהגעה לנקודה האחרונה, או ב-close_stale של system-timer |
 | EXIT_POINTS (נקודת יציאה) | exit_id, site_id, lat, lng, name, type | אין מצב | screen-content, באימות השטח. נדרשת מנוהל הסוללה (F-13 תיקון 1). ROUTE_PATH ו-route_type נדחו מ-v1 עם F-14 |
@@ -55,6 +55,8 @@
 | rejected | draft | screen-content | edit_item | נרשם |
 
 כל מעבר אחר נדחה ב-E-TRANSITION-DENIED ונרשם.
+
+עמודת "מי רשאי (from)" היא תיעוד, ואינה המקום שבו ההרשאה נאכפת. סעיף 4.3 קובע "הוספת מסך או פונה: שורה, לא קוד", ומבחן מבנה 06 אוכף שאין שם פונה בקוד המערכת, ולכן שם הפונה יושב ברשימת המותר בלבד, ו-CORE-02 בודק אותו לפני שהבקשה מגיעה ללוגיקה (BL-11 צעד 3). הטבלה שבליבה נושאת את המצבים, את הפעולה, ואת ההבחנה שרשימת המותר אינה יכולה לבטא: מעבר שמגיע במעטפה מול מעבר שהמערכת מבצעת מעצמה, כמו revert. לכל שורה כאן שנושאת שם מסך יש שורה מקבילה ב-4.3, ובדיקת ממשקים מצליבה את השתיים כדי שלא ייפרדו.
 
 ### 2.3 Business Logic: החוקים העסקיים
 
@@ -97,6 +99,7 @@
 | relevance_threshold | 0.28 | BE-04 | doc-build-01 |
 | answer_max_words | 60 | BE-04 | doc-build-01 |
 | question_max_chars | 200 | BE-04 | הוכרע 12.09 |
+| note_max_chars | 200 | FE-06, BE-05 | usecase-f-07 צעד 6 |
 | fallback_text | הנוסח הנעול בבנייה 01 [היום בקוד, צעד הבא: לכאן] | BE-04 | doc-build-01 |
 | unavailable_text | [טרם נקבע] | BE-03 | usecase-f-05 זרימה ד |
 | voice_id, voice_rate | [היום בקוד, צעד הבא: לכאן] | CONN-02 | usecase-f-02 |
@@ -118,6 +121,8 @@
 ## 3. המודולים
 
 מצב הביצוע לפי שלושת המבחנים בתבנית. ב-v1 אין Agent ואין רשת סוכנים: כל דרגות המימוש "קוד רגיל".
+
+"חלקי" בעמודת מצב הבנייה הוא מצב מוכר ולא זמני בלבד: מודול נבנה בהיקף השלב שלו, ומממש את הפעולות של מקרה השימוש שהשלב מביא. פעולה של אותו מודול שטרם נבנתה אינה מקבלת תשובה ואינה מדמה אחת: היא חוזרת כ-E-MODULE-FAILED דרך CORE-02, נרשמת ב-audit_log, ונראית על המסך. מודול שיענה תשובה מנומסת על פעולה שלא נבנתה יסתיר את מה שחסר.
 
 ### 3.1 הליבה
 
@@ -182,7 +187,8 @@
 | BE-05 | listInstitutes | F-07 צעד 12 | screen-owner |
 | BE-05 | listMou | F-07 צעד 12 | screen-owner |
 | BE-05 | listExitPoints | F-13 תיקון 1 | screen-content |
-| BE-06 | get_gate, get_lock_readiness | F-07 צעד 10, F-08 צעד 9 | screen-veto, screen-owner, screen-traveler (get_gate) |
+| BE-06 | get_gate | F-07 צעד 10 | screen-veto, screen-traveler |
+| BE-06 | get_lock_readiness | F-08 צעד 9 | screen-owner |
 | BE-06 | set_enforce | F-07 זרימה ו | screen-owner |
 | BE-04 | retrieve | F-05 צעד 1 | module-dialogue |
 | BE-03 | ask | F-04 צעד 3 | screen-traveler |
@@ -217,7 +223,7 @@
 | E-ALLOW-DENIED | אין שורה ברשימת המותר לצירוף | CORE-02 |
 | E-ENVELOPE-INVALID | שדה חובה חסר או payload לא תקין | CORE-01 מזהה, CORE-02 מחזיר |
 | E-AUDIT-WRITE-FAILED | לא ניתן לרשום את הבקשה; אינה מנותבת | CORE-02 |
-| E-TRANSITION-DENIED | מעבר מצב שאינו בטבלה 2.2 | BE-05 |
+| E-TRANSITION-DENIED | מעבר מצב שאינו בטבלה 2.2, ובכלל זה בקשת מעבר על פריט שאינו קיים: אין לו מצב נוכחי, ולכן אין לו שורה בטבלה | BE-05 |
 | E-ITEM-INCOMPLETE | שדה חסר ביצירה או בעריכה; error.data מכיל את שם השדה | BE-05 |
 | E-ANCHOR-OUT-OF-BOUNDS | קואורדינטות מחוץ לגבולות המסלול | BE-05 |
 | E-APPROVAL-WRITE-FAILED | רשומת APPROVALS לא נכתבה; המעבר בוטל | BE-05 |
@@ -355,6 +361,8 @@ doc-module-feature-breakdown.md (31.08.2026, 19 מודולים) קדם לתבנ�
 **הצעת היעילות מסעיף 7 במפה הקודמת** (תשובות מיוצרות מראש): התייתרה. בלי מודל שפה בזמן ריצה, התשובה היא ממילא ציטוט מפריט מאושר.
 
 ## 10. יומן גרסאות
+
+גרסה 3.4, 14.09.2026: חמישה פערים שדוח שלב 3 החזיר, בהכרעת בעלת הפרויקט. 2.1: שורת APPROVALS אומרת מה נרשם בשדה who ב-v1 (פער 32). 2.2: נוספה הערה שקובעת ששם הפונה נאכף ברשימת המותר ולא בטבלה שבליבה, ושהטבלה מבחינה בין מעבר שמגיע במעטפה למעבר אוטומטי (פער 36). 2.4: נוסף המפתח note_max_chars בערך 200 (פער 38). 3: נוספה הערה שמגדירה מודול שנבנה בהיקף שלב, ופעולה שטרם נבנתה שחוזרת כ-E-MODULE-FAILED (פער 33). 4.2: שורת BE-06 פוצלה לשתי שורות, כדי ליישר את עמודת הפונה ל-4.4 (פער 35). 4.5: שורת E-TRANSITION-DENIED חודדה לכלול בקשת מעבר על פריט שאינו קיים, והרשימה נשארה 23 קודים (פער 37). שום דבר שאושר בגרסה 3.3 לא בוטל.
 
 גרסה 3.3, 14.09.2026: פער 31 שנפתח במשימה 6 של שלב 2, בהכרעת בעלת הפרויקט. 2.4: נוסף המפתח privacy_opening_text בקורא FE-05. doc-build-03-interfaces סעיף 2.2 מחייב משפט פרטיות בתחילת הסשן ו-PRD סעיף 25 קובע את תוכנו, ולא היה לו מפתח בטבלה. הנוסח עצמו ממתין למילת אישור, ולכן הערך ריק והמסך מחזיר E-REF-EMPTY עם שם המפתח ואינו ממציא נוסח למשפחה. שום דבר שאושר בגרסה 3.2 לא בוטל.
 

@@ -18,6 +18,9 @@ const KEYS_IN_MAP_2_4 = [
   'geofence_radius_m', 'exit_margin_m', 'accuracy_threshold_m',
   'location_sample_interval_s', 'delivery_gap_s', 'pushed_item_max_words',
   'relevance_threshold', 'answer_max_words', 'question_max_chars',
+  // מפה גרסה 3.4, פער 38: לאורך ההערה של usecase-f-07 צעד 6 לא היה
+  // מפתח, ו-BL-12 אוסר ערך משתנה בקוד.
+  'note_max_chars',
   'fallback_text', 'unavailable_text', 'voice_id', 'voice_rate',
   'stale_session_minutes', 'interaction_types',
   'm01_threshold', 'm02_threshold', 'sample_min', 'sample_max',
@@ -52,6 +55,7 @@ const DECIDED_IN_MAP = {
   relevance_threshold: 0.28,
   answer_max_words: 60,
   question_max_chars: 200,
+  note_max_chars: 200,
   stale_session_minutes: 60,
   m01_threshold: 3,
   m02_threshold: 0.70,
@@ -69,9 +73,9 @@ const EXPECTED_EMPTY = ['voice_id', 'voice_rate', 'privacy_opening_text', 'model
 
 // --- המפתחות מול 2.4 ---
 
-check('2.4 מונה עשרים ותשעה מפתחות', KEYS_IN_MAP_2_4.length, 29);
+check('2.4 מונה שלושים מפתחות', KEYS_IN_MAP_2_4.length, 30);
 check('מפתח אחד נוסף בהכרעה', KEYS_ADDED_BY_DECISION.length, 1);
-check('הטבלה מונה שלושים מפתחות', Object.keys(values).length, 30);
+check('הטבלה מונה שלושים ואחד מפתחות', Object.keys(values).length, 31);
 check('המפתחות והסדר כמצופה', Object.keys(values), EXPECTED_ORDER);
 
 check(
