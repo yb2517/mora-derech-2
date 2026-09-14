@@ -1,0 +1,89 @@
+/* DESIGN-01: ערכת העיצוב. מפה 3.3 שורת DESIGN-01, משימה 2 בתוכנית שלב 2.
+ *
+ * זהו הקובץ היחיד בפרויקט שמגדיר ערך עיצוב. כל שאר קובצי העיצוב
+ * והמסכים קוראים מכאן דרך var(), ולכן החלפת ערכת עיצוב היא החלפת
+ * הקובץ הזה בלבד. זו בדיקת הקבלה של השלב לפי מפה 7 ומסמך הבנייה
+ * סעיף 6: "מחליפים ערכת עיצוב: אף מסך לא משתנה".
+ *
+ * [הצעה] הפלטה נגזרת מאב הטיפוס של בנייה 02, שאושר 03.09.2026, כדי
+ * לשמור רציפות חזותית. אף מסמך מאושר אינו קובע פלטה, ולכן הערכים
+ * כאן הם הצעה שמופיעה בדוח השלב, ולא נגזרת ממסמך.
+ *
+ * הערה למי שעורך: מבחן מבנה 05 אוסר על הופעת ערך מטבלת ה-reference
+ * בקובץ קוד. לכן אין כאן, ולא יהיו, המספרים של הטבלה כערך עצמאי.
+ * שינוי ערך כאן מריץ את המבחן, ולא את העין.
+ */
+
+:root {
+  /* דיו וניירות */
+  --color-ink: #1f2a44;
+  --color-ink-soft: #3a4766;
+  --color-page: #edeff3;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #faf8f3;
+
+  /* טקסט */
+  --color-text: #1b1f2a;
+  --color-text-muted: #5c6478;
+  --color-text-inverse: #ffffff;
+
+  /* קווים */
+  --color-line: #d8cfbf;
+  --color-line-strong: #b9ad98;
+  --color-line-faint: #eee9df;
+
+  /* ארבעת מצבי הפריט, לפי מפה 2.2. שם המצב באנגלית הוא הקנוני */
+  --color-approved: #4f6b3a;
+  --color-approved-bg: #e9f0e2;
+  --color-rejected: #9b3b2e;
+  --color-rejected-bg: #f5e5e1;
+  --color-pending: #b07a1a;
+  --color-pending-bg: #fbf0da;
+  --color-draft: #5c6478;
+  --color-draft-bg: #e6e8ee;
+
+  /* מיקוד. נגישות מקלדת, UX-03 */
+  --color-focus: #2c5aa0;
+
+  /* מרווחים. סולם אחד לכל המערכת */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  /* טיפוגרפיה */
+  --font-family: "Segoe UI", "Noto Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+  --font-xs: 0.8rem;
+  --font-sm: 0.875rem;
+  --font-md: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.375rem;
+  --weight-regular: 400;
+  --weight-medium: 600;
+  --weight-bold: 700;
+  --line-tight: 1.3;
+  --line-body: 1.55;
+  --line-reading: 1.7;
+
+  /* אורך שורה לקריאה. טקסט הפריט נקרא בעיניים, לא נסרק */
+  --measure: 72ch;
+
+  /* פינות וקווים */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --border-width-focus: 3px;
+  --focus-offset: 2px;
+
+  /* הצללות */
+  --shadow-panel: 0 1px 2px rgba(31, 42, 68, 0.06);
+
+  /* תנועה. מכובד ב-prefers-reduced-motion ב-base.css */
+  --motion-fast: 120ms;
+  --motion-ease: ease-out;
+}

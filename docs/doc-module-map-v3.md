@@ -1,6 +1,6 @@
 # מפת המודולים: מורה הדרך 2.0, מסלול יפו
 
-סטטוס: טיוטה, גרסה 3, ממתינה למילת אישור של בעלת הפרויקט. גרסה 1 אושרה 11.09.2026; גרסה 2 (DESIGN-01 והמיפוי שורה לשורה) לא הובאה לאישור בנפרד ונבלעה כאן.
+סטטוס: גרסה 3.3, מאושרת 14.09.2026. גרסה 1 אושרה 11.09.2026; גרסה 2 (DESIGN-01 והמיפוי שורה לשורה) לא הובאה לאישור בנפרד ונבלעה בגרסה 3, שאושרה 12.09.2026.
 תאריך: 12.09.2026
 מה נוסף בגרסה 3: ההכרעות של doc-decision-round-01 שאושרו 12.09; דרישת הבטיחות F-13 ותיקון הסוללה; ישות EXIT_POINTS; רישום דחיית F-14 מ-v1.
 נוצר לפי: template-module-map.md (פריט 47, גרסה 1.2), חלק ב, ולפי guide-use-case-creation.md (פריט 55) חלק ד: קיבוץ צעדי מקרי השימוש לפי סוג הרכיב. זהו מסמך האב של הארכיטקטורה. שלושת מסמכי הבן (אוטומציה, סוכנים בקוד, ממשקים) נגזרים ממנו.
@@ -112,6 +112,7 @@
 | battery_resume_percent | 20 | FE-05 | F-13 תיקון 1 |
 | battery_block_text | תבנית: נקודת ציון, מרחק, כיוון | FE-05 | F-13 תיקון 1 |
 | safety_opening_text | משפט הבטיחות בתחילת הסשן | FE-05 | F-13 |
+| privacy_opening_text | [טרם נקבע] | FE-05 | PRD סעיף 25; פער 31, הוכרע 14.09.2026 |
 | model_tier | אין (v1 בלי AI) | GW-01 | decision-01 |
 
 ## 3. המודולים
@@ -131,7 +132,7 @@
 
 | המזהה | המודול | האחריות האחת | מצב הביצוע | הדרישות | קורא | כותב | נתונים פרטיים | מצב הבנייה |
 |---|---|---|---|---|---|---|---|---|
-| BE-05 | Content Governance | מעברי מצב של פריט ומסלול, שלמות פריט, נעילה, רישום הסכמים, מקורות ונקודות יציאה | קוד רגיל | F-07, F-08, F-06, F-13 | CONTENT_ITEMS, SITES, GEO_ANCHORS, SOURCES, RIGHTS_MOU, EXIT_POINTS | כל אלה, ו-APPROVALS | אין | חלקי: מעברי פריט נבנו; נעילה, עוגנים, הסכמים לא |
+| BE-05 | Content Governance | מעברי מצב של פריט ומסלול, שלמות פריט, נעילה, רישום הסכמים, מקורות ונקודות יציאה, וקריאת הישויות האלה בידי מסכי הממשל | קוד רגיל | F-07, F-08, F-06, F-13 | CONTENT_ITEMS, SITES, GEO_ANCHORS, SOURCES, RIGHTS_MOU, EXIT_POINTS | כל אלה, ו-APPROVALS | אין | חלקי: מעברי פריט נבנו; נעילה, עוגנים, הסכמים לא |
 | BE-06 | Gate Enforcement | חישוב M-06, מצב שער B, טבלת המוכנות לנעילה | קוד רגיל | F-07, F-08 | SITES, CONTENT_ITEMS, GEO_ANCHORS, RIGHTS_MOU, reference | אין | אין | חלקי: תצוגה נבנתה, M-06 קבוע בקוד |
 | BE-04 | Retrieval | מאגר מועמדים לפי מפתח, דירוג, סף, הרכבת תשובה או הימנעות | קוד רגיל | F-05 | CONTENT_ITEMS, SITES, RIGHTS_MOU, reference | אין (שולח log ל-BE-07) | מנוע הדירוג הלקסיקלי, נשלף | נבנה (בתוך הקובץ) |
 | BE-03 | Dialogue | קליטת שאלה, הקשר מיקום, קריאה לשליפה, השהיית תוכן נדחף, הרכבה להשמעה | קוד רגיל | F-04 | זיכרון קצר טווח של הסשן | אין (שולח log) | מצב השאלה הפעילה | חלקי: קיים בקובץ בלי הפרדה |
@@ -173,6 +174,14 @@
 | BE-05 | lock_site | F-08 צעד 10 | screen-owner |
 | BE-05 | listApprovedByStop | F-01 ו-F-03 צעד 5 | module-delivery |
 | BE-05 | nearestExitPoint | F-13 תיקון 1 | screen-traveler |
+| BE-05 | listItems | F-07 צעד 1, F-08 צעד 1 | screen-veto, screen-content |
+| BE-05 | getItem | F-07 צעד 5, F-08 צעד 5 | screen-veto, screen-content |
+| BE-05 | listApprovals | F-07 צעד 11 | screen-veto |
+| BE-05 | getSite | F-08 צעדים 1, 9 | screen-content, screen-owner |
+| BE-05 | listSources | F-08 צעד 1 | screen-content, screen-owner |
+| BE-05 | listInstitutes | F-07 צעד 12 | screen-owner |
+| BE-05 | listMou | F-07 צעד 12 | screen-owner |
+| BE-05 | listExitPoints | F-13 תיקון 1 | screen-content |
 | BE-06 | get_gate, get_lock_readiness | F-07 צעד 10, F-08 צעד 9 | screen-veto, screen-owner, screen-traveler (get_gate) |
 | BE-06 | set_enforce | F-07 זרימה ו | screen-owner |
 | BE-04 | retrieve | F-05 צעד 1 | module-dialogue |
@@ -192,10 +201,10 @@
 
 | המסך | הפעולות שלו ואותן בלבד |
 |---|---|
-| screen-veto | submit, approve, reject, return, get_gate |
+| screen-veto | submit, approve, reject, return, get_gate, listItems, getItem, listApprovals |
 | screen-traveler | session_start, session_end, ask, log (attempt_failed, replay), get_gate, nearestExitPoint |
-| screen-content | create_item, edit_item, verify_anchor, register_source, register_exit_point |
-| screen-owner | register_mou, register_institute, set_enforce, get_lock_readiness, lock_site, compute_metrics, export |
+| screen-content | create_item, edit_item, verify_anchor, register_source, register_exit_point, listItems, getItem, getSite, listSources, listExitPoints |
+| screen-owner | register_mou, register_institute, set_enforce, get_lock_readiness, lock_site, compute_metrics, export, getSite, listSources, listInstitutes, listMou |
 
 ### 4.5 קודי השגיאה, רשימה סגורה
 
@@ -346,6 +355,10 @@ doc-module-feature-breakdown.md (31.08.2026, 19 מודולים) קדם לתבנ�
 **הצעת היעילות מסעיף 7 במפה הקודמת** (תשובות מיוצרות מראש): התייתרה. בלי מודל שפה בזמן ריצה, התשובה היא ממילא ציטוט מפריט מאושר.
 
 ## 10. יומן גרסאות
+
+גרסה 3.3, 14.09.2026: פער 31 שנפתח במשימה 6 של שלב 2, בהכרעת בעלת הפרויקט. 2.4: נוסף המפתח privacy_opening_text בקורא FE-05. doc-build-03-interfaces סעיף 2.2 מחייב משפט פרטיות בתחילת הסשן ו-PRD סעיף 25 קובע את תוכנו, ולא היה לו מפתח בטבלה. הנוסח עצמו ממתין למילת אישור, ולכן הערך ריק והמסך מחזיר E-REF-EMPTY עם שם המפתח ואינו ממציא נוסח למשפחה. שום דבר שאושר בגרסה 3.2 לא בוטל.
+
+גרסה 3.2, 14.09.2026: פער 30 שנפתח במשימה 4 של שלב 2, בהכרעת בעלת הפרויקט (דרך א). 4.2: נוספו שמונה פעולות קריאה ל-BE-05, listItems, getItem, listApprovals, getSite, listSources, listInstitutes, listMou ו-listExitPoints, מפני שלאף מסך לא הייתה דרך לבקש את התוכן שהוא נדרש להציג. 4.4: שורות screen-veto, screen-content ו-screen-owner עודכנו בהתאם; שורת screen-traveler לא השתנתה. 3.2: האחריות של BE-05 נוסחה כך שתכלול את קריאת הישויות שהוא הבעלים שלהן, כפי ש-listApprovedByStop כבר עשתה. קריאה שאינה מוצאת דבר מחזירה רשימה ריקה או null עם ok, ולא קוד שגיאה: הרשימה הסגורה של 4.5 נשארת סגורה. שום דבר שאושר בגרסה 3.1 לא בוטל.
 
 גרסה 3.1, 14.09.2026: נקלטו שמונה פערים שדוח שלב 1 החזיר, בהכרעת בעלת הפרויקט. 4.1: ערכי lang בגרסה 1. 3.3: שם הפונה של AUTO-01 יושר ל-module-geofence. 4.5: עמודת היכן נזרק חודדה לשני קודי הליבה, שלוש שורות נוקבות ב-error.data במקום ב-data, ונוסף קוד עשרים ושלושה, E-MODULE-FAILED, כדי שמודול שאינו מגיב יחזיר הודעה ולא קריסה. 2.4: נוסף הסוג השמיני abstained ל-interaction_types, ונוסף המפתח interaction_type_senders לאכיפת BL-17. 4.2: נוספה השורה module-retrieval, BE-07, log, ששורת 3.2 חייבה ולא הייתה. שום דבר שאושר בגרסה 3 לא בוטל.
 

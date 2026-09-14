@@ -1,0 +1,54 @@
+/* DESIGN-01: תגית המצב. ארבעת מצבי הפריט של מפה 2.2, ומצב השער.
+ *
+ * שם המחלקה הוא שם המצב הקנוני באנגלית, כדי שהמסך יוכל להרכיב את
+ * שם המחלקה מהמצב שחזר במעטפה בלי טבלת תרגום משלו.
+ */
+
+.status {
+  display: inline-block;
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.status--approved { background: var(--color-approved-bg); color: var(--color-approved); }
+.status--rejected { background: var(--color-rejected-bg); color: var(--color-rejected); }
+.status--pending { background: var(--color-pending-bg); color: var(--color-pending); }
+.status--draft { background: var(--color-draft-bg); color: var(--color-draft); }
+
+/* נקודת מצב לצד שורה ברשימה. משלימה את התגית ואינה מחליפה אותה */
+.status-dot {
+  display: inline-block;
+  width: var(--space-xs);
+  height: var(--space-xs);
+  border-radius: 50%;
+}
+
+.status-dot--approved { background: var(--color-approved); }
+.status-dot--rejected { background: var(--color-rejected); }
+.status-dot--pending { background: var(--color-pending); }
+.status-dot--draft { background: var(--color-draft); }
+
+/* פס השערים: שער B ואז שער A */
+.gate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-ink-soft);
+  color: var(--color-text-inverse);
+}
+
+.gate__lock {
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--color-rejected-bg);
+  color: var(--color-rejected);
+  font-size: var(--font-sm);
+}
+
+.gate__lock--open { background: var(--color-approved-bg); color: var(--color-approved); }

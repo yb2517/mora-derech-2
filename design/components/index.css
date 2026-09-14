@@ -1,0 +1,15 @@
+/* DESIGN-01: נקודת הכניסה של ערכת העיצוב.
+ *
+ * מסך טוען את הקובץ הזה ואת tokens.css, ואינו טוען קובץ עיצוב אחר
+ * ואינו מגדיר עיצוב משלו (מפה 3.3 שורת DESIGN-01).
+ *
+ * הסדר קובע: base מניח את ברירות המחדל, והרכיבים מעליו.
+ */
+
+@import "./base.css";
+@import "./panel.css";
+@import "./button.css";
+@import "./field.css";
+@import "./status.css";
+@import "./message.css";
+@import "./table.css";

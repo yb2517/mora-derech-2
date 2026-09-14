@@ -1,0 +1,55 @@
+/* DESIGN-01: הכפתור. שלוש דרגות בלבד, כדי שהמסך לא ימציא רביעית. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-xs) var(--space-md);
+  border: var(--border-width) solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.btn:hover:not(:disabled) { background: var(--color-surface-sunken); }
+
+/* הפעולה הראשית של המסך. אחת לכל מסך */
+.btn--primary {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-text-inverse);
+}
+
+.btn--primary:hover:not(:disabled) { background: var(--color-ink-soft); }
+
+/* אישור ודחייה, בצבע המצב שאליו הם מעבירים (מפה 2.2) */
+.btn--approve {
+  background: var(--color-approved);
+  border-color: var(--color-approved);
+  color: var(--color-text-inverse);
+}
+
+.btn--reject {
+  background: var(--color-surface);
+  border-color: var(--color-rejected);
+  color: var(--color-rejected);
+}
+
+/* כפתור המצב הנוכחי מנוטרל, לפי doc-build-03-interfaces 2.1 */
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* כפתור השאלה במסך המטייל. גדול, כי הוא נלחץ בהליכה */
+.btn--touch {
+  padding: var(--space-md) var(--space-xl);
+  font-size: var(--font-lg);
+  border-radius: var(--radius-md);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}

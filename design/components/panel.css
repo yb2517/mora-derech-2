@@ -1,0 +1,74 @@
+/* DESIGN-01: הפאנל. המכולה שכל מסך בנוי ממנה. */
+
+.panel {
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+}
+
+.panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: var(--border-width) solid var(--color-line);
+}
+
+.panel__body { padding: var(--space-md); }
+
+.panel__body--sunken { background: var(--color-surface-sunken); }
+
+.panel__foot {
+  padding: var(--space-sm) var(--space-md);
+  border-top: var(--border-width) solid var(--color-line);
+}
+
+/* פס הכותרת של המערכת, משותף לכל המסכים */
+.app-bar {
+  background: var(--color-ink);
+  color: var(--color-text-inverse);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.app-bar__title { font-size: var(--font-xl); }
+.app-bar__note { color: var(--color-page); font-size: var(--font-sm); }
+
+/* פריסת המסך: עמודה ראשית ועמודת צד שנערמת במסך צר */
+.layout {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: var(--space-lg);
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.layout--wide { max-width: none; }
+
+.layout--split { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+
+@media (max-width: 52rem) {
+  .layout--split { grid-template-columns: 1fr; }
+}
+
+/* ציטוט טקסט המקור, בפאנל הווטו ובמסך התוכן */
+.quote {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-inline-start: var(--border-width-focus) solid var(--color-line-strong);
+  max-width: var(--measure);
+  line-height: var(--line-reading);
+}
+
+/* ספירות לצד כותרת הפאנל, למשל ספירת הפריטים לפי מצב. יושבות בתוך
+ * כותרת, ולכן הן מבטלות במפורש את משקל הכותרת */
+.panel__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  font-size: var(--font-sm);
+  font-weight: var(--weight-regular);
+}

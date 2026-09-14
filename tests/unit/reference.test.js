@@ -23,7 +23,11 @@ const KEYS_IN_MAP_2_4 = [
   'm01_threshold', 'm02_threshold', 'sample_min', 'sample_max',
   'enforce_gate_b', 'error_human_text', 'crossing_clear_seconds',
   'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
-  'battery_block_text', 'safety_opening_text', 'model_tier',
+  'battery_block_text', 'safety_opening_text',
+  // פער 31, בהכרעת בעלת הפרויקט 14.09.2026: משפט הפרטיות של
+  // PRD סעיף 25, שקורא אותו FE-05.
+  'privacy_opening_text',
+  'model_tier',
 ];
 
 // מפתח שנוסף בהכרעת בעלת הפרויקט 14.09.2026, פער 14, כדי לאכוף את
@@ -61,13 +65,13 @@ const DECIDED_IN_MAP = {
 };
 
 // מפתחות שאין להם ערך מוכרע במסמך מאושר.
-const EXPECTED_EMPTY = ['voice_id', 'voice_rate', 'model_tier'];
+const EXPECTED_EMPTY = ['voice_id', 'voice_rate', 'privacy_opening_text', 'model_tier'];
 
 // --- המפתחות מול 2.4 ---
 
-check('2.4 מונה עשרים ושמונה מפתחות', KEYS_IN_MAP_2_4.length, 28);
+check('2.4 מונה עשרים ותשעה מפתחות', KEYS_IN_MAP_2_4.length, 29);
 check('מפתח אחד נוסף בהכרעה', KEYS_ADDED_BY_DECISION.length, 1);
-check('הטבלה מונה עשרים ותשעה מפתחות', Object.keys(values).length, 29);
+check('הטבלה מונה שלושים מפתחות', Object.keys(values).length, 30);
 check('המפתחות והסדר כמצופה', Object.keys(values), EXPECTED_ORDER);
 
 check(

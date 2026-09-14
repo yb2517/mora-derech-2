@@ -19,7 +19,10 @@ const { check, report } = createChecker('מבחן מבנה 07');
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const MAP_FILE = 'docs/doc-module-map-v3.md';
 const HUMAN_TEXT_FILE = 'docs/doc-error-human-text.md';
-const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
+// dist הוא פלט האריזה של משימה 9 ולא מקור: הוא עותק משורשר של
+// אותם קבצים, והוא אינו במאגר. כלל מבני חל על המקום שאפשר
+// לערוך, ולכן הוא נסרק כאן כמו node_modules, כלומר לא.
+const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude', 'dist']);
 
 // --- הרשימה שבמפה, נקראת מהמסמך ---
 

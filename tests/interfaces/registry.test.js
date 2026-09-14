@@ -68,6 +68,9 @@ const ACTIONS_IN_MAP = {
     'create_item', 'edit_item', 'verify_anchor',
     'register_exit_point', 'lock_site',
     'listApprovedByStop', 'nearestExitPoint',
+    // שמונה פעולות הקריאה, פער 30, מפה גרסה 3.2
+    'listItems', 'getItem', 'listApprovals', 'getSite',
+    'listSources', 'listInstitutes', 'listMou', 'listExitPoints',
   ],
   'BE-06': ['get_gate', 'get_lock_readiness', 'set_enforce'],
   'BE-04': ['retrieve'],
@@ -79,7 +82,7 @@ const ACTIONS_IN_MAP = {
   ],
 };
 
-// מפה 4.2 יחד עם 4.4, צירוף אחרי צירוף. שלושים ושלוש שורות.
+// מפה 4.2 יחד עם 4.4, צירוף אחרי צירוף. ארבעים ושש שורות.
 const ROWS_IN_MAP = [
   ['screen-veto', 'BE-05', 'submit'],
   ['screen-veto', 'BE-05', 'approve'],
@@ -95,6 +98,19 @@ const ROWS_IN_MAP = [
   ['screen-owner', 'BE-05', 'lock_site'],
   ['module-delivery', 'BE-05', 'listApprovedByStop'],
   ['screen-traveler', 'BE-05', 'nearestExitPoint'],
+  // פער 30: שתים עשרה שורות הקריאה, מפה 4.2 יחד עם 4.4
+  ['screen-veto', 'BE-05', 'listItems'],
+  ['screen-content', 'BE-05', 'listItems'],
+  ['screen-veto', 'BE-05', 'getItem'],
+  ['screen-content', 'BE-05', 'getItem'],
+  ['screen-veto', 'BE-05', 'listApprovals'],
+  ['screen-content', 'BE-05', 'getSite'],
+  ['screen-owner', 'BE-05', 'getSite'],
+  ['screen-content', 'BE-05', 'listSources'],
+  ['screen-owner', 'BE-05', 'listSources'],
+  ['screen-owner', 'BE-05', 'listInstitutes'],
+  ['screen-owner', 'BE-05', 'listMou'],
+  ['screen-content', 'BE-05', 'listExitPoints'],
   ['screen-veto', 'BE-06', 'get_gate'],
   ['screen-traveler', 'BE-06', 'get_gate'],
   ['screen-owner', 'BE-06', 'get_lock_readiness'],
@@ -210,12 +226,12 @@ check(
 // ---------------------------------------------------------------
 
 check(
-  'ספירת שורות המפה שווה לספירת הצירופים ב-4.2, אחרי תוספת פער 11',
+  'ספירת שורות המפה שווה לספירת הצירופים ב-4.2, אחרי פערים 11 ו-30',
   mapRows.length,
   ROWS_IN_MAP.length,
 );
 
-check('שלושים וארבעה צירופים ב-4.2, אחרי תוספת פער 11', ROWS_IN_MAP.length, 34);
+check('ארבעים ושישה צירופים ב-4.2, אחרי פערים 11 ו-30', ROWS_IN_MAP.length, 46);
 
 const keyOf = (r) => `${r.from}|${r.module}|${r.action}`;
 const keysInFile = rows.map(keyOf).sort();
@@ -354,9 +370,9 @@ check(
 // שלב 7: שאילתה על is_demo מחזירה אפס אחרי ההסרה. כאן נבדק שההסרה
 // היא מחיקת שורות מסומנות ולא עבודת ידיים.
 check(
-  'הסרת כל המסומן בשלב 7 מחזירה 22 מודולים ו-32 שורות ייצור',
+  'הסרת כל המסומן בשלב 7 מחזירה 22 מודולים ו-44 שורות ייצור',
   [allModules.filter((m) => !m.is_demo).length, productionRows.length],
-  [22, 32],
+  [22, 44],
 );
 
 // --- סיכום ---
