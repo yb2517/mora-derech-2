@@ -34,6 +34,9 @@ const DEVICE_CODES = ['E-NO-HEBREW-VOICE', 'E-LOCATION-NOT-ALLOWED', 'E-MIC-NOT-
 
 export function create({ host, from, reference, send }) {
   const view = {
+    site: null,
+    resumed: false,
+    stop: null,
     session: null,
     question: '',
     answer: null,
@@ -74,19 +77,27 @@ export function create({ host, from, reference, send }) {
     const gate = await ask('BE-06', 'get_gate', {});
     if (!absorb(gate)) return render();
 
-    const response = await ask('BE-07', 'session_start', { site_id: gate.data?.site?.site_id });
+    view.site = gate.data?.site ?? null;
+
+    const response = await ask('BE-07', 'session_start', { site_id: view.site?.site_id });
     if (!absorb(response)) return render();
 
-    view.session = response.data ?? null;
+    // BE-07 מחזיר { session, resumed }: הסשן עצמו, ואם הוא חידוש
+    // של סשן פתוח (הכרעה 2). עד שלב 4 ההדגמה החזירה אישור בלבד.
+    view.session = response.data?.session ?? null;
+    view.resumed = response.data?.resumed === true;
     view.error = null;
     render();
   }
 
   async function end() {
-    const response = await ask('BE-07', 'session_end', {});
+    const response = await ask('BE-07', 'session_end', {
+      session_id: view.session?.session_id,
+    });
     if (!absorb(response)) return render();
     view.session = null;
     view.answer = null;
+    view.resumed = false;
     view.notices.clear();
     view.battery = BATTERY.OK;
     render();
@@ -96,12 +107,24 @@ export function create({ host, from, reference, send }) {
     const text = view.question.trim();
     if (text === '') return;
 
-    const response = await ask('BE-03', 'ask', { question: text });
+    // ההקשר נשלח עם השאלה: מזהה הסשן למען היומן, המסלול למען
+    // השליפה, והתחנה הנוכחית כשהיא ידועה. בשלב 4 אין מקור לתחנה:
+    // AUTO-01 הוא שלב 5, ולכן היא ריקה, וזה מצב תקין
+    // (usecase-f-04 זרימה ב).
+    const response = await ask('BE-03', 'ask', {
+      question: text,
+      session_id: view.session?.session_id,
+      site_id: view.session?.site_id ?? view.site?.site_id,
+      stop_id: view.stop ?? undefined,
+    });
 
     if (!response.ok) {
       // שאלה שלא נענתה היא ניסיון שנכשל, ומודול השיחה אינו יודע
       // עליה: המסך הוא הפונה המורשה לסוג הזה (מפה 4.2 שורת log).
-      await ask('BE-07', 'log', { type: 'attempt_failed' });
+      await ask('BE-07', 'log', {
+        type: 'attempt_failed',
+        session_id: view.session?.session_id,
+      });
       absorb(response);
       return render();
     }
@@ -225,7 +248,18 @@ export function create({ host, from, reference, send }) {
     }
 
     if (view.answer) {
-      children.push(createElement('blockquote', { class: 'quote' }, view.answer.answer ?? ''));
+      // BE-03 מחזיר spoken: מה שיישמע, כפי ש-BE-04 החזיר אותו
+      // ובלי ניסוח מחדש (BL-13). בשלב 5 הוא יגיע ל-CONN-02, ועד אז
+      // הוא מוצג כטקסט.
+      children.push(createElement('blockquote', { class: 'quote' }, view.answer.spoken ?? ''));
+
+      // תשובת הימנעות אינה שגיאה, והמסך אומר את זה: היא מצב תקין
+      // (usecase-f-05 זרימה א), ובלי הסימון היא נראית כמו תשובה.
+      if (view.answer.is_fallback === true) {
+        children.push(createElement('div', { class: 'message' }, 'אין מידע מאומת על השאלה הזאת במסלול.'));
+      } else if (view.answer.source_page !== null && view.answer.source_page !== undefined) {
+        children.push(createElement('span', { class: 'list__meta' }, `מקור: עמוד ${view.answer.source_page}`));
+      }
     }
 
     // כפתור השאלה ושדה ההקלדה. בשלב 5 הכפתור יפעיל גם את המיקרופון,

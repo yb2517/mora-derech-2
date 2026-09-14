@@ -271,13 +271,17 @@ check('ופאנל ההסכמים ממשיך לעבוד', text().includes('ריש
   check('הבקשה שנדחתה נרשמה עם הקוד', rejected.length, 1);
 }
 
-// --- מודול שטרם נבנה אינו מתחזה ---
+// --- הנעילה נבנתה בשלב 4, והיא מסרבת מסיבה עסקית ---
 
 {
+  // עד שלב 3 הפעולה חזרה כ-E-MODULE-FAILED, כלומר "טרם נבנתה".
+  // מרגע שהיא נבנתה, התשובה על נתוני ההדגמה היא סירוב מנומק: יש
+  // בהם פריטים שטרם הוכרעו ותחנה בלי פריט מאושר.
   const response = await first.send({
     from: callerOf('FE-08'), module: 'BE-05', action: 'lock_site', payload: {},
   });
-  check('lock_site מחזיר E-MODULE-FAILED', response.error.code, 'E-MODULE-FAILED');
+  check('lock_site מחזיר E-LOCK-REFUSED', response.error.code, 'E-LOCK-REFUSED');
+  check('והסירוב נושא את התנאים שנכשלו', response.error.data.failed, ['L1', 'L2', 'L3']);
   check('והמסלול נשאר פתוח', first.repository.getSite().status, 'open');
 }
 

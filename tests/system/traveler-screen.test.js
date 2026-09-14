@@ -17,8 +17,13 @@ const { createBrowserDriver } = await import('../../repository/driver-browser.js
 const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
-const { default: demoHandler, DEMO_MODULE_IDS } = await import('../../tools/demo-modules.js');
+const { DEMO_SEED } = await import('../../tools/demo-modules.js');
 const { create } = await import('../../screens/traveler/index.js');
+const { create: createGovernance } = await import('../../services/governance.js');
+const { create: createGate } = await import('../../services/gate.js');
+const { create: createRetrieval } = await import('../../services/retrieval.js');
+const { create: createDialogue } = await import('../../services/dialogue.js');
+const { create: createLog } = await import('../../services/log.js');
 
 const modulesFile = (await import('../../registry/modules.json', { with: { type: 'json' } })).default;
 const allowFile = (await import('../../registry/allow-list.json', { with: { type: 'json' } })).default;
@@ -34,14 +39,34 @@ function memoryStorage() {
 
 const repository = createRepository(createBrowserDriver({
   storage: memoryStorage(),
-  seed: { modules: modulesFile, allow_list: allowFile, reference: referenceFile.values },
+  seed: {
+    modules: modulesFile,
+    allow_list: allowFile,
+    reference: referenceFile.values,
+    // נתוני ההדגמה, כדי שיהיה מסלול, פריטים מאושרים ונקודת יציאה.
+    ...DEMO_SEED,
+    // הסשנים של ההדגמה אינם נזרעים כאן: הבדיקה פותחת סשן משלה,
+    // ושלושת הסשנים הסינתטיים היו הופכים אותה לתלויה בהם.
+    sessions: [],
+    interactions: [],
+  },
 }));
 
-const handlers = {};
-for (const id of DEMO_MODULE_IDS) handlers[id] = demoHandler;
-
-const orchestrator = createOrchestrator({ repository, handlers });
-const realSend = createEndpoint({ handle: (envelope) => orchestrator.handle(envelope) });
+// **משימה 11 של שלב 4: המסך מדבר עם המודולים האמיתיים.** עד שלב 3
+// הבדיקה הזאת הורכבה מול מודול ההדגמה, מפני ש-BE-03, BE-04, FE-04
+// ו-BE-07 לא היו קיימים. מודול ההדגמה אינו מופיע כאן יותר.
+let orchestrator = null;
+const realSend = createEndpoint({
+  handle: (envelope) => orchestrator.handle(envelope),
+});
+const handlers = {
+  'BE-05': createGovernance({ repository }),
+  'BE-06': createGate({ repository }),
+  'BE-04': createRetrieval({ repository, send: realSend, caller: modulesFile.modules.find((m) => m.id === 'BE-04').caller }),
+  'BE-03': createDialogue({ repository, send: realSend, caller: modulesFile.modules.find((m) => m.id === 'BE-03').caller }),
+  'BE-07': createLog({ repository }),
+};
+orchestrator = createOrchestrator({ repository, handlers });
 
 const caller = modulesFile.modules.find((m) => m.id === 'FE-05').caller;
 
@@ -95,6 +120,8 @@ byLabel('התחלת הטיול').click();
 await settle();
 
 check('הסשן נפתח דרך שתי בקשות', sent.map((e) => e.action), ['get_gate', 'session_start']);
+check('ונרשם סשן אמיתי', repository.listSessions().length, 1);
+check('והוא פתוח', repository.listSessions()[0].ended_at, null);
 check('כל בקשה יצאה בשם הפונה של המסך', [...new Set(sent.map((e) => e.from))], [caller]);
 
 // UX-01 בהליכה: סיום הסשן, ועוד כפתור השאלה כהפרה המתועדת.
@@ -107,9 +134,48 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
   byLabel('שאלה').click();
   await settle();
 
-  check('השאלה נשלחה למודול השיחה', sent.at(-1).module, 'BE-03');
-  check('השאלה נשלחה כמות שהיא', sent.at(-1).payload.question, 'מה קרה כאן');
+  // המסך שולח למודול השיחה, ומודול השיחה שולח לשליפה: שתי המעטפות
+  // האלה אינן עוברות דרך ה-send של הבדיקה, מפני שהן יוצאות מתוך
+  // המודול אל אותה כתובת אחת.
+  const asked = sent.filter((e) => e.module === 'BE-03');
+  check('השאלה נשלחה למודול השיחה', asked.at(-1).module, 'BE-03');
+  check('השאלה נשלחה כמות שהיא', asked.at(-1).payload.question, 'מה קרה כאן');
+  check('ועם הקשר הסשן והמסלול', [
+    typeof asked.at(-1).payload.session_id, typeof asked.at(-1).payload.site_id,
+  ], ['string', 'string']);
   check('התשובה מוצגת בכתב', dom.host.querySelectorAll('.quote').length, 1);
+
+  // השאלה אינה בקורפוס ההדגמה, ולכן התשובה היא הימנעות. זה מצב
+  // תקין, והמסך אומר זאת (usecase-f-05 זרימה א).
+  check('והנוסח הוא נוסח ההימנעות',
+    dom.host.querySelector('.quote').textContent, referenceFile.values.fallback_text);
+
+  // שורת initiated נכתבה בידי BE-07, ולא בידי המסך.
+  const session = repository.listSessions()[0];
+  const rows = repository.listInteractions({ session_id: session.session_id });
+  check('נרשמה שורת יזימה', rows.filter((row) => row.type === 'initiated').length, 1);
+  check('ונרשמה שורת הימנעות מהשליפה', rows.filter((row) => row.type === 'abstained').length, 1);
+}
+
+// --- שאלה שיש עליה תשובה בקורפוס ---
+
+{
+  const item = repository.listItems({ status: 'approved' })[0];
+  const word = item.text.split(' ').find((w) => w.length > 4);
+
+  dom.host.querySelector('input').type(word);
+  byLabel('שאלה').click();
+  await settle();
+
+  const quoted = dom.host.querySelector('.quote').textContent;
+  check('התשובה אינה הימנעות', quoted !== referenceFile.values.fallback_text, true);
+
+  // BL-13: התשובה היא ציטוט או קיצוץ מפריט מאושר, בלי מילה שאינה
+  // בו. איזה פריט ניצח הוא עניין של הדירוג, ולכן הטענה היא על
+  // הקבוצה: היא חייבת להיות ציטוט מאחד מהם.
+  check('והיא ציטוט מפריט מאושר',
+    repository.listItems({ status: 'approved' }).some((row) => row.text.includes(quoted)), true);
+  check('והמקור מוצג', dom.host.textContent.includes('מקור: עמוד'), true);
 }
 
 // --- שאלה שנכשלה נרשמת כניסיון שנכשל ---

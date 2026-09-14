@@ -26,8 +26,11 @@ const { createBrowserDriver } = await import('../../repository/driver-browser.js
 const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
-const { default: demoHandler, DEMO_MODULE_IDS } = await import('../../tools/demo-modules.js');
+const { DEMO_SEED } = await import('../../tools/demo-modules.js');
 const { create } = await import('../../screens/admin/index.js');
+const { create: createGovernance } = await import('../../services/governance.js');
+const { create: createGate } = await import('../../services/gate.js');
+const { create: createLog } = await import('../../services/log.js');
 
 const modulesFile = (await import('../../registry/modules.json', { with: { type: 'json' } })).default;
 const allowFile = (await import('../../registry/allow-list.json', { with: { type: 'json' } })).default;
@@ -43,11 +46,22 @@ function memoryStorage() {
 
 const repository = createRepository(createBrowserDriver({
   storage: memoryStorage(),
-  seed: { modules: modulesFile, allow_list: allowFile, reference: referenceFile.values },
+  seed: {
+    modules: modulesFile,
+    allow_list: allowFile,
+    reference: referenceFile.values,
+    ...DEMO_SEED,
+  },
 }));
 
-const handlers = {};
-for (const id of DEMO_MODULE_IDS) handlers[id] = demoHandler;
+// **משימה 11 של שלב 4, וחוב טכני 11 של דוח שלב 3**: עד כה הבדיקה
+// הזאת הורכבה מול מודול ההדגמה, מפני ש-role של צוות התוכן נשען על
+// פעולות F-08 שלא היו קיימות. מודול ההדגמה אינו מופיע כאן יותר.
+const handlers = {
+  'BE-05': createGovernance({ repository }),
+  'BE-06': createGate({ repository }),
+  'BE-07': createLog({ repository }),
+};
 
 const orchestrator = createOrchestrator({ repository, handlers });
 const send = createEndpoint({ handle: (envelope) => orchestrator.handle(envelope) });
@@ -106,8 +120,14 @@ check('רשימת הפריטים נטענה', dom.host.querySelectorAll('.list__
   const denied = await send({ from: CONTENT, module: 'BE-05', action: 'lock_site', payload: {} });
   check('lock_site בשם צוות התוכן נדחה', denied.error.code, 'E-ALLOW-DENIED');
 
+  // אותה פעולה בשם בעלת הפרויקט עוברת את רשימת המותר. מה שקורה
+  // אחריה הוא עניין עסקי: על נתוני ההדגמה הנעילה נדחית ב-L1 עד L3,
+  // וזו התשובה הנכונה. מה שנבדק כאן הוא הגבול, ולא התוצאה.
   const allowed = await send({ from: OWNER, module: 'BE-05', action: 'lock_site', payload: {} });
-  check('ובשם בעלת הפרויקט עובר', allowed.ok, true);
+  check('ובשם בעלת הפרויקט אינו נדחה ברשימת המותר',
+    allowed.error?.code === 'E-ALLOW-DENIED', false);
+  check('והסירוב הוא עסקי ומנומק', allowed.error.code, 'E-LOCK-REFUSED');
+  check('עם התנאים שנכשלו', allowed.error.data.failed, ['L1', 'L2', 'L3']);
 
   // ולהפך: יצירת פריט שייכת לצוות התוכן.
   const deniedOwner = await send({ from: OWNER, module: 'BE-05', action: 'create_item', payload: {} });

@@ -1,6 +1,6 @@
 {
   "source": "מסמך הבנייה גרסה 2.2 סעיף 7 (נתוני הדגמה ב-/data/demo/ מסומנים ב-is_demo); מפה 2.1 (שדות הישויות); היקף המערך: הכרעה ג בתוכנית שלב 2, בהכרעת בעלת הפרויקט 14.09.2026",
-  "note": "כל שורה כאן סינתטית ומסומנת is_demo. אלה אינם 19 פריטי הקורפוס, שעוברים לרשומות בשלב 7 (מפה סעיף 7), ואין כאן ציטוט ממקור אמיתי. המערך נבחר כדי לכסות תצוגה: ארבעת מצבי הפריט, תחנה בלי פריט מאושר, ופריט בלי עוגן מאומת. הסרה בשלב 7, ובדיקת הקבלה שם: שאילתה על is_demo מחזירה אפס.",
+  "note": "כל שורה כאן סינתטית ומסומנת is_demo. אלה אינם 19 פריטי הקורפוס, שעוברים לרשומות בשלב 7 (מפה סעיף 7), ואין כאן ציטוט ממקור אמיתי. המערך נבחר כדי לכסות תצוגה: ארבעת מצבי הפריט, תחנה בלי פריט מאושר, ופריט בלי עוגן מאומת. הסרה בשלב 7, ובדיקת הקבלה שם: שאילתה על is_demo מחזירה אפס. שדה bounds ברשומת המסלול נוסף במשימה 3 של שלב 4, לפי מפה 2.1 והכרעה 3 בתוכנית השלב: הגבולות הם שדה של SITES ולא מפתח בטבלת ה-reference. הערכים סינתטיים ומכילים את ארבעת עוגני ההדגמה. שורות ה-pushed וסשן ההדגמה הרביעי נוספו במשימה 11 של שלב 4: בלי הגעה אחת לפחות לכל סשן, כלל המדגם של usecase-f-09 צעד 9 גורע את כולם, ו-M-01 אינו ניתן להדגמה כפי ש-CLAUDE.md סעיף 7 מתאר. דגל partial_log הועבר לסשן הרביעי, כדי שיישאר לו מדגים בלי לגרוע סשן מהשלושה של 2, 3 ו-5.",
   "institutes": [
     {
       "institute_id": "inst-demo-1",
@@ -39,6 +39,12 @@
         "stop-demo-b",
         "stop-demo-c"
       ],
+      "bounds": {
+        "min_lat": 31.778,
+        "max_lat": 31.786,
+        "min_lng": 35.21,
+        "max_lng": 35.225
+      },
       "status": "open",
       "locked_at": null,
       "corpus_version": null,
@@ -311,6 +317,17 @@
       "ended_at": "2026-09-07T07:36:00.000Z",
       "completed": false,
       "last_stop_id": "stop-demo-b",
+      "flags": [],
+      "previous_session_id": null,
+      "is_demo": true
+    },
+    {
+      "session_id": "sess-demo-4",
+      "site_id": "site-demo-jaffa",
+      "started_at": "2026-09-08T06:02:00.000Z",
+      "ended_at": "2026-09-08T06:55:00.000Z",
+      "completed": false,
+      "last_stop_id": "stop-demo-a",
       "flags": [
         "partial_log"
       ],
@@ -436,6 +453,54 @@
       "item_id": "item-demo-4",
       "question": "שאלת הדגמה עשירית",
       "source_item": "item-demo-4",
+      "is_fallback": false,
+      "is_demo": true
+    },
+    {
+      "interaction_id": "int-demo-push-1",
+      "session_id": "sess-demo-1",
+      "time": "2026-09-05T06:05:00.000Z",
+      "type": "pushed",
+      "stop_id": "stop-demo-a",
+      "item_id": "item-demo-1",
+      "question": null,
+      "source_item": null,
+      "is_fallback": false,
+      "is_demo": true
+    },
+    {
+      "interaction_id": "int-demo-push-2",
+      "session_id": "sess-demo-2",
+      "time": "2026-09-06T06:05:00.000Z",
+      "type": "pushed",
+      "stop_id": "stop-demo-a",
+      "item_id": "item-demo-1",
+      "question": null,
+      "source_item": null,
+      "is_fallback": false,
+      "is_demo": true
+    },
+    {
+      "interaction_id": "int-demo-push-3",
+      "session_id": "sess-demo-3",
+      "time": "2026-09-07T06:05:00.000Z",
+      "type": "pushed",
+      "stop_id": "stop-demo-a",
+      "item_id": "item-demo-1",
+      "question": null,
+      "source_item": null,
+      "is_fallback": false,
+      "is_demo": true
+    },
+    {
+      "interaction_id": "int-demo-push-4",
+      "session_id": "sess-demo-4",
+      "time": "2026-09-08T06:07:00.000Z",
+      "type": "pushed",
+      "stop_id": "stop-demo-a",
+      "item_id": "item-demo-1",
+      "question": null,
+      "source_item": null,
       "is_fallback": false,
       "is_demo": true
     }

@@ -78,29 +78,41 @@ function freshRepository() {
   const { repository } = freshRepository();
   const names = Object.keys(repository).sort();
 
-  // שש פעולות המערכת של שלב 1, ושתים עשרה פעולות הישויות העסקיות
-  // שנוספו במשימה 2 של שלב 3 (usecase-f-07 סעיף 8: השמות עסקיים).
-  check('הממשק מונה בדיוק את שמונה עשרה הפעולות', names, [
-    'appendApproval', 'appendAudit', 'appendInstitute', 'appendMou', 'appendSource',
-    'getItem', 'getModule', 'getRef', 'getSite',
-    'listAllowed', 'listApprovals', 'listAudit', 'listCallers', 'listInstitutes',
-    'listItems', 'listMou', 'listSources', 'setStatus',
+  // שש פעולות המערכת של שלב 1, שתים עשרה פעולות הישויות של משימה 2
+  // בשלב 3, ושש עשרה שנוספו במשימה 1 של שלב 4 (usecase-f-07 סעיף 8:
+  // השמות עסקיים).
+  check('הממשק מונה בדיוק את שלושים וחמש הפעולות', names, [
+    'appendAnchor', 'appendApproval', 'appendAudit', 'appendExitPoint', 'appendInstitute',
+    'appendInteraction', 'appendItem', 'appendMou', 'appendSession', 'appendSource',
+    'getAnchor', 'getAnchorByItem', 'getItem', 'getModule', 'getRef', 'getSession', 'getSite',
+    'listAllowed', 'listAnchors', 'listApprovals', 'listAudit', 'listCallers',
+    'listExitPoints', 'listInstitutes', 'listInteractions', 'listItems', 'listMou',
+    'listSessions', 'listSources',
+    'setRef', 'setStatus', 'updateAnchor', 'updateItem', 'updateSession', 'updateSite',
   ]);
 
-  // setStatus היא הכתיבה היחידה שאינה הוספה, והיא מותרת: מפה 2.1
-  // מגדירה את status כעמודה שמשתנה, וכותבה היחיד הוא BE-05 (BL-09).
-  // כל השאר חייבות להיות קריאה או הוספה.
+  // **אין מחיקה, בשום שם.** זה הכלל שאינו זז: CLAUDE.md סעיף 11
+  // אוסר על הסוכן למחוק נתונים, ומפה 2.1 קובעת append-only לשתי
+  // טבלאות היומן.
   check(
-    'אין פעולה שנשמעת כמחיקה או כדריסה',
-    names
-      .filter((n) => n !== 'setStatus')
-      .filter((n) => /delete|remove|drop|clear|truncate|reset|write|update|set/i.test(n)),
+    'אין פעולה שנשמעת כמחיקה',
+    names.filter((n) => /delete|remove|drop|clear|truncate|reset|purge/i.test(n)),
     [],
   );
 
+  // חמש פעולות כתיבה שאינן הוספה, וכולן על עמודות שמפה 2.1 מגדירה
+  // כמשתנות, עם כותב יחיד לפי BL-09: מצב הפריט ושדותיו (BE-05),
+  // מצב המסלול והנעילה (BE-05), אימות העוגן ו-is_crossing (BE-05),
+  // וסגירת הסשן (BE-07). רשימה סגורה, ולא דפוס שם.
   check(
-    'אין פעולה שמעדכנת או מוחקת רשומת ביקורת',
-    names.filter((n) => /(approval|audit)/i.test(n) && !/^(append|list)/.test(n)),
+    'פעולות הכתיבה שאינן הוספה הן שש, ואלה בדיוק',
+    names.filter((n) => /^(set|update)/.test(n)),
+    ['setRef', 'setStatus', 'updateAnchor', 'updateItem', 'updateSession', 'updateSite'],
+  );
+
+  check(
+    'אין פעולה שמעדכנת או מוחקת רשומה שהיא append-only',
+    names.filter((n) => /(approval|audit|interaction)/i.test(n) && !/^(append|list)/.test(n)),
     [],
   );
 }
@@ -123,6 +135,7 @@ function liveDriver() {
       tables[name][index] = { ...tables[name][index], ...patch };
       return tables[name][index];
     },
+    setRefKey: (key, value) => { tables.reference[key] = value; return value; },
   };
 }
 
@@ -208,17 +221,19 @@ function liveDriver() {
 
 {
   const { driver, storage } = freshRepository();
-  // ארבע טבלאות המערכת של שלב 1, ושש הישויות העסקיות של מפה 2.1
-  // שנוספו במשימה 2 של שלב 3.
-  check('הדרייבר מכיר עשר טבלאות', [...TABLE_NAMES], [
+  // שלוש טבלאות המערכת, שלוש טבלאות ה-append-only, ושמונה הישויות
+  // העסקיות של מפה 2.1. ארבע האחרונות נוספו במשימה 1 של שלב 4.
+  check('הדרייבר מכיר ארבע עשרה טבלאות', [...TABLE_NAMES], [
     'modules', 'allow_list', 'reference',
-    'audit_log', 'approvals',
+    'audit_log', 'approvals', 'interactions',
     'content_items', 'sites', 'sources', 'institutes', 'rights_mou',
+    'geo_anchors', 'exit_points', 'sessions',
   ]);
-  // עשר: שלוש טבלאות הנתונים מהזריעה, ושבע שנפתחות ריקות. טבלה
-  // בלי זריעה נפתחת כרשימה ריקה, מלבד reference: מפתח חסר בה הוא
-  // E-REF-EMPTY ולא ערך ריק, ולכן היא אינה נוצרת מעצמה.
-  check('הטבלאות נזרעו באחסון', storage.size, 10);
+  // ארבע עשרה: שלוש טבלאות הנתונים מהזריעה, ואחת עשרה שנפתחות
+  // ריקות. טבלה בלי זריעה נפתחת כרשימה ריקה, מלבד reference: מפתח
+  // חסר בה הוא E-REF-EMPTY ולא ערך ריק, ולכן היא אינה נוצרת מעצמה
+  // כשאין לה זריעה.
+  check('הטבלאות נזרעו באחסון', storage.size, 14);
   check(
     'כל מפתח באחסון נושא את התחילית של המערכת',
     storage.keys().filter((k) => !k.startsWith('mora-derech/')),
@@ -368,6 +383,7 @@ function liveDriver() {
       tables[name][index] = { ...tables[name][index], ...patch };
       return tables[name][index];
     },
+    setRefKey: (key, value) => { tables.reference[key] = value; return value; },
   };
   const repository = createRepository(fakeCloudDriver);
   repository.appendAudit({ request_id: 'req-008', phase: 'request' });
@@ -376,10 +392,170 @@ function liveDriver() {
   check('getRef עובד מעליו', repository.getRef('relevance_threshold'), 0.28);
 }
 
+// --- משימה 1 בתוכנית שלב 4: ארבע הישויות של השלב ---
+
+// בדיקת הקבלה של המשימה: כותבים עוגן וקוראים אותו.
+{
+  const { repository } = freshRepository();
+  check('עוגנים נפתחים ריקים', repository.listAnchors(), []);
+
+  repository.appendAnchor({
+    anchor_id: 'anch-001', item_id: 'item-001', lat: 31.78, lng: 35.22,
+    verified: false, verified_at: null, is_crossing: false,
+  });
+
+  check('העוגן נקרא חזרה לפי מזהה', repository.getAnchor('anch-001').item_id, 'item-001');
+  check('העוגן נקרא חזרה לפי פריט', repository.getAnchorByItem('item-001').anchor_id, 'anch-001');
+  check('עוגן שאינו קיים מחזיר null', repository.getAnchor('anch-999'), null);
+
+  repository.updateAnchor('anch-001', { verified: true, is_crossing: true });
+  check('verified התעדכן', repository.getAnchor('anch-001').verified, true);
+  check('is_crossing התעדכן', repository.getAnchor('anch-001').is_crossing, true);
+  check('עדכון עוגן שאינו קיים מחזיר null', repository.updateAnchor('anch-999', {}), null);
+}
+
+// העוגן אינו נושא site_id במפה 2.1, והשיוך למסלול עובר דרך הפריט.
+{
+  const { repository } = freshRepository();
+  repository.appendItem({ item_id: 'item-a', site_id: 'site-1', stop_id: 'stop-1', status: 'draft' });
+  repository.appendItem({ item_id: 'item-b', site_id: 'site-2', stop_id: 'stop-9', status: 'draft' });
+  repository.appendAnchor({ anchor_id: 'anch-a', item_id: 'item-a' });
+  repository.appendAnchor({ anchor_id: 'anch-b', item_id: 'item-b' });
+
+  check('listAnchors בלי מסנן מחזיר את הכול', repository.listAnchors().length, 2);
+  check('listAnchors לפי מסלול עובר דרך הפריט', repository.listAnchors({ site_id: 'site-1' })
+    .map((row) => row.anchor_id), ['anch-a']);
+  check('listAnchors לפי פריט', repository.listAnchors({ item_id: 'item-b' })
+    .map((row) => row.anchor_id), ['anch-b']);
+}
+
+// כתיבת פריט ועדכונו: עד שלב 3 פריט נוצר בזריעה בלבד.
+{
+  const { repository } = freshRepository();
+  repository.appendItem({
+    item_id: 'item-new', site_id: 'site-1', stop_id: 'stop-1',
+    text: 'טקסט', status: 'draft',
+  });
+
+  check('הפריט נקרא חזרה', repository.getItem('item-new').status, 'draft');
+  repository.updateItem('item-new', { text: 'טקסט אחר', word_count: 2 });
+  check('updateItem שינה את הטקסט', repository.getItem('item-new').text, 'טקסט אחר');
+  check('updateItem שמר את מה שלא נגע בו', repository.getItem('item-new').site_id, 'site-1');
+  check('updateItem על פריט שאינו קיים מחזיר null', repository.updateItem('item-x', {}), null);
+  checkThrows('פריט בלי item_id נדחה', () => repository.appendItem({ site_id: 'site-1' }));
+}
+
+// מצב המסלול: usecase-f-08 צעד 12, ופתיחה חוזרת של BL-07.
+{
+  const { repository } = freshRepository();
+  const driver = createBrowserDriver({ storage: memoryStorage(), seed: {
+    ...seed, sites: [{ site_id: 'site-1', status: 'open', locked_at: null, corpus_version: null }],
+  } });
+  const repo = createRepository(driver);
+
+  repo.updateSite('site-1', { status: 'locked', locked_at: '2026-09-14T10:00:00.000Z', corpus_version: 1 });
+  const site = repo.getSite('site-1');
+  check('המסלול ננעל', site.status, 'locked');
+  check('corpus_version נשמר', site.corpus_version, 1);
+  check('עדכון מסלול שאינו קיים מחזיר null', repo.updateSite('site-9', {}), null);
+  check('repository אחר לא הושפע', repository.getSite('site-1'), null);
+}
+
+// נקודות יציאה, F-13 תיקון 1.
+{
+  const { repository } = freshRepository();
+  repository.appendExitPoint({ exit_id: 'exit-1', site_id: 'site-1', lat: 31.78, lng: 35.21, name: 'תחנה' });
+  repository.appendExitPoint({ exit_id: 'exit-2', site_id: 'site-2', lat: 31.79, lng: 35.22, name: 'אחרת' });
+
+  check('נקודות היציאה של המסלול', repository.listExitPoints({ site_id: 'site-1' })
+    .map((row) => row.exit_id), ['exit-1']);
+  check('מסלול בלי נקודת יציאה מחזיר רשימה ריקה', repository.listExitPoints({ site_id: 'site-3' }), []);
+  checkThrows('נקודת יציאה בלי exit_id נדחית', () => repository.appendExitPoint({ site_id: 'site-1' }));
+}
+
+// סשנים: כתיבה, עדכון וסינון לפי טווח, לפי usecase-f-09 צעדים 2, 6, 8.
+{
+  const { repository } = freshRepository();
+  repository.appendSession({
+    session_id: 'sess-1', site_id: 'site-1', started_at: '2026-09-05T06:00:00.000Z',
+    ended_at: null, completed: false, last_stop_id: null, flags: [], previous_session_id: null,
+  });
+  repository.appendSession({
+    session_id: 'sess-2', site_id: 'site-1', started_at: '2026-09-20T06:00:00.000Z',
+    ended_at: null, completed: false, last_stop_id: null, flags: [], previous_session_id: null,
+  });
+
+  check('הסשן נקרא חזרה', repository.getSession('sess-1').site_id, 'site-1');
+  check('סשן שאינו קיים מחזיר null', repository.getSession('sess-9'), null);
+
+  repository.updateSession('sess-1', {
+    ended_at: '2026-09-05T07:00:00.000Z', completed: true, last_stop_id: 'stop-c',
+  });
+  check('הסשן נסגר', repository.getSession('sess-1').completed, true);
+  check('last_stop_id נשמר', repository.getSession('sess-1').last_stop_id, 'stop-c');
+
+  check('סינון לפי טווח על started_at', repository.listSessions({
+    from: '2026-09-01T00:00:00.000Z', to: '2026-09-10T00:00:00.000Z',
+  }).map((row) => row.session_id), ['sess-1']);
+  check('סינון לפי מסלול', repository.listSessions({ site_id: 'site-1' }).length, 2);
+  checkThrows('סשן בלי session_id נדחה', () => repository.appendSession({ site_id: 'site-1' }));
+}
+
+// INTERACTIONS: append-only, כמו APPROVALS.
+{
+  const { repository, driver } = freshRepository();
+  repository.appendInteraction({
+    interaction_id: 'int-1', session_id: 'sess-1', time: '2026-09-05T06:09:00.000Z',
+    type: 'initiated', stop_id: 'stop-a', item_id: 'item-1',
+  });
+  repository.appendInteraction({
+    interaction_id: 'int-2', session_id: 'sess-1', time: '2026-09-05T06:20:00.000Z',
+    type: 'pushed', stop_id: 'stop-b', item_id: 'item-2',
+  });
+  repository.appendInteraction({
+    interaction_id: 'int-3', session_id: 'sess-2', time: '2026-09-06T06:20:00.000Z', type: 'pushed',
+  });
+
+  check('שורות הסשן', repository.listInteractions({ session_id: 'sess-1' }).length, 2);
+  check('סינון לפי סוג', repository.listInteractions({ type: 'initiated' })
+    .map((row) => row.interaction_id), ['int-1']);
+  checkThrows('שורה בלי interaction_id נדחית', () => repository.appendInteraction({ type: 'pushed' }));
+
+  // הצד השני של append-only: אין בממשק עדכון, והדרייבר אינו מרשה אותו.
+  check('אין בממשק פעולת עדכון ל-INTERACTIONS', repository.updateInteraction, undefined);
+  checkThrows('הדרייבר דוחה עדכון שורת INTERACTIONS',
+    () => driver.updateRow('interactions', 'interaction_id', 'int-1', { type: 'pushed' }));
+  check('אין בממשק פעולת מחיקה לאף טבלה',
+    Object.keys(repository).filter((name) => /delete|remove|drop/i.test(name)), []);
+}
+
+// ארבע הטבלאות החדשות מוכרות לדרייבר.
+{
+  for (const name of ['geo_anchors', 'exit_points', 'sessions', 'interactions']) {
+    check(`הדרייבר מכיר את ${name}`, TABLE_NAMES.includes(name), true);
+  }
+  check('סך הטבלאות שהדרייבר מכיר', TABLE_NAMES.length, 14);
+}
+
+// setRef: מפתח אחד בטבלת ה-reference (פער 40, משימה 5 בתוכנית שלב 4).
+{
+  const { repository } = freshRepository();
+  check('הערך לפני', repository.getRef('enforce_gate_b'), false);
+  repository.setRef('enforce_gate_b', true);
+  check('הערך אחרי', repository.getRef('enforce_gate_b'), true);
+  check('מפתח אחר לא נגע', repository.getRef('relevance_threshold'), 0.28);
+  checkThrows('כתיבה בלי מפתח נדחית', () => repository.setRef('', true));
+
+  // אין דרך להחליף את הטבלה כולה ואין דרך למחוק מפתח.
+  repository.setRef('enforce_gate_b', false);
+  check('הכתיבה הפיכה', repository.getRef('enforce_gate_b'), false);
+}
+
 // --- דרייבר פגום נדחה בטעינה ---
 
-checkThrows('דרייבר בלי readTable נדחה', () => createRepository({ appendRow() {} }));
-checkThrows('דרייבר בלי appendRow נדחה', () => createRepository({ readTable() {} }));
+checkThrows('דרייבר בלי readTable נדחה', () => createRepository({ appendRow() {}, updateRow() {}, setRefKey() {} }));
+checkThrows('דרייבר בלי appendRow נדחה', () => createRepository({ readTable() {}, updateRow() {}, setRefKey() {} }));
+checkThrows('דרייבר בלי setRefKey נדחה', () => createRepository({ readTable() {}, appendRow() {}, updateRow() {} }));
 checkThrows('בלי דרייבר כלל נדחה', () => createRepository());
 checkThrows('דרייבר דפדפן בלי אחסון נדחה', () => createBrowserDriver({ storage: null }));
 

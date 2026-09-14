@@ -208,9 +208,13 @@ export const DEMO_MODULE_IDS = Object.freeze(Object.keys(RESPONSES));
  * וכותב, ורענון הדף מראה את מה שקרה. הסימון is_demo נשאר על כל
  * שורה, וההסרה בשלב 7 היא מחיקת הקובץ הזה ושל /data/demo/.
  *
- * שש הטבלאות בלבד, אלה שהדרייבר מכיר. geo_anchors, exit_points,
- * admin_users, sessions ו-interactions נכנסים עם המודולים שלהם
- * בשלבים 4 ו-5.
+ * עשר הטבלאות שהדרייבר מכיר. ארבע נוספו במשימה 3 של שלב 4, עם
+ * המודולים שקוראים אותן: geo_anchors (L3 ו-BL-19), exit_points
+ * (F-13 תיקון 1), sessions ו-interactions (BE-07 והמדדים).
+ *
+ * admin_users אינו נזרע: אין לו טבלה בדרייבר ואין ב-4.2 פעולה
+ * שקוראת אותו. מפה 2.1 מגדירה את הישות, ו-v1 אינו מאמת זהות (פער
+ * 32, נסגר במפה 3.5), ולכן אין מי שיקרא את השורות האלה.
  */
 export const DEMO_SEED = Object.freeze({
   content_items: demo.content_items,
@@ -219,4 +223,8 @@ export const DEMO_SEED = Object.freeze({
   sources: demo.sources,
   institutes: demo.institutes,
   rights_mou: demo.rights_mou,
+  geo_anchors: demo.geo_anchors,
+  exit_points: demo.exit_points,
+  sessions: demo.sessions,
+  interactions: demo.interactions,
 });
