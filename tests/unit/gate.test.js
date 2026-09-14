@@ -1,0 +1,156 @@
+// Unit של BE-06, Gate Enforcement. נגזר מבדיקת הקבלה של משימה 4
+// בתוכנית שלב 3, מ-usecase-f-07 צעדים 10 ו-14, מ-BL-08 ומ-BL-12,
+// ומשורת BE-06 במפה 6.1 ("M-06 = 0, enforce = true: שער חסום;
+// הקריטריון: M-06 נקרא מרשומה").
+//
+//   node tests/unit/gate.test.js
+
+import { create } from '../../services/gate.js';
+import { createChecker } from '../helpers/assert.js';
+
+const { check, checkThrows, report } = createChecker('BE-06 gate');
+
+const NOW = '2026-09-14T12:00:00.000Z';
+
+// שני מקורות למסלול, ופריט לכל אחד: הכיסוי נמדד מול המקורות
+// שהמסלול משתמש בהם בפועל.
+function fakeRepository({ mou = [], siteStatus = 'open', enforce = false, sources = ['src-1', 'src-2'] } = {}) {
+  return {
+    getRef: (key) => (key === 'enforce_gate_b' ? enforce : undefined),
+    getSite: () => ({ site_id: 's-1', name: 'מסלול', status: siteStatus }),
+    listSources: () => sources.map((source_id) => ({ source_id })),
+    listMou: () => mou.map((row) => ({ ...row })),
+  };
+}
+
+const askGate = (repository) => create({ repository, now: () => NOW })({
+  from: 'screen-veto', module: 'BE-06', action: 'get_gate', payload: {}, lang: 'he',
+});
+
+const validMou = {
+  mou_id: 'mou-1',
+  institute_id: 'inst-1',
+  scope: ['src-1', 'src-2'],
+  signed_at: '2026-09-01T00:00:00.000Z',
+  valid_until: '2027-09-01T00:00:00.000Z',
+};
+
+// --- M-06 נספר מרשומה ---
+
+{
+  const response = askGate(fakeRepository({ mou: [validMou] }));
+  check('התשובה מוצלחת', response.ok, true);
+  check('M-06 = 1 כשיש הסכם בתוקף שמכסה את כל המקורות', response.data.coverage.m06, 1);
+  check('והמכון המכסה מזוהה', response.data.coverage.institutes, ['inst-1']);
+  check('המקורות הנדרשים', response.data.coverage.required, ['src-1', 'src-2']);
+}
+
+{
+  // בדיקת הקבלה של המשימה: מסירים מקור אחד מההיקף.
+  const partial = { ...validMou, scope: ['src-1'] };
+  check('כיסוי חלקי אינו נספר', askGate(fakeRepository({ mou: [partial] })).data.coverage.m06, 0);
+}
+
+{
+  const expired = { ...validMou, valid_until: '2026-01-01T00:00:00.000Z' };
+  check('הסכם שפג תוקפו אינו נספר', askGate(fakeRepository({ mou: [expired] })).data.coverage.m06, 0);
+  check('והוא גם אינו נספר כהסכם בתוקף', askGate(fakeRepository({ mou: [expired] })).data.coverage.mou_in_effect, 0);
+}
+
+{
+  const undated = { ...validMou, valid_until: null };
+  check('הסכם בלי תאריך תוקף אינו נספר', askGate(fakeRepository({ mou: [undated] })).data.coverage.m06, 0);
+}
+
+{
+  const second = { ...validMou, mou_id: 'mou-2', institute_id: 'inst-2' };
+  check('שני מכונים מכסים: M-06 = 2', askGate(fakeRepository({ mou: [validMou, second] })).data.coverage.m06, 2);
+
+  const sameInstitute = { ...validMou, mou_id: 'mou-3' };
+  check(
+    'שני הסכמים של אותו מכון נספרים כמכון אחד',
+    askGate(fakeRepository({ mou: [validMou, sameInstitute] })).data.coverage.m06,
+    1,
+  );
+}
+
+{
+  check('בלי הסכמים כלל: M-06 = 0', askGate(fakeRepository({ mou: [] })).data.coverage.m06, 0);
+  check(
+    'מסלול בלי מקורות אינו מייצר כיסוי',
+    askGate(fakeRepository({ mou: [validMou], sources: [] })).data.coverage.m06,
+    0,
+  );
+}
+
+// --- BL-08: מצב השער ---
+
+{
+  const open = askGate(fakeRepository({ mou: [validMou], siteStatus: 'locked', enforce: true }));
+  check('מסלול נעול ו-M-06 = 1: השער פתוח', open.data.gate.open, true);
+  check('ואינו חוסם', open.data.gate.blocking, false);
+}
+
+{
+  // שורת BE-06 במפה 6.1.
+  const blocked = askGate(fakeRepository({ mou: [], siteStatus: 'locked', enforce: true }));
+  check('M-06 = 0 ואכיפה דולקת: חסום', blocked.data.gate.open, false);
+  check('והחסימה בתוקף', blocked.data.gate.blocking, true);
+  check('הסיבה מוחזרת למסך', blocked.data.gate.reasons, ['m06_zero']);
+}
+
+{
+  // פער 34: בסוף שלב 3 זהו המצב בפועל. ההסכם נרשם, M-06 = 1,
+  // והשער נשאר חסום מפני שהמסלול אינו נעול. הנעילה היא F-08.
+  const registered = askGate(fakeRepository({ mou: [validMou], siteStatus: 'open', enforce: true }));
+  check('הסכם נרשם והמסלול פתוח: M-06 = 1', registered.data.coverage.m06, 1);
+  check('והשער עדיין חסום', registered.data.gate.open, false);
+  check('והסיבה היחידה היא הנעילה', registered.data.gate.reasons, ['site_not_locked']);
+}
+
+{
+  // זרימה ו3: אכיפה כבויה, המצב מוצג ואינו נאכף.
+  const soft = askGate(fakeRepository({ mou: [], enforce: false }));
+  check('אכיפה כבויה: אינו חוסם', soft.data.gate.blocking, false);
+  check('אבל המצב מוצג כחסום', soft.data.gate.open, false);
+  check('והמסך יודע שהאכיפה כבויה', soft.data.gate.enforced, false);
+}
+
+// --- BL-12 וחוק ברזל 5: ערך חסר אינו מומצא ---
+
+{
+  const repository = { ...fakeRepository(), getRef: () => undefined };
+  const response = askGate(repository);
+  check('מפתח חסר מחזיר E-REF-EMPTY', response.error.code, 'E-REF-EMPTY');
+  check('ו-error.data נושא את שם ההגדרה', response.error.data.key, 'enforce_gate_b');
+}
+
+{
+  const repository = { ...fakeRepository(), getRef: () => null };
+  check('מפתח בלי ערך מוכרע מחזיר אותו דבר', askGate(repository).error.code, 'E-REF-EMPTY');
+}
+
+// --- ההיקף: פעולות שלב 4 אינן מתחזות ---
+
+{
+  const handle = create({ repository: fakeRepository(), now: () => NOW });
+  const envelope = (action) => ({ from: 'screen-owner', module: 'BE-06', action, payload: {}, lang: 'he' });
+  checkThrows('get_lock_readiness אינו מיושם בשלב הזה', () => handle(envelope('get_lock_readiness')));
+  checkThrows('set_enforce אינו מיושם בשלב הזה', () => handle(envelope('set_enforce')));
+}
+
+checkThrows('בלי Repository אין מודול', () => create({}));
+
+// --- מה שהמודול אינו עושה ---
+
+{
+  // מפה 3.2, שורת BE-06: "כותב: אין". הבדיקה מזריקה Repository
+  // שנופל בכל כתיבה, וקוראת את השער.
+  const repository = fakeRepository({ mou: [validMou] });
+  for (const name of ['setStatus', 'appendApproval', 'appendMou', 'appendInstitute', 'appendSource']) {
+    repository[name] = () => { throw new Error(`BE-06 כתב ב-${name}`); };
+  }
+  check('קריאת השער אינה כותבת דבר', askGate(repository).ok, true);
+}
+
+report();
