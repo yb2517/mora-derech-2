@@ -81,14 +81,14 @@ function freshRepository() {
   // שש פעולות המערכת של שלב 1, שתים עשרה פעולות הישויות של משימה 2
   // בשלב 3, ושש עשרה שנוספו במשימה 1 של שלב 4 (usecase-f-07 סעיף 8:
   // השמות עסקיים).
-  check('הממשק מונה בדיוק את שלושים וארבע הפעולות', names, [
+  check('הממשק מונה בדיוק את שלושים וחמש הפעולות', names, [
     'appendAnchor', 'appendApproval', 'appendAudit', 'appendExitPoint', 'appendInstitute',
     'appendInteraction', 'appendItem', 'appendMou', 'appendSession', 'appendSource',
     'getAnchor', 'getAnchorByItem', 'getItem', 'getModule', 'getRef', 'getSession', 'getSite',
     'listAllowed', 'listAnchors', 'listApprovals', 'listAudit', 'listCallers',
     'listExitPoints', 'listInstitutes', 'listInteractions', 'listItems', 'listMou',
     'listSessions', 'listSources',
-    'setStatus', 'updateAnchor', 'updateItem', 'updateSession', 'updateSite',
+    'setRef', 'setStatus', 'updateAnchor', 'updateItem', 'updateSession', 'updateSite',
   ]);
 
   // **אין מחיקה, בשום שם.** זה הכלל שאינו זז: CLAUDE.md סעיף 11
@@ -105,9 +105,9 @@ function freshRepository() {
   // מצב המסלול והנעילה (BE-05), אימות העוגן ו-is_crossing (BE-05),
   // וסגירת הסשן (BE-07). רשימה סגורה, ולא דפוס שם.
   check(
-    'פעולות הכתיבה שאינן הוספה הן חמש, ואלה בדיוק',
+    'פעולות הכתיבה שאינן הוספה הן שש, ואלה בדיוק',
     names.filter((n) => /^(set|update)/.test(n)),
-    ['setStatus', 'updateAnchor', 'updateItem', 'updateSession', 'updateSite'],
+    ['setRef', 'setStatus', 'updateAnchor', 'updateItem', 'updateSession', 'updateSite'],
   );
 
   check(
@@ -135,6 +135,7 @@ function liveDriver() {
       tables[name][index] = { ...tables[name][index], ...patch };
       return tables[name][index];
     },
+    setRefKey: (key, value) => { tables.reference[key] = value; return value; },
   };
 }
 
@@ -382,6 +383,7 @@ function liveDriver() {
       tables[name][index] = { ...tables[name][index], ...patch };
       return tables[name][index];
     },
+    setRefKey: (key, value) => { tables.reference[key] = value; return value; },
   };
   const repository = createRepository(fakeCloudDriver);
   repository.appendAudit({ request_id: 'req-008', phase: 'request' });
@@ -535,10 +537,25 @@ function liveDriver() {
   check('סך הטבלאות שהדרייבר מכיר', TABLE_NAMES.length, 14);
 }
 
+// setRef: מפתח אחד בטבלת ה-reference (פער 40, משימה 5 בתוכנית שלב 4).
+{
+  const { repository } = freshRepository();
+  check('הערך לפני', repository.getRef('enforce_gate_b'), false);
+  repository.setRef('enforce_gate_b', true);
+  check('הערך אחרי', repository.getRef('enforce_gate_b'), true);
+  check('מפתח אחר לא נגע', repository.getRef('relevance_threshold'), 0.28);
+  checkThrows('כתיבה בלי מפתח נדחית', () => repository.setRef('', true));
+
+  // אין דרך להחליף את הטבלה כולה ואין דרך למחוק מפתח.
+  repository.setRef('enforce_gate_b', false);
+  check('הכתיבה הפיכה', repository.getRef('enforce_gate_b'), false);
+}
+
 // --- דרייבר פגום נדחה בטעינה ---
 
-checkThrows('דרייבר בלי readTable נדחה', () => createRepository({ appendRow() {} }));
-checkThrows('דרייבר בלי appendRow נדחה', () => createRepository({ readTable() {} }));
+checkThrows('דרייבר בלי readTable נדחה', () => createRepository({ appendRow() {}, updateRow() {}, setRefKey() {} }));
+checkThrows('דרייבר בלי appendRow נדחה', () => createRepository({ readTable() {}, updateRow() {}, setRefKey() {} }));
+checkThrows('דרייבר בלי setRefKey נדחה', () => createRepository({ readTable() {}, appendRow() {}, updateRow() {} }));
 checkThrows('בלי דרייבר כלל נדחה', () => createRepository());
 checkThrows('דרייבר דפדפן בלי אחסון נדחה', () => createBrowserDriver({ storage: null }));
 

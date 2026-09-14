@@ -17,9 +17,16 @@
 // טעם ובאותו כלל: geo_anchors, exit_points, sessions ו-interactions.
 // אין כאן פעולת מחיקה לאף טבלה, ואין החלפת טבלה שלמה.
 
-// טבלאות שנזרעות פעם אחת ונקראות בלבד: הן הנתונים של CORE-03 ושל
-// טבלת ה-reference, ואיש אינו כותב אליהן בזמן ריצה.
+// טבלאות שנזרעות פעם אחת ואינן מקבלות שורות בזמן ריצה: הן הנתונים
+// של CORE-03 ושל טבלת ה-reference.
+//
+// טבלת ה-reference אינה אוסף שורות אלא אוסף מפתחות, ולכן היא אינה
+// נכתבת ב-appendRow ולא ב-updateRow אלא ב-setRefKey בלבד. הפעולה
+// נוספה במשימה 5 של שלב 4, מפני שמפה 4.2 נותנת ל-BE-06 את
+// set_enforce, שהיא כתיבה של מפתח בטבלה הזאת, ולא הייתה לה דרך.
 const SEEDED_ONLY = Object.freeze(['modules', 'allow_list', 'reference']);
+
+const REFERENCE = 'reference';
 
 // טבלאות שגדלות בלבד. שורה שנכתבה אינה משתנה ואינה נמחקת:
 // audit_log לפי BL-09, ו-APPROVALS לפי מפה 2.1 ("append-only, נכתב
@@ -107,6 +114,21 @@ export function createBrowserDriver({ storage = globalThis.localStorage, seed = 
       rows.push(row);
       write(name, rows);
       return row;
+    },
+
+    /**
+     * כותב מפתח אחד בטבלת ה-reference, ומחזיר את ערכו.
+     *
+     * מפתח בלבד, ולא הטבלה: אין כאן דרך להחליף את הטבלה כולה, ואין
+     * דרך למחוק מפתח. מי רשאי לכתוב איזה מפתח אינו נשאל כאן אלא
+     * ברשימת המותר (**פער 40**: BL-09 אינו מונה כותב לטבלת
+     * ה-reference, ו-4.2 בכל זאת נותנת ל-BE-06 את set_enforce).
+     */
+    setRefKey(key, value) {
+      const values = read(REFERENCE) ?? {};
+      values[key] = value;
+      write(REFERENCE, values);
+      return value;
     },
 
     /**

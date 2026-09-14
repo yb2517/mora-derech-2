@@ -38,7 +38,7 @@ const SESSIONS = 'sessions';
 const INTERACTIONS = 'interactions';
 
 function assertDriver(driver) {
-  const missing = ['readTable', 'appendRow', 'updateRow'].filter(
+  const missing = ['readTable', 'appendRow', 'updateRow', 'setRefKey'].filter(
     (name) => typeof driver?.[name] !== 'function',
   );
   if (missing.length > 0) {
@@ -88,6 +88,22 @@ export function createRepository(driver) {
         return undefined;
       }
       return copy(values[key]);
+    },
+
+    /**
+     * כותב מפתח אחד בטבלת ה-reference.
+     *
+     * **פער 40**: BL-09 מונה כותב יחיד לכל ישות עסקית ואינו מזכיר
+     * את reference, ומפה 4.2 בכל זאת נותנת ל-BE-06 את set_enforce,
+     * שהיא כתיבה לטבלה הזאת. הפעולה קיימת כאן מפני שבלעדיה הפעולה
+     * שבמפה אינה ניתנת למימוש, ומי רשאי לקרוא לה נקבע ברשימת המותר.
+     * מדווח בדוח השלב.
+     */
+    setRef(key, value) {
+      if (typeof key !== 'string' || key.trim() === '') {
+        throw new Error('כתיבה ל-reference חייבת מפתח');
+      }
+      return copy(driver.setRefKey(key, copy(value)));
     },
 
     /**
