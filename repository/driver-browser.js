@@ -12,6 +12,10 @@
 // שלוש טבלאות המערכת והטבלה הרביעית נכנסו בשלב 1. שש הטבלאות
 // העסקיות נכנסו במשימה 2 של שלב 3, עם ה-Slice הראשון: עד אז לא היה
 // מה לשמור, ומשימה 2 היא נגיעה בליבה לפי CLAUDE.md סעיף 9.2.
+//
+// ארבע הטבלאות האחרונות של מפה 2.1 נכנסו במשימה 1 של שלב 4, מאותו
+// טעם ובאותו כלל: geo_anchors, exit_points, sessions ו-interactions.
+// אין כאן פעולת מחיקה לאף טבלה, ואין החלפת טבלה שלמה.
 
 // טבלאות שנזרעות פעם אחת ונקראות בלבד: הן הנתונים של CORE-03 ושל
 // טבלת ה-reference, ואיש אינו כותב אליהן בזמן ריצה.
@@ -20,11 +24,27 @@ const SEEDED_ONLY = Object.freeze(['modules', 'allow_list', 'reference']);
 // טבלאות שגדלות בלבד. שורה שנכתבה אינה משתנה ואינה נמחקת:
 // audit_log לפי BL-09, ו-APPROVALS לפי מפה 2.1 ("append-only, נכתב
 // בלבד. אין עריכה ואין מחיקה").
-const APPEND_ONLY = Object.freeze(['audit_log', 'approvals']);
+// INTERACTIONS נוסף במשימה 1 של שלב 4, לפי מפה 2.1 ("append-only,
+// נכתב בלבד") ו-BL-18: שורת אינטראקציה שאפשר לערוך אינה עדות.
+const APPEND_ONLY = Object.freeze(['audit_log', 'approvals', 'interactions']);
 
-// הישויות העסקיות של מפה 2.1 שהשלב הזה נוגע בהן. הן גדלות בשורות
-// חדשות, ושורה קיימת ניתנת לעדכון (למשל status של פריט).
-const ENTITIES = Object.freeze(['content_items', 'sites', 'sources', 'institutes', 'rights_mou']);
+// הישויות העסקיות של מפה 2.1. הן גדלות בשורות חדשות, ושורה קיימת
+// ניתנת לעדכון (למשל status של פריט).
+//
+// שלוש מהן נוספו במשימה 1 של שלב 4, מפני שמודולי השלב זקוקים להן:
+// geo_anchors (L3, verify_anchor, is_crossing של BL-19), exit_points
+// (F-13 תיקון 1, nearestExitPoint) ו-sessions (BE-07, ועדכון ended_at
+// ו-completed בסגירה).
+const ENTITIES = Object.freeze([
+  'content_items',
+  'sites',
+  'sources',
+  'institutes',
+  'rights_mou',
+  'geo_anchors',
+  'exit_points',
+  'sessions',
+]);
 
 /** שמות הטבלאות שהדרייבר מכיר. */
 export const TABLE_NAMES = Object.freeze([...SEEDED_ONLY, ...APPEND_ONLY, ...ENTITIES]);

@@ -12,6 +12,9 @@
 //
 // הפעולות על הישויות העסקיות נכנסו במשימה 2 של שלב 3, לפי
 // usecase-f-07 סעיף 8: השמות עסקיים, ולא שמות של טבלאות ושל שאילתות.
+// משימה 1 של שלב 4 הוסיפה את העוגנים, נקודות היציאה, הסשנים
+// והאינטראקציות, ואת הכתיבה לפריט ולמסלול שהיו חסרות: עד שלב 3 פריט
+// נוצר בזריעה בלבד, ומסלול לא שינה מצב מעולם.
 // **אין כאן חוק עסקי**: מה מותר ומתי הוא של הליבה ושל BE-05. כאן יש
 // קריאה וכתיבה בשם שאפשר להבין.
 
@@ -28,6 +31,12 @@ const SOURCES = 'sources';
 const INSTITUTES = 'institutes';
 const RIGHTS_MOU = 'rights_mou';
 
+// ארבע הישויות שמשימה 1 של שלב 4 מוסיפה, לפי מפה 2.1.
+const GEO_ANCHORS = 'geo_anchors';
+const EXIT_POINTS = 'exit_points';
+const SESSIONS = 'sessions';
+const INTERACTIONS = 'interactions';
+
 function assertDriver(driver) {
   const missing = ['readTable', 'appendRow', 'updateRow'].filter(
     (name) => typeof driver?.[name] !== 'function',
@@ -41,6 +50,18 @@ function assertDriver(driver) {
 // וזה היה הופך את audit_log למשהו שאינו append-only בפועל.
 function copy(value) {
   return value === undefined ? undefined : structuredClone(value);
+}
+
+// רשומה בלי מזהה אינה ניתנת להצלבה, ולכן היא נדחית כאן ולא נכתבת
+// חצי. אותו נימוק שבו request_id חובה בשורת audit_log ו-approval_id
+// ברשומת APPROVALS.
+function requireId(record, key, name) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    throw new Error(`${name} חייב להיות אובייקט`);
+  }
+  if (typeof record[key] !== 'string' || record[key].trim() === '') {
+    throw new Error(`${name} חייב ${key}`);
+  }
 }
 
 export function createRepository(driver) {
@@ -223,6 +244,132 @@ export function createRepository(driver) {
 
     appendSource(record) {
       return copy(driver.appendRow(SOURCES, copy(record)));
+    },
+
+    // --- ארבע הישויות של שלב 4, ושתי הכתיבות שהיו חסרות ---
+
+    /**
+     * מוסיף פריט תוכן. הכותב היחיד הוא BE-05 (BL-09), והשלמות של
+     * usecase-f-08 צעד 3 היא שלו: כאן נכתב מה שביקשו לכתוב.
+     */
+    appendItem(record) {
+      requireId(record, 'item_id', 'פריט');
+      return copy(driver.appendRow(CONTENT_ITEMS, copy(record)));
+    },
+
+    /**
+     * מעדכן שדות בפריט קיים, ומחזיר אותו אחרי העדכון או null.
+     *
+     * setStatus נשאר בנפרד ולא נבלע כאן: מצב הפריט הוא העמודה שכל
+     * BL-01 עומד עליה, ופעולה בשם שלה קלה יותר להצליב מול היומן.
+     */
+    updateItem(itemId, patch) {
+      return copy(driver.updateRow(CONTENT_ITEMS, 'item_id', itemId, copy(patch))) ?? null;
+    },
+
+    /**
+     * מעדכן את רשומת המסלול: status, locked_at ו-corpus_version של
+     * usecase-f-08 צעד 12, ופתיחה חוזרת של BL-07.
+     */
+    updateSite(siteId, patch) {
+      return copy(driver.updateRow(SITES, 'site_id', siteId, copy(patch))) ?? null;
+    },
+
+    /** עוגן אחד לפי מזהה. null לעוגן שאינו קיים. */
+    getAnchor(anchorId) {
+      return copy(rows(GEO_ANCHORS).find((row) => row.anchor_id === anchorId)) ?? null;
+    },
+
+    /**
+     * העוגן של פריט. מפה 2.1 מקשרת עוגן לפריט ב-item_id, ולכן זו
+     * הדרך שבה FE-04 מגיע ל-is_crossing של הנקודה שהוא עומד למסור.
+     */
+    getAnchorByItem(itemId) {
+      return copy(rows(GEO_ANCHORS).find((row) => row.item_id === itemId)) ?? null;
+    },
+
+    /**
+     * עוגנים. עם site_id, העוגנים של פריטי המסלול: לעוגן עצמו אין
+     * site_id במפה 2.1, והשיוך עובר דרך הפריט.
+     */
+    listAnchors({ site_id: siteId, item_id: itemId } = {}) {
+      const all = rows(GEO_ANCHORS);
+      const ofSite = siteId === undefined
+        ? all
+        : (() => {
+            const items = new Set(
+              rows(CONTENT_ITEMS).filter((row) => row.site_id === siteId).map((row) => row.item_id),
+            );
+            return all.filter((row) => items.has(row.item_id));
+          })();
+      return ofSite.filter((row) => itemId === undefined || row.item_id === itemId).map(copy);
+    },
+
+    appendAnchor(record) {
+      requireId(record, 'anchor_id', 'עוגן');
+      return copy(driver.appendRow(GEO_ANCHORS, copy(record)));
+    },
+
+    /** מעדכן עוגן: verified, verified_at, is_crossing, קואורדינטות. */
+    updateAnchor(anchorId, patch) {
+      return copy(driver.updateRow(GEO_ANCHORS, 'anchor_id', anchorId, copy(patch))) ?? null;
+    },
+
+    /** נקודות היציאה של המסלול (F-13 תיקון 1). */
+    listExitPoints({ site_id: siteId } = {}) {
+      return rows(EXIT_POINTS)
+        .filter((row) => siteId === undefined || row.site_id === siteId)
+        .map(copy);
+    },
+
+    appendExitPoint(record) {
+      requireId(record, 'exit_id', 'נקודת יציאה');
+      return copy(driver.appendRow(EXIT_POINTS, copy(record)));
+    },
+
+    /** סשן אחד. null לסשן שאינו קיים. */
+    getSession(sessionId) {
+      return copy(rows(SESSIONS).find((row) => row.session_id === sessionId)) ?? null;
+    },
+
+    /**
+     * סשנים. עם site_id, סשני המסלול; עם from ו-to, סשנים שהתחילו
+     * בטווח. הטווח הוא זה של compute_metrics (usecase-f-09 צעד 8),
+     * וההשוואה על started_at, מפני שסשן פתוח עדיין אינו נסגר.
+     */
+    listSessions({ site_id: siteId, from, to } = {}) {
+      return rows(SESSIONS)
+        .filter((row) => siteId === undefined || row.site_id === siteId)
+        .filter((row) => from === undefined || row.started_at >= from)
+        .filter((row) => to === undefined || row.started_at <= to)
+        .map(copy);
+    },
+
+    appendSession(record) {
+      requireId(record, 'session_id', 'סשן');
+      return copy(driver.appendRow(SESSIONS, copy(record)));
+    },
+
+    /** מעדכן סשן: ended_at, completed, last_stop_id, flags. */
+    updateSession(sessionId, patch) {
+      return copy(driver.updateRow(SESSIONS, 'session_id', sessionId, copy(patch))) ?? null;
+    },
+
+    /**
+     * מוסיף שורת INTERACTIONS. append-only, כמו APPROVALS: אין פעולה
+     * שמעדכנת שורה קיימת ואין פעולה שמוחקת אותה (מפה 2.1, BL-18).
+     */
+    appendInteraction(record) {
+      requireId(record, 'interaction_id', 'שורת INTERACTIONS');
+      return copy(driver.appendRow(INTERACTIONS, copy(record)));
+    },
+
+    /** שורות היומן. עם session_id, שורות הסשן; עם type, סוג אחד. */
+    listInteractions({ session_id: sessionId, type } = {}) {
+      return rows(INTERACTIONS)
+        .filter((row) => sessionId === undefined || row.session_id === sessionId)
+        .filter((row) => type === undefined || row.type === type)
+        .map(copy);
     },
   };
 }
