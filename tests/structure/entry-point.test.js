@@ -36,9 +36,14 @@ check('יש קובץ HTML אחד בשורש', rootPages, [ENTRY]);
 const imports = [...code.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((m) => m[1]);
 
 check(
-  'מייבאת את הדרייבר, את ה-Repository ואת ה-Orchestrator',
+  'מייבאת את הדרייבר, את ה-Repository, את ה-Orchestrator ואת הכתובת',
   imports.slice().sort(),
-  ['./core/orchestrator.js', './repository/driver-browser.js', './repository/index.js'],
+  [
+    './core/orchestrator.js',
+    './repository/driver-browser.js',
+    './repository/index.js',
+    './screens/endpoint.js',
+  ],
 );
 
 // מודול שירות, מתאם, אוטומציה, שער או כלי אינו נכנס דרך נקודת

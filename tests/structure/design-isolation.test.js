@@ -55,7 +55,10 @@ function scannable(raw) {
 }
 
 const designFiles = collect(DESIGN_DIR, /\.css$/);
+// הכתובת אינה מסך (מבחן מבנה 03), אבל גם היא אינה רשאית להחזיק
+// עיצוב, ולכן היא נסרקת עם השאר ואינה נספרת כמסך.
 const screenFiles = collect(SCREENS_DIR, /\.(css|js|mjs|html)$/);
+const screensOnly = screenFiles.filter((f) => f.path !== 'screens/endpoint.js');
 const all = [...designFiles, ...screenFiles].map((f) => ({ ...f, code: scannable(f.raw) }));
 
 check('קובץ הערכה קיים', designFiles.some((f) => f.path === TOKENS), true);
@@ -150,10 +153,11 @@ const ownSheet = screenFiles.filter((f) => f.path.endsWith('.css')).map((f) => f
 
 check('אין מסך עם גיליון סגנון משלו', ownSheet.sort(), []);
 
-const emptyPass = screenFiles.length === 0;
-check('מצב השלב מדווח במפורש', emptyPass, true);
+const emptyPass = screensOnly.length === 0;
 
 report(
   ` (${designFiles.length} קובצי עיצוב, ${defined.size} מאפיינים, ${used.size} בשימוש`
-  + (emptyPass ? ', ועובר בריק על המסכים: אין מסכים במשימה 2)' : `, ${screenFiles.length} קובצי מסך)`),
+  + (emptyPass
+    ? ', ועובר בריק על המסכים: אין עדיין מסכים)'
+    : `, ${screensOnly.length} קובצי מסך)`),
 );

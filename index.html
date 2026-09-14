@@ -35,6 +35,7 @@
   import { createBrowserDriver } from './repository/driver-browser.js';
   import { createRepository } from './repository/index.js';
   import { createOrchestrator } from './core/orchestrator.js';
+  import { createEndpoint } from './screens/endpoint.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
@@ -106,6 +107,10 @@
 
     const orchestrator = createOrchestrator({ repository, handlers });
 
+    // הכתובת האחת. נבנית פעם אחת, ואותה אחת מוזרקת לכל מסך: זה מה
+    // שהופך את "כל מסך פונה לכתובת אחת" למבנה ולא להסכמה.
+    const send = createEndpoint({ handle: (envelope) => orchestrator.handle(envelope) });
+
     // שם הפונה של מסך אינו כתוב כאן: הוא תכונה של המודול בטבלת
     // המודולים, ולכן הוספת מסך היא שורה בנתונים (מפה 4.3, מבחן
     // מבנה 06). מודול בלי שם פונה אינו יכול לשלוח מעטפה.
@@ -140,7 +145,7 @@
         host,
         from: callerOf(moduleId),
         reference: referenceFor(refKeys),
-        send: (envelope) => orchestrator.handle(envelope),
+        send,
       });
       return host;
     }
