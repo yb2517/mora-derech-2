@@ -21,7 +21,10 @@ const REFERENCE_FILE = 'data/reference.json';
 
 // תיקיות שאינן קוד המערכת: המסמכים הם המקור ומצטטים את הערכים בכוונה,
 // והבדיקות מחזיקות אותם כדי להצליב מול המפה.
-const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
+// dist הוא פלט האריזה של משימה 9 ולא מקור: הוא עותק משורשר של
+// אותם קבצים, והוא אינו במאגר. כלל מבני חל על המקום שאפשר
+// לערוך, ולכן הוא נסרק כאן כמו node_modules, כלומר לא.
+const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude', 'dist']);
 const CODE_EXTENSIONS = ['.js', '.mjs', '.json', '.css', '.html'];
 
 // שדות תיעוד בקובצי הנתונים. הם מפנים לסעיפים במפה ("סעיף 4.2"), ואינם ערכים.

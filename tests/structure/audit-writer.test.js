@@ -19,7 +19,10 @@ import referenceFile from '../../data/reference.json' with { type: 'json' };
 const { check, checkThrows, report } = createChecker('מבחן מבנה 04');
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
-const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
+// dist הוא פלט האריזה של משימה 9 ולא מקור: הוא עותק משורשר של
+// אותם קבצים, והוא אינו במאגר. כלל מבני חל על המקום שאפשר
+// לערוך, ולכן הוא נסרק כאן כמו node_modules, כלומר לא.
+const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude', 'dist']);
 
 // --- BL-09: כותב אחד. רק ה-Orchestrator קורא ל-appendAudit ---
 
