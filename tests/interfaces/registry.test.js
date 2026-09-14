@@ -11,13 +11,19 @@ import { createChecker } from '../helpers/assert.js';
 
 const { check, checkThrows, checkThrowsAsync, report } = createChecker('CORE-03 registry');
 
-// נתוני הדגמה מסומנים ב-is_demo ומוסרים בשלב 7 (מסמך הבנייה סעיף 7).
-// ההצלבה מול המפה נעשית על השורות שאינן הדגמה, כדי שמודול הדמה של
-// משימה 7 לא יזהם אותה, וכדי שההסרה בשלב 7 תהיה מחיקת שורות בלבד.
+// שלוש קבוצות שורות, ולכל אחת תפקיד אחר בבדיקה:
+//   allRows      כל מה שבקובץ
+//   mapRows      השורות שמקורן ב-4.2, כלומר בלי מודול הדמה של משימה 7
+//   productionRows  מה שנשאר אחרי שלב 7, כלומר בלי is_demo
+//
+// שורות tool-simulator מסומנות is_demo בהכרעת בעלת הפרויקט (פער 13):
+// מפה 4.3 קובעת allowed=false בייצור, ובייצור אין להן שורה כלל.
 const allModules = modulesFile.modules;
 const allRows = allowFile.rows;
 const modules = allModules.filter((m) => !m.is_demo);
-const rows = allRows.filter((r) => !r.is_demo);
+const mapRows = allRows.filter((r) => r.module !== 'test-echo');
+const rows = mapRows;
+const productionRows = allRows.filter((r) => !r.is_demo);
 
 // ---------------------------------------------------------------
 // הנתונים שמולם מצליבים, מוקלדים כאן ביד מתוך המפה.
@@ -105,6 +111,9 @@ const ROWS_IN_MAP = [
   ['module-dialogue', 'BE-07', 'log'],
   ['module-delivery', 'BE-07', 'log'],
   ['screen-traveler', 'BE-07', 'log'],
+  // נוספה בהכרעת בעלת הפרויקט 14.09.2026, פער 11: מפה 3.2 כותבת על
+  // BE-04 "שולח log ל-BE-07", ולא הייתה לו שורה.
+  ['module-retrieval', 'BE-07', 'log'],
   ['system-timer', 'BE-07', 'close_stale'],
   ['screen-owner', 'BE-07', 'compute_metrics'],
   ['screen-owner', 'BE-07', 'export'],
@@ -162,6 +171,16 @@ check(
 
 // כל from ברשימת המותר הוא caller של מודול רשום. זה מה שמאפשר
 // ל-CORE-02 לגזור את הרשימה הסגורה מהנתונים ולא מהקוד.
+// אחרי פער 11, כל עשרת הפונים של 4.1 יש להם לפחות שורה אחת.
+check(
+  'אין פונה ברשימה הסגורה בלי אף שורה',
+  modules
+    .map((m) => m.caller)
+    .filter(Boolean)
+    .filter((caller) => !allRows.some((r) => r.from === caller)),
+  [],
+);
+
 check(
   'כל from ברשימת המותר הוא caller של מודול',
   [...new Set(rows.map((r) => r.from))]
@@ -191,10 +210,12 @@ check(
 // ---------------------------------------------------------------
 
 check(
-  'ספירת השורות ברשימת המותר שווה לספירת הצירופים ב-4.2',
-  rows.length,
+  'ספירת שורות המפה שווה לספירת הצירופים ב-4.2, אחרי תוספת פער 11',
+  mapRows.length,
   ROWS_IN_MAP.length,
 );
+
+check('שלושים וארבעה צירופים ב-4.2, אחרי תוספת פער 11', ROWS_IN_MAP.length, 34);
 
 const keyOf = (r) => `${r.from}|${r.module}|${r.action}`;
 const keysInFile = rows.map(keyOf).sort();
@@ -251,21 +272,37 @@ check(
 // tool-simulator, מפה 4.3
 // ---------------------------------------------------------------
 
+// פער 13: שורות הסימולטור פתוחות בפיתוח ומסומנות להסרה, ולכן בייצור
+// אין להן שורה והתוצאה היא E-ALLOW-DENIED, כמו שמפה 4.3 מתכוונת.
 check(
-  'שורות tool-simulator של הייצור עם allowed=false',
-  rows.filter((r) => r.from === 'tool-simulator').map((r) => `${r.action}=${r.allowed}`),
-  ['arrive=false', 'leave=false'],
+  'שורות tool-simulator פתוחות בפיתוח ומסומנות is_demo',
+  allRows
+    .filter((r) => r.from === 'tool-simulator' && r.module === 'FE-04')
+    .map((r) => `${r.action}=${r.allowed}/${r.is_demo === true}`),
+  ['arrive=true/true', 'leave=true/true'],
 );
 
 check(
-  'כל שורה שאינה tool-simulator עם allowed=true',
-  rows.filter((r) => r.from !== 'tool-simulator' && r.allowed !== true).map(keyOf),
+  'בייצור אין ולו שורת סימולטור אחת',
+  productionRows.filter((r) => r.from === 'tool-simulator'),
   [],
 );
 
 check(
-  'לכל שורה ארבעה שדות בלבד',
-  rows.filter((r) => JSON.stringify(Object.keys(r)) !== JSON.stringify(['from', 'module', 'action', 'allowed'])),
+  'כל שורה בקובץ עם allowed=true',
+  allRows.filter((r) => r.allowed !== true).map(keyOf),
+  [],
+);
+
+check(
+  'לשורת ייצור ארבעה שדות, ולשורת פיתוח חמישה עם is_demo',
+  allRows
+    .filter((r) => {
+      const keys = JSON.stringify(Object.keys(r));
+      return keys !== JSON.stringify(['from', 'module', 'action', 'allowed'])
+        && keys !== JSON.stringify(['from', 'module', 'action', 'allowed', 'is_demo']);
+    })
+    .map(keyOf),
   [],
 );
 
@@ -290,9 +327,13 @@ check(
 );
 
 check(
-  'שורת הדגמה אחת ברשימת המותר, מסומנת',
-  allRows.filter((r) => r.is_demo).map((r) => `${r.from}|${r.module}|${r.action}`),
-  ['tool-simulator|test-echo|echo'],
+  'שלוש שורות מסומנות להסרה בשלב 7: שתי שורות הסימולטור ומודול הדמה',
+  allRows.filter((r) => r.is_demo).map((r) => `${r.from}|${r.module}|${r.action}`).sort(),
+  [
+    'tool-simulator|FE-04|arrive',
+    'tool-simulator|FE-04|leave',
+    'tool-simulator|test-echo|echo',
+  ],
 );
 
 check(
@@ -313,12 +354,9 @@ check(
 // שלב 7: שאילתה על is_demo מחזירה אפס אחרי ההסרה. כאן נבדק שההסרה
 // היא מחיקת שורות מסומנות ולא עבודת ידיים.
 check(
-  'הסרת כל המסומן מחזירה בדיוק את מצב המפה',
-  [
-    allModules.filter((m) => !m.is_demo).length,
-    allRows.filter((r) => !r.is_demo).length,
-  ],
-  [22, 33],
+  'הסרת כל המסומן בשלב 7 מחזירה 22 מודולים ו-32 שורות ייצור',
+  [allModules.filter((m) => !m.is_demo).length, productionRows.length],
+  [22, 32],
 );
 
 // --- סיכום ---

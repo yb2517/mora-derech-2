@@ -166,12 +166,13 @@ function liveDriver() {
 
 {
   const { repository } = freshRepository();
-  // 33 שורות המפה ועוד שורת ההדגמה של משימה 7, שמוסרת בשלב 7.
-  check('listAllowed מחזיר את כל השורות', repository.listAllowed().length, 34);
+  // 34 צירופי 4.2 (כולל שורת פער 11) ועוד שורת ההדגמה של משימה 7.
+  // שלוש מהן מסומנות להסרה בשלב 7, ואז נשארות 32 שורות ייצור.
+  check('listAllowed מחזיר את כל השורות', repository.listAllowed().length, 35);
   check(
-    'מהן 33 שאינן הדגמה, כמספר צירופי 4.2',
+    'מהן 32 שורות ייצור',
     repository.listAllowed().filter((r) => !r.is_demo).length,
-    33,
+    32,
   );
   check('listCallers מחזיר את עשרת הפונים של 4.1', repository.listCallers().length, 10);
   check(

@@ -5,6 +5,7 @@
 
 import referenceFile from '../../data/reference.json' with { type: 'json' };
 import { ERROR_CODES, ERROR_CODE_LIST } from '../../core/errors.js';
+import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import { createChecker } from '../helpers/assert.js';
 
 const { check, checkThrows, checkThrowsAsync, report } = createChecker('reference table');
@@ -24,6 +25,17 @@ const KEYS_IN_MAP_2_4 = [
   'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
   'battery_block_text', 'safety_opening_text', 'model_tier',
 ];
+
+// מפתח שנוסף בהכרעת בעלת הפרויקט 14.09.2026, פער 14, כדי לאכוף את
+// BL-17: type ברשימה הסגורה, ו-from מורשה לסוג. הערכים מהסוגריים
+// בשורת log במפה 4.2.
+const KEYS_ADDED_BY_DECISION = ['interaction_type_senders'];
+
+// הסדר בקובץ: מפתחות 2.4, ו-interaction_type_senders מיד אחרי
+// interaction_types, כדי ששני המפתחות של BL-17 יישבו יחד.
+const EXPECTED_ORDER = KEYS_IN_MAP_2_4.flatMap(
+  (key) => (key === 'interaction_types' ? [key, 'interaction_type_senders'] : [key]),
+);
 
 // הערכים שמפה 2.4 קובעת במפורש.
 const DECIDED_IN_MAP = {
@@ -54,8 +66,17 @@ const EXPECTED_EMPTY = ['voice_id', 'voice_rate', 'model_tier'];
 // --- המפתחות מול 2.4 ---
 
 check('2.4 מונה עשרים ושמונה מפתחות', KEYS_IN_MAP_2_4.length, 28);
-check('הטבלה מונה עשרים ושמונה מפתחות', Object.keys(values).length, 28);
-check('המפתחות והסדר זהים ל-2.4', Object.keys(values), KEYS_IN_MAP_2_4);
+check('מפתח אחד נוסף בהכרעה', KEYS_ADDED_BY_DECISION.length, 1);
+check('הטבלה מונה עשרים ותשעה מפתחות', Object.keys(values).length, 29);
+check('המפתחות והסדר כמצופה', Object.keys(values), EXPECTED_ORDER);
+
+check(
+  'אין בטבלה מפתח שאינו מ-2.4 ואינו מהכרעה',
+  Object.keys(values).filter(
+    (key) => !KEYS_IN_MAP_2_4.includes(key) && !KEYS_ADDED_BY_DECISION.includes(key),
+  ),
+  [],
+);
 
 // --- הערכים המוכרעים ---
 
@@ -153,6 +174,48 @@ check(
 
 // model_tier ריק בכוונה, וזה מה שמאפשר את בדיקת הקבלה של שלב 6
 check('model_tier ריק, לפי 2.4: אין AI ב-v1', values.model_tier, null);
+
+// --- interaction_type_senders, פער 14, BL-17 ---
+
+check('שבעה סוגים, כמספר interaction_types', Object.keys(values.interaction_type_senders).length, 7);
+
+check(
+  'הסוגים זהים ל-interaction_types, לשני הכיוונים',
+  [
+    Object.keys(values.interaction_type_senders)
+      .filter((type) => !values.interaction_types.includes(type)),
+    values.interaction_types
+      .filter((type) => !(type in values.interaction_type_senders)),
+  ],
+  [[], []],
+);
+
+check(
+  'לכל סוג לפחות פונה אחד',
+  Object.entries(values.interaction_type_senders)
+    .filter(([, senders]) => !Array.isArray(senders) || senders.length === 0)
+    .map(([type]) => type),
+  [],
+);
+
+// כל פונה שמופיע כאן הוא caller של מודול רשום. בלי זה אפשר לכתוב
+// בטבלה שם שאינו קיים, ו-BL-17 היה דוחה הכול בשקט.
+check(
+  'כל פונה בטבלה הוא caller של מודול רשום',
+  [...new Set(Object.values(values.interaction_type_senders).flat())]
+    .filter((sender) => !modulesFile.modules.some((m) => m.caller === sender)),
+  [],
+);
+
+// הערכים מהסוגריים בשורת log ב-4.2, מוקלדים כאן ביד.
+check('initiated הוא של מודול השיחה בלבד, לפי הבדיקה האדומה השלישית',
+  values.interaction_type_senders.initiated, ['module-dialogue']);
+check('pushed ו-arrived_no_content של מודול המסירה',
+  [values.interaction_type_senders.pushed, values.interaction_type_senders.arrived_no_content],
+  [['module-delivery'], ['module-delivery']]);
+check('attempt_failed ו-replay של מסך המטייל',
+  [values.interaction_type_senders.attempt_failed, values.interaction_type_senders.replay],
+  [['screen-traveler'], ['screen-traveler']]);
 
 // --- שני הנוסחים שנקלטו מהמסמכים ---
 

@@ -47,7 +47,7 @@ const everyPath = [
   { label: 'payload פסול', request: { from: 'tool-simulator', module: 'test-echo', action: 'echo', payload: [], lang: 'he' } },
   { label: 'פונה לא מוכר', request: { from: 'screen-nope', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' } },
   { label: 'פונה מוכר בלי שורה', request: { from: 'module-retrieval', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' } },
-  { label: 'שורה חסומה', request: { from: 'tool-simulator', module: 'FE-04', action: 'arrive', payload: {}, lang: 'he' } },
+  { label: 'צירוף שאין לו שורה', request: { from: 'screen-veto', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' } },
   { label: 'מעטפה שאינה אובייקט', request: null },
 ];
 

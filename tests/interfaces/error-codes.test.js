@@ -52,7 +52,7 @@ const expectedByPath = [
   ['בלי lang', { from: 'tool-simulator', module: 'test-echo', action: 'echo', payload: {} }, 'E-ENVELOPE-INVALID'],
   ['פונה לא מוכר', { from: 'screen-nope', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' }, 'E-FROM-UNKNOWN'],
   ['פונה מוכר בלי שורה', { from: 'module-retrieval', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' }, 'E-ALLOW-DENIED'],
-  ['שורה חסומה', { from: 'tool-simulator', module: 'FE-04', action: 'arrive', payload: {}, lang: 'he' }, 'E-ALLOW-DENIED'],
+  ['צירוף שאין לו שורה', { from: 'screen-veto', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' }, 'E-ALLOW-DENIED'],
 ];
 
 const emitted = [];

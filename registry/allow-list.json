@@ -1,6 +1,6 @@
 {
-  "source": "doc-module-map-v3 סעיף 4.2 (הפעולות), 4.3 (רשימת המותר), 4.4 (טבלת פעולות המסכים)",
-  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורות tool-simulator של הייצור עם allowed=false. שורה עם is_demo היא נתון הדגמה שמוסר בשלב 7.",
+  "source": "doc-module-map-v3 סעיף 4.2, 4.3, 4.4; שורת module-retrieval ל-BE-07 log וסימון שורות הסימולטור: הכרעת בעלת הפרויקט 14.09.2026, פערים 11 ו-13",
+  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורה עם is_demo היא שורת פיתוח שמוסרת בשלב 7: שורות tool-simulator (מפה 4.3, allowed=false בייצור, כלומר אין שורה כלל) ומודול הדמה של משימה 7.",
   "rows": [
     {
       "from": "screen-veto",
@@ -138,13 +138,15 @@
       "from": "tool-simulator",
       "module": "FE-04",
       "action": "arrive",
-      "allowed": false
+      "allowed": true,
+      "is_demo": true
     },
     {
       "from": "tool-simulator",
       "module": "FE-04",
       "action": "leave",
-      "allowed": false
+      "allowed": true,
+      "is_demo": true
     },
     {
       "from": "system-timer",
@@ -178,6 +180,12 @@
     },
     {
       "from": "screen-traveler",
+      "module": "BE-07",
+      "action": "log",
+      "allowed": true
+    },
+    {
+      "from": "module-retrieval",
       "module": "BE-07",
       "action": "log",
       "allowed": true

@@ -107,14 +107,33 @@ const echoRequest = {
   );
 }
 
-// שורה שקיימת ברשימה עם allowed=false נדחית. זה המצב של שורות
-// tool-simulator של הייצור לפי 4.3, והוא שונה מצירוף שאין לו שורה:
-// בשני המצבים הקוד הוא E-ALLOW-DENIED, ובלי בדיקת allowed השורה
-// החסומה הייתה עוברת.
+// שורה שקיימת ברשימה ו-allowed שלה false נדחית. אחרי הכרעת פער 13
+// אין עוד שורה כזאת בנתונים, ולכן השורה מוזרקת: הכלל הוא חלק מהחוזה
+// לפי 4.3, והוא נבדק בלי להיות תלוי בתוכן הנתונים.
+//
+// המודול המוזרק הוא test-echo, שיש לו handler. לכן אם בדיקת allowed
+// תוסר, הבקשה תעבור בשקט ותחזיר ok, והטענה תאדים. בגרסה הקודמת
+// המודול היה FE-04 שאין לו handler, ולכן ההסרה גרמה לזריקה במקום
+// לטענה אדומה, וזה כיסוי חלש יותר.
 {
-  const { orchestrator, repository } = build({ handlers: { 'FE-04': () => ({ ok: true, data: null, error: null }) } });
+  const blocked = {
+    ...allowFile,
+    rows: [...allowFile.rows, {
+      from: 'screen-veto', module: 'test-echo', action: 'echo', allowed: false,
+    }],
+  };
+  const repository = createRepository(createBrowserDriver({
+    storage: memoryStorage(),
+    seed: { ...seed, allow_list: blocked },
+  }));
+  const orchestrator = createOrchestrator({
+    repository,
+    handlers: { 'test-echo': echoHandler },
+    newRequestId: () => 'req-blocked',
+    now: () => '2026-09-14T00:00:00.000Z',
+  });
   const response = await orchestrator.handle({
-    from: 'tool-simulator', module: 'FE-04', action: 'arrive', payload: {}, lang: 'he',
+    from: 'screen-veto', module: 'test-echo', action: 'echo', payload: {}, lang: 'he',
   });
 
   check('שורה עם allowed=false נדחית', response.ok, false);

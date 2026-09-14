@@ -19,7 +19,13 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
 
 // הנתונים הם המקום היחיד שבו שם פונה מותר.
-const DATA_FILES = new Set(['registry/modules.json', 'registry/allow-list.json']);
+const DATA_FILES = new Set([
+  'registry/modules.json',
+  'registry/allow-list.json',
+  // interaction_type_senders מחזיק שמות פונים, וזה בדיוק העיקרון:
+  // הרשאה היא תא בטבלה ולא שורה בקוד (פער 14, BL-12).
+  'data/reference.json',
+]);
 
 function collectFiles(dir) {
   const found = [];

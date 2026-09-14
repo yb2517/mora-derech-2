@@ -1,5 +1,5 @@
 {
-  "source": "doc-module-map-v3 סעיף 2.4; הנוסחים לבני אדם מ-doc-error-human-text; safety_opening_text מ-usecase-f-13 סעיף 3; battery_block_text מ-doc-f-13-amendment-01-battery סעיף 1",
+  "source": "doc-module-map-v3 סעיף 2.4; הנוסחים לבני אדם מ-doc-error-human-text; safety_opening_text מ-usecase-f-13 סעיף 3; battery_block_text מ-doc-f-13-amendment-01-battery סעיף 1; interaction_type_senders: הכרעת בעלת הפרויקט 14.09.2026, פער 14, והערכים מהסוגריים בשורת log במפה 4.2",
   "note": "ערך null הוא ערך שאין לו הכרעה מאושרת, והוא מוחזר כ-E-REF-EMPTY ואינו מומצא (BL-12, חוק ברזל 5). הרשימה המלאה ב-pending.",
   "pending": {
     "voice_id": "מפה 2.4 כותבת 'היום בקוד, צעד הבא: לכאן'. אב הטיפוס אינו במאגר",
@@ -30,6 +30,29 @@
       "session_start",
       "session_end"
     ],
+    "interaction_type_senders": {
+      "initiated": [
+        "module-dialogue"
+      ],
+      "pushed": [
+        "module-delivery"
+      ],
+      "arrived_no_content": [
+        "module-delivery"
+      ],
+      "attempt_failed": [
+        "screen-traveler"
+      ],
+      "replay": [
+        "screen-traveler"
+      ],
+      "session_start": [
+        "screen-traveler"
+      ],
+      "session_end": [
+        "screen-traveler"
+      ]
+    },
     "m01_threshold": 3,
     "m02_threshold": 0.7,
     "sample_min": 15,

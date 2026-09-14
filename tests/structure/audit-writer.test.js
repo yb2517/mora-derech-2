@@ -86,7 +86,7 @@ const requests = [
   { module: 'test-echo', action: 'echo', payload: {}, lang: 'he' },
   { from: 'screen-nope', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' },
   { from: 'module-retrieval', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' },
-  { from: 'tool-simulator', module: 'FE-04', action: 'arrive', payload: {}, lang: 'he' },
+  { from: 'screen-veto', module: 'test-echo', action: 'echo', payload: {}, lang: 'he' },
   null,
 ];
 
