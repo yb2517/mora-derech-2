@@ -284,7 +284,7 @@ const envelope = (action, payload = {}, from = 'screen-veto') => ({
   check('getItem מחזיר את הפריט עם הטקסט', item.item.text, 'טקסט');
   check('ואת המקור שלו', item.source.name, 'מקור א');
   check('getItem על מזהה שאינו קיים מחזיר null עם ok', handle(envelope('getItem', { item_id: 'i-404' })), {
-    ok: true, data: { item: null, source: null },
+    ok: true, data: { item: null, source: null, anchor: null },
   });
 
   check('getSite', handle(envelope('getSite', {})).data.site.site_id, 's-1');
@@ -562,6 +562,24 @@ const ITEM = {
   check('ועם audience מפורש הוא עובר',
     ask({ site_id: 's-1', stop_id: 'st-1', audience: 'מבוגרים בלבד' }).data.items.map((row) => row.item_id),
     ['i-adults', 'i-all']);
+}
+
+// getItem מחזיר את העוגן: מפה 4.4 נותנת ל-screen-content את getItem
+// ואת verify_anchor, ואינה נותנת לו פעולה שקוראת עוגן.
+{
+  const repository = fakeRepository();
+  const handle = create(options(repository));
+  const response = handle(envelope('getItem', { item_id: 'i-draft' }, 'screen-content'));
+
+  check('הפריט חוזר', response.data.item.item_id, 'i-draft');
+  check('והמקור שלו', response.data.source.source_id, 'src-1');
+  check('והעוגן שלו', response.data.anchor.anchor_id, 'a-draft');
+  check('עם מצב האימות', response.data.anchor.verified, false);
+  check('ופריט שאינו קיים מחזיר null בשלושתם', [
+    handle(envelope('getItem', { item_id: 'i-none' }, 'screen-content')).data.item,
+    handle(envelope('getItem', { item_id: 'i-none' }, 'screen-content')).data.source,
+    handle(envelope('getItem', { item_id: 'i-none' }, 'screen-content')).data.anchor,
+  ], [null, null, null]);
 }
 
 // ---------------------------------------------------------------------

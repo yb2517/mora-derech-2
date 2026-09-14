@@ -310,6 +310,13 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         source: item
           ? repository.listSources().find((row) => row.source_id === item.source_id) ?? null
           : null,
+        // העוגן חוזר עם הפריט מאותו טעם שהוא חוזר עם
+        // listApprovedByStop: מפה 4.4 נותנת ל-screen-content את
+        // getItem ואת verify_anchor, ואינה נותנת לו פעולה שקוראת
+        // עוגן. בלי זה המסך אינו יכול להראות אם העוגן אומת, ואומת
+        // בשטח היה הופך לכפתור שפועל בעיוורון. נמצא באימות בדפדפן
+        // בסוף שלב 4.
+        anchor: item ? repository.getAnchorByItem(item.item_id) : null,
       });
     },
 
