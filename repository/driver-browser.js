@@ -6,22 +6,29 @@
 //
 // **הקובץ היחיד במאגר שנוגע באחסון.** מבחן מבנה 01 בודק בדיוק את זה.
 // הדרייבר אינו יודע דבר על מעטפות, על מודולים ועל חוקים עסקיים: הוא
-// קורא טבלה ומוסיף שורה, וזה הכול. המשמעות העסקית יושבת ב-index.js.
+// קורא טבלה, מוסיף שורה ומעדכן שורה, וזה הכול. המשמעות העסקית יושבת
+// ב-index.js.
 //
-// שלוש טבלאות המערכת והטבלה הרביעית, לפי שורה 5 בתוכנית שלב 1:
-// modules, allow_list, audit_log, reference.
+// שלוש טבלאות המערכת והטבלה הרביעית נכנסו בשלב 1. שש הטבלאות
+// העסקיות נכנסו במשימה 2 של שלב 3, עם ה-Slice הראשון: עד אז לא היה
+// מה לשמור, ומשימה 2 היא נגיעה בליבה לפי CLAUDE.md סעיף 9.2.
+
+// טבלאות שנזרעות פעם אחת ונקראות בלבד: הן הנתונים של CORE-03 ושל
+// טבלת ה-reference, ואיש אינו כותב אליהן בזמן ריצה.
+const SEEDED_ONLY = Object.freeze(['modules', 'allow_list', 'reference']);
+
+// טבלאות שגדלות בלבד. שורה שנכתבה אינה משתנה ואינה נמחקת:
+// audit_log לפי BL-09, ו-APPROVALS לפי מפה 2.1 ("append-only, נכתב
+// בלבד. אין עריכה ואין מחיקה").
+const APPEND_ONLY = Object.freeze(['audit_log', 'approvals']);
+
+// הישויות העסקיות של מפה 2.1 שהשלב הזה נוגע בהן. הן גדלות בשורות
+// חדשות, ושורה קיימת ניתנת לעדכון (למשל status של פריט).
+const ENTITIES = Object.freeze(['content_items', 'sites', 'sources', 'institutes', 'rights_mou']);
 
 /** שמות הטבלאות שהדרייבר מכיר. */
-export const TABLE_NAMES = Object.freeze([
-  'modules',
-  'allow_list',
-  'audit_log',
-  'reference',
-]);
+export const TABLE_NAMES = Object.freeze([...SEEDED_ONLY, ...APPEND_ONLY, ...ENTITIES]);
 
-// טבלה שנצרכת לקריאה בלבד נזרעת פעם אחת. audit_log נפתחת ריקה וגדלה
-// בלבד: אין בדרייבר פעולה שמוחקת שורה או שדורסת טבלה שכבר נזרעה.
-const APPEND_ONLY = 'audit_log';
 const KEY_PREFIX = 'mora-derech/';
 
 function assertKnownTable(name) {
@@ -35,7 +42,7 @@ function assertKnownTable(name) {
  * @param {Storage} [options.storage] מקום האחסון. ברירת המחדל היא
  *   אחסון הדפדפן. בדיקה מזריקה אחסון בזיכרון, ולכן היא רצה בלי דפדפן
  *   ובלי לגעת בנתונים אמיתיים.
- * @param {object} [options.seed] הנתונים ההתחלתיים של הטבלאות לקריאה.
+ * @param {object} [options.seed] הנתונים ההתחלתיים של הטבלאות.
  */
 export function createBrowserDriver({ storage = globalThis.localStorage, seed = {} } = {}) {
   if (!storage) {
@@ -52,13 +59,16 @@ export function createBrowserDriver({ storage = globalThis.localStorage, seed = 
   }
 
   // זריעה: טבלה שאינה קיימת באחסון מקבלת את הנתונים ההתחלתיים.
-  // טבלה שכבר קיימת אינה נדרסת, גם לא בזריעה חוזרת.
+  // טבלה שכבר קיימת אינה נדרסת, גם לא בזריעה חוזרת. זה מה שהופך את
+  // רענון הדף למבחן אמיתי: מה שנכתב בפעם הקודמת נשאר.
   for (const name of TABLE_NAMES) {
     if (read(name) !== undefined) continue;
-    if (name === APPEND_ONLY) {
-      write(name, []);
-    } else if (seed[name] !== undefined) {
+    if (seed[name] !== undefined) {
       write(name, seed[name]);
+    } else if (name !== 'reference') {
+      // טבלה בלי זריעה נפתחת ריקה. reference יוצא מן הכלל: הוא אוסף
+      // מפתחות ולא רשימת שורות, ומפתח חסר הוא E-REF-EMPTY ולא ריק.
+      write(name, []);
     }
   }
 
@@ -70,13 +80,33 @@ export function createBrowserDriver({ storage = globalThis.localStorage, seed = 
 
     appendRow(name, row) {
       assertKnownTable(name);
-      if (name !== APPEND_ONLY) {
-        throw new Error(`הוספת שורה מותרת ל-${APPEND_ONLY} בלבד, לא ל-${name}`);
+      if (SEEDED_ONLY.includes(name)) {
+        throw new Error(`הטבלה ${name} נזרעת ואינה נכתבת בזמן ריצה`);
       }
       const rows = read(name) ?? [];
       rows.push(row);
       write(name, rows);
       return row;
+    },
+
+    /**
+     * מעדכן שורה אחת לפי מפתח, ומחזיר את השורה אחרי העדכון, או
+     * undefined אם לא נמצאה.
+     *
+     * אינו זמין לטבלה שגדלה בלבד: שורת יומן שאפשר לעדכן אינה יומן.
+     * אין כאן מחיקה, ואין החלפת טבלה שלמה.
+     */
+    updateRow(name, key, id, patch) {
+      assertKnownTable(name);
+      if (!ENTITIES.includes(name)) {
+        throw new Error(`עדכון שורה אינו מותר בטבלה ${name}`);
+      }
+      const rows = read(name) ?? [];
+      const index = rows.findIndex((row) => row[key] === id);
+      if (index === -1) return undefined;
+      rows[index] = { ...rows[index], ...patch };
+      write(name, rows);
+      return rows[index];
     },
   };
 }
