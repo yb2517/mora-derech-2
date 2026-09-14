@@ -35,13 +35,15 @@ const CODES_IN_MAP_4_5 = [
   'E-MIC-NOT-ALLOWED',
   'E-LOCATION-NOT-ALLOWED',
   'E-NO-EXIT-POINT',
+  // קוד עשרים ושלושה, הכרעת בעלת הפרויקט 14.09.2026, פער 22
+  'E-MODULE-FAILED',
 ];
 
 // --- מבחן מבנה 07: זהים, לא חסר, לא עודף ---
 
-check('הרשימה במפה מונה עשרים ושניים קודים', CODES_IN_MAP_4_5.length, 22);
+check('הרשימה במפה מונה עשרים ושלושה קודים', CODES_IN_MAP_4_5.length, 23);
 
-check('הקובץ מונה עשרים ושניים קודים', ERROR_CODE_LIST.length, 22);
+check('הקובץ מונה עשרים ושלושה קודים', ERROR_CODE_LIST.length, 23);
 
 const inCode = [...ERROR_CODE_LIST].sort();
 const inMap = [...CODES_IN_MAP_4_5].sort();
@@ -117,7 +119,7 @@ check(
 );
 
 check(
-  'כל אחד מעשרים ושניים הקודים עובר ב-error',
+  'כל אחד מעשרים ושלושה הקודים עובר ב-error',
   CODES_IN_MAP_4_5.filter((code) => error(code).code !== code),
   [],
 );

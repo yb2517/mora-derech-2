@@ -1,6 +1,6 @@
 // CORE-01: הרשימה הסגורה של קודי השגיאה וההסבר למפתח.
 //
-// המקור: doc-module-map-v3 סעיף 4.5, עשרים ושניים קודים.
+// המקור: doc-module-map-v3 סעיף 4.5, עשרים ושלושה קודים.
 // המפתחות והערכים כאן הועתקו מהטבלה שבמפה כלשונם.
 //
 // הנוסח לבני אדם אינו יושב כאן. מקומו במפתח error_human_text בטבלת
@@ -18,14 +18,14 @@ export const ERROR_CODES = Object.freeze({
   'E-ENVELOPE-INVALID': 'שדה חובה חסר או payload לא תקין',
   'E-AUDIT-WRITE-FAILED': 'לא ניתן לרשום את הבקשה; אינה מנותבת',
   'E-TRANSITION-DENIED': 'מעבר מצב שאינו בטבלה 2.2',
-  'E-ITEM-INCOMPLETE': 'שדה חסר ביצירה או בעריכה, עם שם השדה',
+  'E-ITEM-INCOMPLETE': 'שדה חסר ביצירה או בעריכה; error.data מכיל את שם השדה',
   'E-ANCHOR-OUT-OF-BOUNDS': 'קואורדינטות מחוץ לגבולות המסלול',
   'E-APPROVAL-WRITE-FAILED': 'רשומת APPROVALS לא נכתבה; המעבר בוטל',
-  'E-LOCK-REFUSED': 'תנאי נעילה נכשל; data מכיל את רשימת הכשלים',
+  'E-LOCK-REFUSED': 'תנאי נעילה נכשל; error.data מכיל את רשימת הכשלים',
   'E-GATE-CLOSED': 'שער B חסום ואכיפה דולקת',
   'E-QUESTION-INVALID': 'שאלה ריקה, ארוכה מדי או חסרת site_id',
   'E-RETRIEVAL-FAILED': 'כשל בקריאת מאגר המועמדים',
-  'E-REF-EMPTY': 'ערך reference חסר',
+  'E-REF-EMPTY': 'ערך reference חסר; error.data מכיל את שם ההגדרה',
   'E-SESSION-CLOSED': 'רשומת log לסשן שאינו פתוח',
   'E-LOG-TYPE-INVALID': 'type אינו ברשימה, או from אינו מורשה לסוג',
   'E-LOG-WRITE-FAILED': 'כשל כתיבה אחרי הניסיונות החוזרים; הסשן partial_log',
@@ -34,9 +34,10 @@ export const ERROR_CODES = Object.freeze({
   'E-MIC-NOT-ALLOWED': 'הרשאת מיקרופון נדחתה',
   'E-LOCATION-NOT-ALLOWED': 'הרשאת מיקום נדחתה',
   'E-NO-EXIT-POINT': 'אין נקודת יציאה רשומה למסלול; הודעת חסימת הסוללה אינה יכולה להיבנות',
+  'E-MODULE-FAILED': 'המודול לא החזיר תשובה: אינו רשום, או נפל בזמן הטיפול',
 });
 
-/** עשרים ושניים הקודים, בסדר שבו הם מופיעים ב-4.5. */
+/** עשרים ושלושה הקודים, בסדר שבו הם מופיעים ב-4.5. */
 export const ERROR_CODE_LIST = Object.freeze(Object.keys(ERROR_CODES));
 
 /**

@@ -118,17 +118,32 @@ export function createOrchestrator({
 
       // צעד 4: ניתוב ל-handler אחד.
       //
-      // מודול שיש לו שורה מותרת ואין לו handler הוא תקלת הרכבה, לא
-      // שגיאה עסקית, ולכן הוא נופל בזריקה ואינו מקבל קוד: הרשימה
-      // הסגורה של 4.5 אינה מונה קוד למודול שאינו מגיב, וקוד שאינו
-      // ברשימה אינו נזרק (חוק ברזל 8). אותו נימוק חל על handler שנופל
-      // מעצמו: הזריקה עוברת הלאה ואינה מתורגמת לקוד מומצא. פער מדווח.
+      // מודול שאינו מגיב מחזיר E-MODULE-FAILED, הקוד העשרים ושלושה
+      // שנוסף למפה 4.5 בהכרעת בעלת הפרויקט 14.09.2026. שני המקרים
+      // שהוא מכסה: מודול שיש לו שורה מותרת ואין לו handler, ו-handler
+      // שנופל מעצמו. בשניהם הבקשה מקבלת מעטפת תשובה ונרשמת, במקום
+      // לקרוס: מודול שנופל באמצע טיול אינו מפיל את המסך.
       const handler = handlers[request.module];
       if (typeof handler !== 'function') {
-        throw new Error(`אין handler רשום למודול ${String(request.module)}`);
+        return await respond(
+          requestId,
+          request,
+          errorResponse(error('E-MODULE-FAILED', { module: request.module, reason: 'no-handler' })),
+        );
       }
 
-      return await respond(requestId, request, await handler(request));
+      let result;
+      try {
+        result = await handler(request);
+      } catch {
+        return await respond(
+          requestId,
+          request,
+          errorResponse(error('E-MODULE-FAILED', { module: request.module, reason: 'threw' })),
+        );
+      }
+
+      return await respond(requestId, request, result);
     },
   };
 

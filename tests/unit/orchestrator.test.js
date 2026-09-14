@@ -251,19 +251,30 @@ const echoRequest = {
 }
 
 // =============================================================
-// תקלות הרכבה נופלות בזריקה ואינן מקבלות קוד מומצא
+// מודול שאינו מגיב: E-MODULE-FAILED, קוד עשרים ושלושה
 // =============================================================
-await checkThrowsAsync('מודול מותר בלי handler נזרק', async () => {
-  const { orchestrator } = build({ handlers: {} });
-  await orchestrator.handle(echoRequest);
-});
+{
+  const { orchestrator, repository } = build({ handlers: {} });
+  const response = await orchestrator.handle(echoRequest);
 
-await checkThrowsAsync('handler שנופל מעביר את הזריקה הלאה', async () => {
-  const { orchestrator } = build({
+  check('מודול מותר בלי handler מחזיר מעטפה ולא קורס', response.ok, false);
+  check('הקוד הוא E-MODULE-FAILED', response.error?.code, 'E-MODULE-FAILED');
+  check('הפירוט נוקב בסיבה', response.error?.data.reason, 'no-handler');
+  check('שתי שורות נרשמו, כמו לכל בקשה', repository.listAudit().length, 2);
+  check('שורת התשובה נושאת את הקוד', repository.listAudit().at(-1).error_code, 'E-MODULE-FAILED');
+}
+
+{
+  const { orchestrator, repository } = build({
     handlers: { 'test-echo': () => { throw new Error('המודול נפל'); } },
   });
-  await orchestrator.handle(echoRequest);
-});
+  const response = await orchestrator.handle(echoRequest);
+
+  check('handler שנופל מחזיר מעטפה ולא קורס', response.ok, false);
+  check('הקוד הוא E-MODULE-FAILED', response.error?.code, 'E-MODULE-FAILED');
+  check('הפירוט מבחין בין שתי הסיבות', response.error?.data.reason, 'threw');
+  check('גם כאן שתי שורות', repository.listAudit().length, 2);
+}
 
 await checkThrowsAsync('בלי Repository נדחה בהרכבה', async () => createOrchestrator({}));
 

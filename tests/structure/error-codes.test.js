@@ -12,11 +12,13 @@ import { fileURLToPath } from 'node:url';
 
 import { ERROR_CODES, ERROR_CODE_LIST } from '../../core/errors.js';
 import { createChecker } from '../helpers/assert.js';
+import referenceFile from '../../data/reference.json' with { type: 'json' };
 
 const { check, report } = createChecker('מבחן מבנה 07');
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const MAP_FILE = 'docs/doc-module-map-v3.md';
+const HUMAN_TEXT_FILE = 'docs/doc-error-human-text.md';
 const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
 
 // --- הרשימה שבמפה, נקראת מהמסמך ---
@@ -31,7 +33,7 @@ const inMap = section
   .map(([code, developerText]) => ({ code, developerText }));
 
 check('סעיף 4.5 נקרא מהמסמך', inMap.length > 0, true);
-check('המפה מונה עשרים ושניים קודים', inMap.length, 22);
+check('המפה מונה עשרים ושלושה קודים', inMap.length, 23);
 
 // --- זהים, לשני הכיוונים ---
 
@@ -56,6 +58,51 @@ check(
 check(
   'הסדר בקוד הוא הסדר במפה',
   [...ERROR_CODE_LIST],
+  inMap.map((row) => row.code),
+);
+
+// --- הנוסח לאדם מול המסמך שלו ---
+//
+// ההסבר למפתח מוצלב מול המפה למעלה. הנוסח לאדם יושב בטבלת ה-reference
+// ומקורו ב-doc-error-human-text, ובלי ההצלבה הזאת אפשר לשנות את
+// המסמך בלי שאיש ישים לב. המוטציה שגילתה את החסר: הסרת שורה מהמסמך
+// לא הפילה דבר.
+
+const humanDoc = readFileSync(join(ROOT, HUMAN_TEXT_FILE), 'utf8');
+const humanSection = humanDoc.split('## הטבלה')[1].split('## שני נוסחים')[0];
+const humanInDoc = humanSection
+  .split('\n')
+  .map((line) => line.trim())
+  .filter((line) => line.startsWith('| E-'))
+  .map((line) => line.slice(1, -1).split('|').map((cell) => cell.trim()))
+  .map(([code, audience, text]) => ({ code, audience, text }));
+
+const humanInTable = referenceFile.values.error_human_text;
+
+check('טבלת הנוסחים נקראה מהמסמך', humanInDoc.length > 0, true);
+check('המסמך מונה נוסח לכל קוד', humanInDoc.length, ERROR_CODE_LIST.length);
+
+check(
+  'אין קוד ברשימה הסגורה שחסר לו נוסח במסמך',
+  ERROR_CODE_LIST.filter((code) => !humanInDoc.some((row) => row.code === code)),
+  [],
+);
+
+check(
+  'אין נוסח במסמך לקוד שאינו ברשימה הסגורה',
+  humanInDoc.filter((row) => !ERROR_CODE_LIST.includes(row.code)).map((row) => row.code),
+  [],
+);
+
+check(
+  'הנוסח בטבלת ה-reference זהה לנוסח שבמסמך, מילה במילה',
+  humanInDoc.filter((row) => humanInTable[row.code] !== row.text).map((row) => row.code),
+  [],
+);
+
+check(
+  'הסדר בטבלה הוא הסדר של 4.5',
+  Object.keys(humanInTable),
   inMap.map((row) => row.code),
 );
 
@@ -95,4 +142,7 @@ check(
 check('נסרקו קובצי קוד', files.length > 0, true);
 check('ונמצאו בהם מחרוזות קוד', literals.size > 0, true);
 
-report(` (${inMap.length} במפה, ${ERROR_CODE_LIST.length} בקוד, ${literals.size} מחרוזות ב-${files.length} קבצים)`);
+report(
+  ` (${inMap.length} במפה, ${ERROR_CODE_LIST.length} בקוד, ${humanInDoc.length} נוסחים לאדם, `
+  + `${literals.size} מחרוזות ב-${files.length} קבצים)`,
+);

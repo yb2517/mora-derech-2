@@ -84,10 +84,14 @@ for (const [key, expected] of Object.entries(DECIDED_IN_MAP)) {
   check(`${key} זהה לערך שב-2.4`, values[key], expected);
 }
 
-check('interaction_types, שבעת הסוגים של 2.4', values.interaction_types, [
+// שמונה סוגים: שבעה מ-2.4, ו-abstained שנוסף בהכרעת בעלת הפרויקט
+// 14.09.2026 כדי שלמודול השליפה יהיה סוג שהוא מורשה לשלוח (BL-17).
+check('interaction_types, שמונת הסוגים', values.interaction_types, [
   'initiated', 'pushed', 'arrived_no_content',
-  'attempt_failed', 'replay', 'session_start', 'session_end',
+  'attempt_failed', 'replay', 'session_start', 'session_end', 'abstained',
 ]);
+
+check('abstained הוא של מודול השליפה', values.interaction_type_senders.abstained, ['module-retrieval']);
 
 // --- הנוסחים מ-doc-error-human-text ---
 
@@ -113,7 +117,7 @@ check(
 
 const humanCodes = Object.keys(values.error_human_text);
 
-check('error_human_text מונה עשרים ושניים קודים', humanCodes.length, 22);
+check('error_human_text מונה עשרים ושלושה קודים', humanCodes.length, 23);
 
 check(
   'אין קוד ברשימה הסגורה שחסר לו נוסח לאדם',
@@ -177,7 +181,7 @@ check('model_tier ריק, לפי 2.4: אין AI ב-v1', values.model_tier, null)
 
 // --- interaction_type_senders, פער 14, BL-17 ---
 
-check('שבעה סוגים, כמספר interaction_types', Object.keys(values.interaction_type_senders).length, 7);
+check('שמונה סוגים, כמספר interaction_types', Object.keys(values.interaction_type_senders).length, 8);
 
 check(
   'הסוגים זהים ל-interaction_types, לשני הכיוונים',

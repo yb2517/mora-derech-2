@@ -155,8 +155,8 @@ function liveDriver() {
   const { repository } = freshRepository();
   check('getRef על ערך מספרי', repository.getRef('relevance_threshold'), 0.28);
   check('getRef על ערך טקסטואלי', repository.getRef('fallback_text'), referenceFile.values.fallback_text);
-  check('getRef על רשימה', repository.getRef('interaction_types').length, 7);
-  check('getRef על טבלת הנוסחים', Object.keys(repository.getRef('error_human_text')).length, 22);
+  check('getRef על רשימה', repository.getRef('interaction_types').length, 8);
+  check('getRef על טבלת הנוסחים', Object.keys(repository.getRef('error_human_text')).length, 23);
   check('getRef על מפתח שקיים ואין לו ערך מוכרע מחזיר null', repository.getRef('model_tier'), null);
   check('getRef על מפתח שאינו בטבלה מחזיר undefined', repository.getRef('no_such_key'), undefined);
 

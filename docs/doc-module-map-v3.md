@@ -101,7 +101,8 @@
 | unavailable_text | [טרם נקבע] | BE-03 | usecase-f-05 זרימה ד |
 | voice_id, voice_rate | [היום בקוד, צעד הבא: לכאן] | CONN-02 | usecase-f-02 |
 | stale_session_minutes | 60 | AUTO-02 | הוכרע 12.09 |
-| interaction_types | initiated, pushed, arrived_no_content, attempt_failed, replay, session_start, session_end | BE-07 | usecase-f-09 סעיף 3 |
+| interaction_types | initiated, pushed, arrived_no_content, attempt_failed, replay, session_start, session_end, abstained | BE-07 | usecase-f-09 סעיף 3; abstained הוכרע 14.09.2026 |
+| interaction_type_senders | הפונה המורשה לכל סוג, לפי הסוגריים בשורת log ב-4.2 | BE-07 | הוכרע 14.09.2026, לאכיפת BL-17 |
 | m01_threshold, m02_threshold, sample_min, sample_max | 3, 0.70, 15, 25 | BE-07 | הסיפורים M-01, M-02 |
 | enforce_gate_b | false בפיתוח | BE-06 | doc-build-01 |
 | error_human_text | טבלת ההסברים לבני אדם, לפי קוד | הליבה | המצגת חלק א |
@@ -148,7 +149,7 @@
 | CONN-01 | STT Adapter | מתאם | listen: אודיו לטקסט, או כשל | F-02, F-04 | אין | אין | נבנה בתוך הקובץ |
 | CONN-02 | TTS Adapter | מתאם | speak ו-stop, קול עברי מפורש, שרשור, השהיה אחרי ביטול | F-02 | reference (voice_id, voice_rate) | אין | נבנה בתוך הקובץ |
 | CONN-03 | Location Adapter | מתאם | דגימות מיקום מהמכשיר, או מהסימולטור, באותה צורה | F-01 | reference (interval) | אין | נבנה בתוך הקובץ |
-| AUTO-01 | Geofence (system-geofence) | שכבת אוטומציה | מרחק לעוגנים ולנקודות יציאה, סינון דיוק, בחירת הקרוב, arrive ו-leave | F-01, F-03, F-13 | GEO_ANCHORS, EXIT_POINTS, reference | זיכרון קצר טווח: התחנה הנוכחית | נבנה בתוך הקובץ |
+| AUTO-01 | Geofence (module-geofence) | שכבת אוטומציה | מרחק לעוגנים ולנקודות יציאה, סינון דיוק, בחירת הקרוב, arrive ו-leave | F-01, F-03, F-13 | GEO_ANCHORS, EXIT_POINTS, reference | זיכרון קצר טווח: התחנה הנוכחית | נבנה בתוך הקובץ |
 | AUTO-02 | Timer (system-timer) | שכבת אוטומציה | release למינון, close_stale לסשנים | F-01, F-09 | reference | אין | חלקי: טיימר המינון קיים |
 | GW-01 | AI Gateway | שער | יציאה יחידה לספק AI, Adapter לספק, חוזה קריאה | אין ב-v1 | reference (model_tier) | אין | לא נבנה, מוגדר כתפר ריק |
 | TOOL-01 | Walk Simulator (tool-simulator) | מתאם, פיתוח בלבד | הזרמת דגימות מלאכותיות ל-CONN-03 | פיתוח | אין | אין | נבנה |
@@ -158,7 +159,7 @@
 
 ### 4.1 המעטפות
 
-בקשה: { from, module, action, payload, lang }. תשובה: { ok, data, error }. שניהם ב-CORE-01, ואף מודול אינו מגדיר מעטפה משלו. from מרשימה סגורה: screen-veto, screen-traveler, screen-content, screen-owner, module-dialogue (BE-03), module-delivery (FE-04), module-retrieval (BE-04), module-geofence (AUTO-01), system-timer (AUTO-02), tool-simulator (TOOL-01).
+בקשה: { from, module, action, payload, lang }. תשובה: { ok, data, error }. שניהם ב-CORE-01, ואף מודול אינו מגדיר מעטפה משלו. from מרשימה סגורה: screen-veto, screen-traveler, screen-content, screen-owner, module-dialogue (BE-03), module-delivery (FE-04), module-retrieval (BE-04), module-geofence (AUTO-01), system-timer (AUTO-02), tool-simulator (TOOL-01). lang בגרסה 1 מקבל את הערך he בלבד; רשימה סגורה תיכנס לטבלת ה-reference כשתתווסף שפה.
 
 ### 4.2 הפעולות
 
@@ -179,7 +180,7 @@
 | FE-04 | arrive, leave | F-01 ו-F-03 צעדים 4, 11 | module-geofence, tool-simulator (פיתוח) |
 | FE-04 | release | F-01 ו-F-03 צעד 7 | system-timer |
 | BE-07 | session_start, session_end | F-09 צעדים 1, 6 | screen-traveler |
-| BE-07 | log | F-09 צעד 3 | module-dialogue (initiated), module-delivery (pushed, arrived_no_content), screen-traveler (attempt_failed, replay) |
+| BE-07 | log | F-09 צעד 3 | module-dialogue (initiated), module-delivery (pushed, arrived_no_content), screen-traveler (attempt_failed, replay), module-retrieval (abstained) |
 | BE-07 | close_stale | F-09 צעד 7 | system-timer |
 | BE-07 | compute_metrics, export | F-09 צעד 8 | screen-owner |
 
@@ -202,20 +203,20 @@
 
 | הקוד | ההסבר למפתח | היכן נזרק |
 |---|---|---|
-| E-FROM-MISSING | שדה from חסר במעטפה | CORE-02 |
+| E-FROM-MISSING | שדה from חסר במעטפה | CORE-01 מזהה, CORE-02 מחזיר |
 | E-FROM-UNKNOWN | from אינו ברשימה הסגורה של הפונים | CORE-02 |
 | E-ALLOW-DENIED | אין שורה ברשימת המותר לצירוף | CORE-02 |
-| E-ENVELOPE-INVALID | שדה חובה חסר או payload לא תקין | CORE-01 |
+| E-ENVELOPE-INVALID | שדה חובה חסר או payload לא תקין | CORE-01 מזהה, CORE-02 מחזיר |
 | E-AUDIT-WRITE-FAILED | לא ניתן לרשום את הבקשה; אינה מנותבת | CORE-02 |
 | E-TRANSITION-DENIED | מעבר מצב שאינו בטבלה 2.2 | BE-05 |
-| E-ITEM-INCOMPLETE | שדה חסר ביצירה או בעריכה, עם שם השדה | BE-05 |
+| E-ITEM-INCOMPLETE | שדה חסר ביצירה או בעריכה; error.data מכיל את שם השדה | BE-05 |
 | E-ANCHOR-OUT-OF-BOUNDS | קואורדינטות מחוץ לגבולות המסלול | BE-05 |
 | E-APPROVAL-WRITE-FAILED | רשומת APPROVALS לא נכתבה; המעבר בוטל | BE-05 |
-| E-LOCK-REFUSED | תנאי נעילה נכשל; data מכיל את רשימת הכשלים | BE-05 |
+| E-LOCK-REFUSED | תנאי נעילה נכשל; error.data מכיל את רשימת הכשלים | BE-05 |
 | E-GATE-CLOSED | שער B חסום ואכיפה דולקת | BE-06 |
 | E-QUESTION-INVALID | שאלה ריקה, ארוכה מדי או חסרת site_id | BE-04 |
 | E-RETRIEVAL-FAILED | כשל בקריאת מאגר המועמדים | BE-04 |
-| E-REF-EMPTY | ערך reference חסר | הליבה |
+| E-REF-EMPTY | ערך reference חסר; error.data מכיל את שם ההגדרה | הליבה |
 | E-SESSION-CLOSED | רשומת log לסשן שאינו פתוח | BE-07 |
 | E-LOG-TYPE-INVALID | type אינו ברשימה, או from אינו מורשה לסוג | BE-07 |
 | E-LOG-WRITE-FAILED | כשל כתיבה אחרי הניסיונות החוזרים; הסשן partial_log | BE-07 |
@@ -224,6 +225,7 @@
 | E-MIC-NOT-ALLOWED | הרשאת מיקרופון נדחתה | CONN-01 |
 | E-LOCATION-NOT-ALLOWED | הרשאת מיקום נדחתה | CONN-03 |
 | E-NO-EXIT-POINT | אין נקודת יציאה רשומה למסלול; הודעת חסימת הסוללה אינה יכולה להיבנות | BE-05 |
+| E-MODULE-FAILED | המודול לא החזיר תשובה: אינו רשום, או נפל בזמן הטיפול | CORE-02 |
 
 "אסור" ו"טרם נקבע" הם שני קודים שונים: E-ALLOW-DENIED לעומת E-REF-EMPTY.
 
@@ -344,6 +346,8 @@ doc-module-feature-breakdown.md (31.08.2026, 19 מודולים) קדם לתבנ�
 **הצעת היעילות מסעיף 7 במפה הקודמת** (תשובות מיוצרות מראש): התייתרה. בלי מודל שפה בזמן ריצה, התשובה היא ממילא ציטוט מפריט מאושר.
 
 ## 10. יומן גרסאות
+
+גרסה 3.1, 14.09.2026: נקלטו שמונה פערים שדוח שלב 1 החזיר, בהכרעת בעלת הפרויקט. 4.1: ערכי lang בגרסה 1. 3.3: שם הפונה של AUTO-01 יושר ל-module-geofence. 4.5: עמודת היכן נזרק חודדה לשני קודי הליבה, שלוש שורות נוקבות ב-error.data במקום ב-data, ונוסף קוד עשרים ושלושה, E-MODULE-FAILED, כדי שמודול שאינו מגיב יחזיר הודעה ולא קריסה. 2.4: נוסף הסוג השמיני abstained ל-interaction_types, ונוסף המפתח interaction_type_senders לאכיפת BL-17. 4.2: נוספה השורה module-retrieval, BE-07, log, ששורת 3.2 חייבה ולא הייתה. שום דבר שאושר בגרסה 3 לא בוטל.
 
 גרסה 3, 12.09.2026: נקלטו decision-04 ו-doc-decision-round-01 (חלקים א עד ד); נוספו F-13 (is_crossing, BL-19), נוהל הסוללה (BL-20, ארבעה מפתחות, דגלי סשן, E-NO-EXIT-POINT), מסנן audience (BL-21), ישות EXIT_POINTS ושתי פעולות ל-BE-05; טבלת ה-reference התמלאה; FE-07 ו-FE-08 אוחדו למסך ניהול עם role; סעיף 8 צומצם מ-20 הכרעות ל-10, ונרשמה דחיית F-14. גרסה 2, 11.09.2026: נוסף DESIGN-01 (המתודולוגיה פרק א קובעת אותו כחובה; התבנית אינה מזכירה אותו, וזו הערת פער לספרייה), ונוסף המיפוי שורה לשורה למפה הקודמת. גרסה 1, 11.09.2026: נגזרה משמונת מקרי השימוש לפי פריט 55 חלק ד ותבנית פריט 47. המפה משתנה לפני הקוד, לעולם לא אחריו.
 

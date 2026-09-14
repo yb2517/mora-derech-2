@@ -71,6 +71,21 @@ for (const [label, request, expected] of expectedByPath) {
   check('כשל רישום מחזיר E-AUDIT-WRITE-FAILED', response.error?.code, 'E-AUDIT-WRITE-FAILED');
 }
 
+// מודול שאינו מגיב, שני המקרים
+{
+  const noHandler = createOrchestrator({
+    repository: createRepository(createBrowserDriver({ storage: memoryStorage(), seed })),
+    handlers: {},
+    newRequestId: () => 'req-nh',
+    now: () => '2026-09-14T00:00:00.000Z',
+  });
+  const response = await noHandler.handle({
+    from: 'tool-simulator', module: 'test-echo', action: 'echo', payload: {}, lang: 'he',
+  });
+  emitted.push(response.error?.code);
+  check('מודול שאינו מגיב מחזיר E-MODULE-FAILED', response.error?.code, 'E-MODULE-FAILED');
+}
+
 // כל קוד שיצא בפועל הוא מהרשימה הסגורה. חוק ברזל 8.
 check(
   'כל קוד שיצא מהמערכת נמצא ברשימה הסגורה',
@@ -79,9 +94,10 @@ check(
 );
 
 check(
-  'חמישה קודים שונים יצאו בשלב הזה',
+  'שישה קודים שונים יצאו בשלב הזה',
   [...new Set(emitted)].sort(),
-  ['E-ALLOW-DENIED', 'E-AUDIT-WRITE-FAILED', 'E-ENVELOPE-INVALID', 'E-FROM-MISSING', 'E-FROM-UNKNOWN'],
+  ['E-ALLOW-DENIED', 'E-AUDIT-WRITE-FAILED', 'E-ENVELOPE-INVALID',
+    'E-FROM-MISSING', 'E-FROM-UNKNOWN', 'E-MODULE-FAILED'],
 );
 
 // הקודים שהשלב אינו מממש עדיין. רשומים במפורש כדי שהפער יהיה גלוי,
