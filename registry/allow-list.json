@@ -1,5 +1,5 @@
 {
-  "source": "doc-module-map-v3 סעיף 4.2, 4.3, 4.4; שורת module-retrieval ל-BE-07 log וסימון שורות הסימולטור: הכרעת בעלת הפרויקט 14.09.2026, פערים 11 ו-13",
+  "source": "doc-module-map-v3 סעיף 4.2, 4.3, 4.4; שורת module-retrieval ל-BE-07 log וסימון שורות הסימולטור: הכרעת בעלת הפרויקט 14.09.2026, פערים 11 ו-13; שתים עשרה שורות הקריאה: פער 30, בהכרעת בעלת הפרויקט 14.09.2026, מפה גרסה 3.2",
   "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורה עם is_demo היא שורת פיתוח שמוסרת בשלב 7: שורות tool-simulator (מפה 4.3, allowed=false בייצור, כלומר אין שורה כלל) ומודול הדמה של משימה 7.",
   "rows": [
     {
@@ -214,6 +214,78 @@
       "action": "echo",
       "allowed": true,
       "is_demo": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "listItems",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "listItems",
+      "allowed": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "getItem",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "getItem",
+      "allowed": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "listApprovals",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "getSite",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "getSite",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "listSources",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "listSources",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "listInstitutes",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "listMou",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "listExitPoints",
+      "allowed": true
     }
   ]
 }

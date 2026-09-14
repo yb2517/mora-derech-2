@@ -42,9 +42,10 @@ const rowsOf = (list) => list.map((row) => ({ ...row }));
 
 // הטבלה. מזהה מודול, שם פעולה, ותשובה קבועה.
 //
-// הפעולות כאן הן אלה שבטבלת פעולות המסכים (מפה 4.4) עבור המסכים
-// שנבנים במשימות 5 ו-6. פעולות מסך הניהול נכנסות במשימה 7, כשיהיה
-// מסך ששולח אותן, לפי "משימה אחת בכל פעם".
+// הפעולות כאן הן מטבלת פעולות המסכים (מפה 4.4): שמונה פעולות
+// הקריאה של פער 30, ופעולות הכתיבה של המסכים שנבנים במשימות 5 ו-6.
+// פעולות הכתיבה של מסך הניהול נכנסות במשימה 7, כשיהיה מסך ששולח
+// אותן, לפי "משימה אחת בכל פעם".
 const RESPONSES = {
   'BE-05': {
     submit: (payload) => acknowledged('submit', payload),
@@ -53,6 +54,53 @@ const RESPONSES = {
     return: (payload) => acknowledged('return', payload),
     nearestExitPoint: () => ({
       exit_point: rowsOf(demo.exit_points)[0] ?? null,
+      is_demo: true,
+    }),
+
+    // שמונה פעולות הקריאה של פער 30. שליפה לפי שוויון מזהה בלבד:
+    // אין כאן סינון עסקי, אין דירוג ואין סף. קריאה שאינה מוצאת דבר
+    // מחזירה רשימה ריקה, ו-getItem על מזהה שאינו קיים מחזיר null,
+    // לפי ההכרעה של 14.09.2026: אין קוד שגיאה חדש.
+    listItems: (payload) => ({
+      items: rowsOf(demo.content_items)
+        .filter((item) => item.site_id === payload?.site_id)
+        .filter((item) => payload?.stop_id === undefined || item.stop_id === payload.stop_id)
+        .filter((item) => payload?.status === undefined || item.status === payload.status)
+        .map(({ text, ...rest }) => rest),
+      is_demo: true,
+    }),
+
+    getItem: (payload) => {
+      const item = rowsOf(demo.content_items)
+        .find((row) => row.item_id === payload?.item_id) ?? null;
+      return {
+        item,
+        source: item
+          ? rowsOf(demo.sources).find((row) => row.source_id === item.source_id) ?? null
+          : null,
+        anchor: item
+          ? rowsOf(demo.geo_anchors).find((row) => row.item_id === item.item_id) ?? null
+          : null,
+        is_demo: true,
+      };
+    },
+
+    listApprovals: () => ({ approvals: rowsOf(demo.approvals), is_demo: true }),
+
+    getSite: (payload) => ({
+      site: rowsOf(demo.sites).find((row) => row.site_id === payload?.site_id) ?? null,
+      is_demo: true,
+    }),
+
+    listSources: () => ({ sources: rowsOf(demo.sources), is_demo: true }),
+
+    listInstitutes: () => ({ institutes: rowsOf(demo.institutes), is_demo: true }),
+
+    listMou: () => ({ mou: rowsOf(demo.rights_mou), is_demo: true }),
+
+    listExitPoints: (payload) => ({
+      exit_points: rowsOf(demo.exit_points)
+        .filter((row) => row.site_id === payload?.site_id),
       is_demo: true,
     }),
   },

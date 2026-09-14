@@ -1,5 +1,5 @@
 {
-  "source": "doc-module-map-v3 סעיף 3 (המודולים), 4.1 (שמות הפונים) ו-4.2 (הפעולות); handler לפי CLAUDE.md סעיף 5",
+  "source": "doc-module-map-v3 סעיף 3 (המודולים), 4.1 (שמות הפונים) ו-4.2 (הפעולות); handler לפי CLAUDE.md סעיף 5; שמונה פעולות הקריאה: פער 30, בהכרעת בעלת הפרויקט 14.09.2026, מפה גרסה 3.2",
   "note": "handler הוא יעד הניתוב של CORE-02. null פירושו שהמודול אינו מקבל בקשות. caller הוא שם המודול במעטפה, לפי הרשימה הסגורה של 4.1, ו-null למודול שאינו פונה. שורה עם is_demo היא נתון הדגמה שמוסר בשלב 7.",
   "modules": [
     {
@@ -44,7 +44,15 @@
         "register_exit_point",
         "lock_site",
         "listApprovedByStop",
-        "nearestExitPoint"
+        "nearestExitPoint",
+        "listItems",
+        "getItem",
+        "listApprovals",
+        "getSite",
+        "listSources",
+        "listInstitutes",
+        "listMou",
+        "listExitPoints"
       ]
     },
     {

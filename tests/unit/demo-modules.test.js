@@ -104,6 +104,74 @@ check(
   check('התשובה היא טקסט מנתוני ההדגמה', response.data.answer, demo.content_items[0].text);
 }
 
+// --- שמונה פעולות הקריאה, פער 30 ---
+
+const SITE = demo.sites[0].site_id;
+const read = (action, payload) => demoHandler({ module: 'BE-05', action, payload }).data;
+
+{
+  const all = read('listItems', { site_id: SITE });
+  check('listItems מחזיר את פריטי המסלול', all.items.length, demo.content_items.length);
+
+  // הרשימה היא לתצוגת רשימה, ולכן בלי הטקסט המלא. הטקסט מגיע ב-getItem.
+  check('listItems אינו נושא את הטקסט', 'text' in all.items[0], false);
+  check('listItems נושא את מה שהרשימה מציגה', [
+    'status' in all.items[0], 'stop_id' in all.items[0],
+    'page' in all.items[0], 'word_count' in all.items[0],
+  ], [true, true, true, true]);
+
+  const byStop = read('listItems', { site_id: SITE, stop_id: 'stop-demo-c' });
+  check(
+    'listItems מסנן לפי תחנה',
+    byStop.items.every((i) => i.stop_id === 'stop-demo-c') && byStop.items.length > 0,
+    true,
+  );
+
+  const byStatus = read('listItems', { site_id: SITE, status: 'approved' });
+  check(
+    'listItems מסנן לפי מצב',
+    byStatus.items.map((i) => i.status),
+    byStatus.items.map(() => 'approved'),
+  );
+
+  // פאנל הווטו קיים כדי לראות מה שאינו מאושר. BL-03 חל על השליפה
+  // למשפחה ולא על קריאת ממשל, וזו הטענה שמחזיקה את ההבחנה.
+  check(
+    'listItems מחזיר גם פריטים שאינם מאושרים',
+    all.items.some((i) => i.status !== 'approved'),
+    true,
+  );
+
+  check('קריאה על מסלול שאינו קיים מחזירה רשימה ריקה', read('listItems', { site_id: 'nope' }).items, []);
+}
+
+{
+  const found = read('getItem', { item_id: 'item-demo-1' });
+  check('getItem מחזיר את הפריט עם הטקסט', found.item.text, demo.content_items[0].text);
+  check('getItem מצרף את המקור', found.source.source_id, demo.sources[0].source_id);
+  check('getItem מצרף את העוגן', found.anchor.item_id, 'item-demo-1');
+
+  // ההכרעה של 14.09: אין קוד "לא נמצא", ולכן null עם ok.
+  const missing = read('getItem', { item_id: 'אין-כזה' });
+  check('getItem על מזהה שאינו קיים מחזיר null', [missing.item, missing.source, missing.anchor], [null, null, null]);
+}
+
+check('listApprovals מחזיר את יומן ההחלטות', read('listApprovals', {}).approvals.length, demo.approvals.length);
+check('getSite מחזיר את התחנות הסדורות', read('getSite', { site_id: SITE }).site.stops, demo.sites[0].stops);
+check('getSite על מסלול שאינו קיים מחזיר null', read('getSite', { site_id: 'nope' }).site, null);
+check('listSources מחזיר את המקורות', read('listSources', {}).sources.length, demo.sources.length);
+check('listInstitutes מחזיר את המכונים', read('listInstitutes', {}).institutes.length, demo.institutes.length);
+check('listMou מחזיר את ההסכמים', read('listMou', {}).mou.length, demo.rights_mou.length);
+check('listExitPoints מסנן לפי מסלול', read('listExitPoints', { site_id: SITE }).exit_points.length, demo.exit_points.length);
+check('listExitPoints על מסלול אחר מחזיר ריק', read('listExitPoints', { site_id: 'nope' }).exit_points, []);
+
+// קריאה אינה משנה דבר, ולכן היא ניתנת לחזרה.
+{
+  const once = read('listItems', { site_id: SITE });
+  once.items[0].status = 'rejected';
+  check('התשובה היא העתק, וקריאה חוזרת אינה מושפעת', read('listItems', { site_id: SITE }).items[0].status, demo.content_items[0].status);
+}
+
 // --- מודול ההדגמה: אינו מחליט ---
 
 // אין מצב. אותה בקשה פעמיים מחזירה בדיוק אותו דבר, ואין השפעה
