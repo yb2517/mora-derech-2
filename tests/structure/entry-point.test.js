@@ -43,6 +43,7 @@ check(
     './repository/driver-browser.js',
     './repository/index.js',
     './screens/endpoint.js',
+    './tools/demo-modules.js',
   ],
 );
 
@@ -50,12 +51,21 @@ check(
 // הכניסה: הוא נרשם ב-modules.json וה-Orchestrator מנתב אליו.
 // הרשימה הזאת תגדל בשלבים 3 עד 6, והשורה הזאת היא שתיפול ראשונה
 // אם מישהו ינסה לעקוף את הניתוב.
-const BYPASS = ['services/', 'connectors/', 'automation/', 'gateways/', 'tools/', 'tests/'];
+const BYPASS = ['services/', 'connectors/', 'automation/', 'gateways/', 'tests/'];
 
 check(
-  'אינה מייבאת מודול ישירות ואינה מייבאת עזר בדיקה',
+  'אינה מייבאת מודול שירות ואינה מייבאת עזר בדיקה',
   imports.filter((specifier) => BYPASS.some((dir) => specifier.includes(dir))).sort(),
   [],
+);
+
+// החריג היחיד, ומוצהר: מודול ההדגמה של משימה 4 עומד במקום מודולי
+// השירות כל עוד אינם קיימים. /tools/ הוא פיתוח בלבד לפי סעיף 5
+// במסמך הבנייה, והשורה הזאת יורדת בשלב 7 יחד עם הקובץ.
+check(
+  'ההחזרה מ-tools היא מודול ההדגמה בלבד',
+  imports.filter((specifier) => specifier.includes('tools/')).sort(),
+  ['./tools/demo-modules.js'],
 );
 
 // --- 3. קוראת את שלוש הטבלאות ---

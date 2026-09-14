@@ -36,6 +36,7 @@
   import { createRepository } from './repository/index.js';
   import { createOrchestrator } from './core/orchestrator.js';
   import { createEndpoint } from './screens/endpoint.js';
+  import demoHandler, { DEMO_MODULE_IDS } from './tools/demo-modules.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
@@ -66,6 +67,24 @@
     // צורת הזריעה של הדרייבר: הטבלה היא מה שה-Repository קורא,
     // ולכן reference נזרעת בערכים עצמם ולא במעטפת הקובץ.
     return { modules, allow_list: allowList, reference: reference.values };
+  }
+
+  // טעינת ה-handlers מתוך הנתונים. עזרי בדיקה אינם נטענים כאן:
+  // מערך הבדיקות מרכיב לעצמו מפה משלו, ונקודת הכניסה של המערכת
+  // אינה טוענת קוד בדיקה.
+  async function loadHandlers(modulesTable) {
+    const entries = [];
+    for (const row of modulesTable.modules) {
+      if (typeof row.handler !== 'string' || row.handler === '') continue;
+      if (row.handler.startsWith('tests/')) continue;
+      try {
+        const loaded = await import(`./${row.handler}`);
+        if (typeof loaded.default === 'function') entries.push([row.id, loaded.default]);
+      } catch {
+        // המודול טרם נבנה. מטופל למעלה.
+      }
+    }
+    return Object.fromEntries(entries);
   }
 
   function render(node) {
@@ -101,9 +120,21 @@
     const repository = createRepository(driver);
 
     // מפת ה-handlers של ה-Orchestrator: מזהה מודול לפונקציה.
-    // ריקה בשלב הזה. מודול ההדגמה של משימה 4 נכנס לכאן, ומודולי
-    // השירות האמיתיים מחליפים אותו בשלבים 3 ו-4.
-    const handlers = {};
+    //
+    // היעד נקרא מעמודת handler בטבלת המודולים, ולכן הוספת מודול היא
+    // שורה בנתונים ולא שורה כאן (מפה 4.3, והערת הקובץ: "handler הוא
+    // יעד הניתוב של CORE-02"). מודול שקובצו טרם נבנה נשאר בלי
+    // handler, וה-Orchestrator מחזיר עליו E-MODULE-FAILED. זו
+    // התנהגות מוגדרת ולא תקלה, והיא נראית לעין.
+    const handlers = await loadHandlers(seed.modules);
+
+    // החזרת שלב 2: כל עוד מודול שירות אינו קיים, ההדגמה עומדת
+    // במקומו כדי שיהיה מה להציג על המסך. ברגע ש-services/governance.js
+    // ייכנס בשלב 3, הוא ייטען מהשורה שבנתונים וההדגמה תפסיק לענות
+    // עליו מעצמה. ההסרה בשלב 7 היא מחיקת שלוש השורות האלה ושל הקובץ.
+    for (const id of DEMO_MODULE_IDS) {
+      if (!handlers[id]) handlers[id] = demoHandler;
+    }
 
     const orchestrator = createOrchestrator({ repository, handlers });
 
@@ -162,19 +193,20 @@
       return;
     }
 
-    render(panel('ההרכבה', compositionReport(repository, seed)));
+    render(panel('ההרכבה', compositionReport(repository, seed, handlers)));
   }
 
   // דוח ההרכבה: מה נטען ומה נרשם. אינו שולח מעטפה ואינו כותב שורה,
   // מפני ש-audit_log הוא יומן append-only של המערכת, ובדיקה עצמית
   // שרצה בכל טעינת דף הייתה מזהמת אותו. הפרק הזה מוחלף בהגשת
   // המסכים במשימה 5.
-  function compositionReport(repository, seed) {
+  function compositionReport(repository, seed, handlers) {
     const rows = [
       ['מודולים רשומים', seed.modules.modules.length],
       ['שורות ברשימת המותר', seed.allow_list.rows.length],
       ['מפתחות בטבלת ה-reference', Object.keys(seed.reference).length],
       ['פונים מוכרים', repository.listCallers().length],
+      ['מודולים עם handler', Object.keys(handlers).length],
       ['שורות ביומן הבקשות', repository.listAudit().length],
     ];
 
