@@ -1,0 +1,51 @@
+/* DESIGN-01: ההודעה. הנוסח לאדם של קוד שגיאה, ואישור פעולה.
+ *
+ * הנוסח עצמו לעולם אינו כאן: הוא מגיע מטבלת ה-reference, מפתח
+ * error_human_text, לפי BL-12 וחוק ברזל 5. כאן יושבת הצורה בלבד.
+ */
+
+.message {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  max-width: var(--measure);
+}
+
+.message--error {
+  background: var(--color-rejected-bg);
+  border-color: var(--color-rejected);
+  color: var(--color-rejected);
+}
+
+.message--done {
+  background: var(--color-approved-bg);
+  border-color: var(--color-approved);
+  color: var(--color-approved);
+}
+
+.message--warn {
+  background: var(--color-pending-bg);
+  border-color: var(--color-pending);
+  color: var(--color-pending);
+}
+
+/* הודעה שתופסת את המסך: חסימת שער, וחסימת סוללה (BL-20).
+ * סטטית בכוונה, בלי תנועה ובלי אינטראקציה */
+.notice-screen {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+  background: var(--color-surface);
+  min-height: 100%;
+}
+
+.notice-screen__text {
+  margin: 0 auto;
+  max-width: var(--measure);
+  font-size: var(--font-lg);
+  line-height: var(--line-reading);
+}
