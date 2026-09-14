@@ -36,7 +36,7 @@
   import { createRepository } from './repository/index.js';
   import { createOrchestrator } from './core/orchestrator.js';
   import { createEndpoint } from './screens/endpoint.js';
-  import demoHandler, { DEMO_MODULE_IDS } from './tools/demo-modules.js';
+  import demoHandler, { DEMO_MODULE_IDS, DEMO_SEED } from './tools/demo-modules.js';
   import { create as createVetoScreen } from './screens/veto/index.js';
   import { create as createTravelerScreen } from './screens/traveler/index.js';
   import { create as createAdminScreen } from './screens/admin/index.js';
@@ -69,20 +69,34 @@
     );
     // צורת הזריעה של הדרייבר: הטבלה היא מה שה-Repository קורא,
     // ולכן reference נזרעת בערכים עצמם ולא במעטפת הקובץ.
-    return { modules, allow_list: allowList, reference: reference.values };
+    //
+    // הישויות העסקיות נזרעות מנתוני ההדגמה כל עוד הם קיימים. זריעה
+    // אינה דריסה: טבלה שכבר יש בה נתונים נשארת כפי שהיא, ולכן מה
+    // שנכתב בביקור הקודם שורד רענון. ההסרה בשלב 7 היא מחיקת השורה.
+    return { modules, allow_list: allowList, reference: reference.values, ...DEMO_SEED };
   }
 
   // טעינת ה-handlers מתוך הנתונים. עזרי בדיקה אינם נטענים כאן:
   // מערך הבדיקות מרכיב לעצמו מפה משלו, ונקודת הכניסה של המערכת
   // אינה טוענת קוד בדיקה.
-  async function loadHandlers(modulesTable) {
+  //
+  // שתי צורות למודול, ושתיהן נטענות מאותה עמודה בנתונים:
+  //   create: מודול שזקוק להרכבה. הוא מקבל את ה-Repository כאן,
+  //     ולכן הוא אינו מייבא אותו בעצמו ואינו יודע מאיזה דרייבר
+  //     הנתונים מגיעים (חוק ברזל 3 ו-7, והכרעה 4 בתוכנית שלב 3).
+  //   default: handler מוכן, בלי תלות. כזה הוא מודול ההדגמה.
+  async function loadHandlers(modulesTable, repository) {
     const entries = [];
     for (const row of modulesTable.modules) {
       if (typeof row.handler !== 'string' || row.handler === '') continue;
       if (row.handler.startsWith('tests/')) continue;
       try {
         const loaded = await import(`./${row.handler}`);
-        if (typeof loaded.default === 'function') entries.push([row.id, loaded.default]);
+        if (typeof loaded.create === 'function') {
+          entries.push([row.id, loaded.create({ repository })]);
+        } else if (typeof loaded.default === 'function') {
+          entries.push([row.id, loaded.default]);
+        }
       } catch {
         // המודול טרם נבנה. מטופל למעלה.
       }
@@ -129,12 +143,13 @@
     // יעד הניתוב של CORE-02"). מודול שקובצו טרם נבנה נשאר בלי
     // handler, וה-Orchestrator מחזיר עליו E-MODULE-FAILED. זו
     // התנהגות מוגדרת ולא תקלה, והיא נראית לעין.
-    const handlers = await loadHandlers(seed.modules);
+    const handlers = await loadHandlers(seed.modules, repository);
 
     // החזרת שלב 2: כל עוד מודול שירות אינו קיים, ההדגמה עומדת
-    // במקומו כדי שיהיה מה להציג על המסך. ברגע ש-services/governance.js
-    // ייכנס בשלב 3, הוא ייטען מהשורה שבנתונים וההדגמה תפסיק לענות
-    // עליו מעצמה. ההסרה בשלב 7 היא מחיקת שלוש השורות האלה ושל הקובץ.
+    // במקומו כדי שיהיה מה להציג על המסך. משלב 3 שני מודולים אמיתיים
+    // נטענים מהשורה שבנתונים, וההדגמה כבר אינה מגיעה אליהם: התנאי
+    // כאן הוא "אין handler", ולא "העדף הדגמה". ההסרה בשלב 7 היא
+    // מחיקת שלוש השורות האלה ושל הקובץ.
     for (const id of DEMO_MODULE_IDS) {
       if (!handlers[id]) handlers[id] = demoHandler;
     }

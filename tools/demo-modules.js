@@ -189,5 +189,34 @@ export default function demoHandler(request) {
   return { ok: true, data: answer(request?.payload) };
 }
 
-/** מזהי המודולים שההדגמה עומדת במקומם. נקרא בנקודת הכניסה ובבדיקה. */
+/**
+ * מזהי המודולים שההדגמה עומדת במקומם. נקרא בנקודת הכניסה ובבדיקה.
+ *
+ * משלב 3: מודול שנבנה באמת גובר. נקודת הכניסה מחברת את ההדגמה רק
+ * למזהה שאין לו handler, ולכן BE-05 ו-BE-06 כבר אינם מגיעים לכאן,
+ * ו-BE-03 ו-BE-07 עדיין כן, עד שלב 4. השורות שלהם נשארות בקובץ
+ * מפני שהקובץ כולו יורד בשלב 7, ומחיקה חלקית שלו היא עבודה
+ * שתימחק ממילא.
+ */
 export const DEMO_MODULE_IDS = Object.freeze(Object.keys(RESPONSES));
+
+/**
+ * הזריעה של הישויות העסקיות, משימה 5 בתוכנית שלב 3.
+ *
+ * עד שלב 3 נתוני ההדגמה נקראו מכאן ישירות בכל תשובה, ולא נשמרו.
+ * משלב 3 הם הנתונים ההתחלתיים של הטבלאות באחסון: מודול אמיתי קורא
+ * וכותב, ורענון הדף מראה את מה שקרה. הסימון is_demo נשאר על כל
+ * שורה, וההסרה בשלב 7 היא מחיקת הקובץ הזה ושל /data/demo/.
+ *
+ * שש הטבלאות בלבד, אלה שהדרייבר מכיר. geo_anchors, exit_points,
+ * admin_users, sessions ו-interactions נכנסים עם המודולים שלהם
+ * בשלבים 4 ו-5.
+ */
+export const DEMO_SEED = Object.freeze({
+  content_items: demo.content_items,
+  approvals: demo.approvals,
+  sites: demo.sites,
+  sources: demo.sources,
+  institutes: demo.institutes,
+  rights_mou: demo.rights_mou,
+});
