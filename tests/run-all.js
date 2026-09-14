@@ -43,12 +43,16 @@ const NOT_YET = {
 };
 
 // שלוש הבדיקות האדומות של מפה 6.5. כל אחת שומרת על הגנה במודול
-// שירות, ולכן אף אחת מהן אינה ניתנת לכתיבה לפני שהמודול קיים.
-// הן מופיעות כאן כדי שרמה חסרה תיראה לעין ולא תיעדר בשקט.
+// שירות, ולכן אף אחת מהן לא הייתה ניתנת לכתיבה לפני שהמודול קיים.
+// הן נכתבו במשימות 6, 4 ו-9 של שלב 4, כל אחת מיד אחרי המודול שהיא
+// שומרת עליו.
+//
+// **כשל אמיתי באחת מהן חוסם שחרור** (CLAUDE.md סעיף 8), ולכן הן
+// מדווחות בנפרד ולא נבלעות בסיכום של רמת ה-System.
 const RED_TESTS = [
-  ['F-05', 'פריט pending במאגר המועמדים', 'BE-04, שלב 4'],
-  ['F-08', 'פריט approved בלי רשומת APPROVALS עובר את L1', 'BE-06, שלב 4'],
-  ['F-09', 'שורת initiated שלא ממודול השיחה נספרת', 'BE-07, שלב 4'],
+  ['F-05', 'פריט pending במאגר המועמדים', 'tests/system/red-01-pending-candidate.test.js'],
+  ['F-08', 'פריט approved בלי רשומת APPROVALS עובר את L1', 'tests/system/red-02-approved-without-record.test.js'],
+  ['F-09', 'שורת initiated שלא ממודול השיחה נספרת', 'tests/system/red-03-initiated-sender.test.js'],
 ];
 
 function testFilesIn(dir) {
@@ -121,8 +125,26 @@ console.log(`\n${'='.repeat(72)}`);
 console.log('שלוש הבדיקות האדומות של 6.5');
 console.log('='.repeat(72));
 
-for (const [useCase, title, owner] of RED_TESTS) {
-  console.log(`  ${useCase}  ${title.padEnd(46, '.')} אינה ניתנת לכתיבה: ${owner}`);
+let redBroken = 0;
+
+for (const [useCase, title, file] of RED_TESTS) {
+  let status;
+  if (!ran.has(file)) {
+    status = 'אינה מיושמת';
+    redBroken += 1;
+  } else {
+    const result = ran.get(file);
+    const green = result.failed === 0 && !result.crashed;
+    status = green
+      ? `ההגנה מחזיקה, ${result.passed} טענות`
+      : `**נכשלה, ${result.failed} טענות. חוסם שחרור**`;
+    if (!green) redBroken += 1;
+  }
+  console.log(`  ${useCase}  ${title.padEnd(46, '.')} ${status}`);
+}
+
+if (redBroken > 0) {
+  console.log(`\n  ${redBroken} מתוך 3 הבדיקות האדומות אינן מחזיקות. לפי CLAUDE.md סעיף 8, זה חוסם שחרור.`);
 }
 
 // --- סיכום ---

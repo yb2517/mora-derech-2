@@ -85,7 +85,14 @@
   //     ולכן הוא אינו מייבא אותו בעצמו ואינו יודע מאיזה דרייבר
   //     הנתונים מגיעים (חוק ברזל 3 ו-7, והכרעה 4 בתוכנית שלב 3).
   //   default: handler מוכן, בלי תלות. כזה הוא מודול ההדגמה.
-  async function loadHandlers(modulesTable, repository) {
+  //
+  // מודול שהוא גם פונה (מפה 4.1) מקבל שני דברים נוספים, לפי הכרעה
+  // 16 בתוכנית שלב 4: את **אותה כתובת אחת** שהמסכים מקבלים, ואת שם
+  // הפונה שלו מעמודת caller בנתונים. כך BE-03 קורא ל-BE-04 דרך
+  // CORE-02, הקריאה נרשמת ב-audit_log, ואין ייבוא בין מודולים
+  // (חוקי ברזל 2 ו-7). שם הפונה אינו כתוב בקוד המודול, בדיוק כפי
+  // שאינו כתוב בקוד המסך (מפה 4.3, מבחן מבנה 06).
+  async function loadHandlers(modulesTable, repository, send) {
     const entries = [];
     for (const row of modulesTable.modules) {
       if (typeof row.handler !== 'string' || row.handler === '') continue;
@@ -93,7 +100,7 @@
       try {
         const loaded = await import(`./${row.handler}`);
         if (typeof loaded.create === 'function') {
-          entries.push([row.id, loaded.create({ repository })]);
+          entries.push([row.id, loaded.create({ repository, send, caller: row.caller ?? null })]);
         } else if (typeof loaded.default === 'function') {
           entries.push([row.id, loaded.default]);
         }
@@ -143,7 +150,19 @@
     // יעד הניתוב של CORE-02"). מודול שקובצו טרם נבנה נשאר בלי
     // handler, וה-Orchestrator מחזיר עליו E-MODULE-FAILED. זו
     // התנהגות מוגדרת ולא תקלה, והיא נראית לעין.
-    const handlers = await loadHandlers(seed.modules, repository);
+    // הכתובת האחת נבנית לפני ה-Orchestrator, מפני שמודול שהוא פונה
+    // מקבל אותה בהרכבה, וה-Orchestrator מקבל את המודולים. הקשר
+    // נסגר בהפניה מושהית ולא בייבוא: מי שמטפל בבקשה הוא תמיד
+    // ה-Orchestrator, וגם כשמודול הוא זה ששלח.
+    let orchestrator = null;
+    const send = createEndpoint({
+      handle: (envelope) => {
+        if (!orchestrator) throw new Error('הבקשה נשלחה לפני שההרכבה הסתיימה');
+        return orchestrator.handle(envelope);
+      },
+    });
+
+    const handlers = await loadHandlers(seed.modules, repository, send);
 
     // החזרת שלב 2: כל עוד מודול שירות אינו קיים, ההדגמה עומדת
     // במקומו כדי שיהיה מה להציג על המסך. משלב 3 שני מודולים אמיתיים
@@ -154,11 +173,9 @@
       if (!handlers[id]) handlers[id] = demoHandler;
     }
 
-    const orchestrator = createOrchestrator({ repository, handlers });
-
-    // הכתובת האחת. נבנית פעם אחת, ואותה אחת מוזרקת לכל מסך: זה מה
+    // אותה כתובת אחת מוזרקת לכל מסך ולכל מודול שהוא פונה: זה מה
     // שהופך את "כל מסך פונה לכתובת אחת" למבנה ולא להסכמה.
-    const send = createEndpoint({ handle: (envelope) => orchestrator.handle(envelope) });
+    orchestrator = createOrchestrator({ repository, handlers });
 
     // שם הפונה של מסך אינו כתוב כאן: הוא תכונה של המודול בטבלת
     // המודולים, ולכן הוספת מסך היא שורה בנתונים (מפה 4.3, מבחן
