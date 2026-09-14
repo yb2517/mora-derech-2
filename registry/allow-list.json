@@ -1,0 +1,219 @@
+{
+  "source": "doc-module-map-v3 סעיף 4.2, 4.3, 4.4; שורת module-retrieval ל-BE-07 log וסימון שורות הסימולטור: הכרעת בעלת הפרויקט 14.09.2026, פערים 11 ו-13",
+  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורה עם is_demo היא שורת פיתוח שמוסרת בשלב 7: שורות tool-simulator (מפה 4.3, allowed=false בייצור, כלומר אין שורה כלל) ומודול הדמה של משימה 7.",
+  "rows": [
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "submit",
+      "allowed": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "approve",
+      "allowed": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "reject",
+      "allowed": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-05",
+      "action": "return",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "register_mou",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "register_institute",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "register_source",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "create_item",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "edit_item",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "verify_anchor",
+      "allowed": true
+    },
+    {
+      "from": "screen-content",
+      "module": "BE-05",
+      "action": "register_exit_point",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-05",
+      "action": "lock_site",
+      "allowed": true
+    },
+    {
+      "from": "module-delivery",
+      "module": "BE-05",
+      "action": "listApprovedByStop",
+      "allowed": true
+    },
+    {
+      "from": "screen-traveler",
+      "module": "BE-05",
+      "action": "nearestExitPoint",
+      "allowed": true
+    },
+    {
+      "from": "screen-veto",
+      "module": "BE-06",
+      "action": "get_gate",
+      "allowed": true
+    },
+    {
+      "from": "screen-traveler",
+      "module": "BE-06",
+      "action": "get_gate",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-06",
+      "action": "get_lock_readiness",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-06",
+      "action": "set_enforce",
+      "allowed": true
+    },
+    {
+      "from": "module-dialogue",
+      "module": "BE-04",
+      "action": "retrieve",
+      "allowed": true
+    },
+    {
+      "from": "screen-traveler",
+      "module": "BE-03",
+      "action": "ask",
+      "allowed": true
+    },
+    {
+      "from": "module-geofence",
+      "module": "FE-04",
+      "action": "arrive",
+      "allowed": true
+    },
+    {
+      "from": "module-geofence",
+      "module": "FE-04",
+      "action": "leave",
+      "allowed": true
+    },
+    {
+      "from": "tool-simulator",
+      "module": "FE-04",
+      "action": "arrive",
+      "allowed": true,
+      "is_demo": true
+    },
+    {
+      "from": "tool-simulator",
+      "module": "FE-04",
+      "action": "leave",
+      "allowed": true,
+      "is_demo": true
+    },
+    {
+      "from": "system-timer",
+      "module": "FE-04",
+      "action": "release",
+      "allowed": true
+    },
+    {
+      "from": "screen-traveler",
+      "module": "BE-07",
+      "action": "session_start",
+      "allowed": true
+    },
+    {
+      "from": "screen-traveler",
+      "module": "BE-07",
+      "action": "session_end",
+      "allowed": true
+    },
+    {
+      "from": "module-dialogue",
+      "module": "BE-07",
+      "action": "log",
+      "allowed": true
+    },
+    {
+      "from": "module-delivery",
+      "module": "BE-07",
+      "action": "log",
+      "allowed": true
+    },
+    {
+      "from": "screen-traveler",
+      "module": "BE-07",
+      "action": "log",
+      "allowed": true
+    },
+    {
+      "from": "module-retrieval",
+      "module": "BE-07",
+      "action": "log",
+      "allowed": true
+    },
+    {
+      "from": "system-timer",
+      "module": "BE-07",
+      "action": "close_stale",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-07",
+      "action": "compute_metrics",
+      "allowed": true
+    },
+    {
+      "from": "screen-owner",
+      "module": "BE-07",
+      "action": "export",
+      "allowed": true
+    },
+    {
+      "from": "tool-simulator",
+      "module": "test-echo",
+      "action": "echo",
+      "allowed": true,
+      "is_demo": true
+    }
+  ]
+}
