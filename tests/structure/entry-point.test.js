@@ -43,6 +43,7 @@ check(
     './repository/driver-browser.js',
     './repository/index.js',
     './screens/endpoint.js',
+    './screens/veto/index.js',
     './tools/demo-modules.js',
   ],
 );

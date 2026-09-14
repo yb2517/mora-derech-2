@@ -7,8 +7,9 @@
 //   הכתובת (screens/endpoint.js) אינה מסך. היא אינה מצהירה מי היא,
 //   מפני שהזהות באה מהמסך, והיא אינה מייבאת דבר.
 //
-//   מסך מצהיר מי הוא בשדה from, פונה דרך הכתובת, ואינו מייבא את
-//   ה-Orchestrator, את שכבת הנתונים או מודול כלשהו.
+//   מסך מצהיר מי הוא בשדה from, מקבל את הכתובת בהזרקה ואינו בונה
+//   אותה בעצמו, ואינו מייבא את ה-Orchestrator, את שכבת הנתונים או
+//   מודול כלשהו.
 //
 //   node tests/structure/screen-endpoint.test.js
 
@@ -97,18 +98,46 @@ check(
   [],
 );
 
+// היחידה הנבדקת היא מסך ולא קובץ: מסך הוא תיקייה תחת screens/,
+// והוא רשאי להתפצל לקובץ תצוגה ולקובץ הרכבה. מה שנדרש הוא שהמסך
+// כיחידה מצהיר מי הוא ופונה דרך הכתובת, ולא שכל קובץ בתוכו עושה
+// זאת. הטענות שחלות על כל קובץ, בלי יוצא מן הכלל, הן שתיים: אין
+// נגיעה בשכבת הנתונים, ואין דילוג על הכתובת.
+const folders = [...new Set(
+  screens.map((f) => f.path.split('/').slice(0, 2).join('/')),
+)].sort();
+
+const filesIn = (folder) => screens.filter((f) => f.path.startsWith(`${folder}/`));
+
 check(
   'כל מסך מצהיר מי הוא, כלומר שולח from משלו',
-  screens.filter((f) => !/from\s*:/.test(f.text)).map((f) => f.path).sort(),
+  folders.filter((folder) => !filesIn(folder).some((f) => /from\s*:/.test(f.text))),
   [],
 );
 
+// מסך אינו מייבא את הכתובת אלא מקבל אותה בהזרקה, ולכן היא נבנית
+// פעם אחת בנקודת הכניסה ומוזרקת לכולם. זו הצורה החזקה של "כתובת
+// אחת": לא ארבע כתובות שנבנו מאותו קובץ, אלא אחת.
 check(
-  'כל מסך פונה דרך הכתובת',
-  code.filter((f) => !f.specifiers.some((s) => resolveFrom(f.path, s) === ADDRESS))
+  'אין מסך שבונה לעצמו כתובת',
+  screens.filter((f) => f.specifiers.some((s) => resolveFrom(f.path, s) === ADDRESS))
     .map((f) => f.path).sort(),
   [],
 );
+
+// והצד השני של אותה טענה: הכתובת אכן נבנית, ובמקום אחד בלבד.
+const CONSTRUCTOR = 'createEndpoint(';
+const builders = [];
+for (const entry of readdirSync(ROOT)) {
+  if (!entry.endsWith('.html')) continue;
+  const text = readFileSync(join(ROOT, entry), 'utf8');
+  if (text.includes(CONSTRUCTOR)) builders.push(entry);
+}
+for (const file of screens) {
+  if (file.text.includes(CONSTRUCTOR)) builders.push(file.path);
+}
+
+check('הכתובת נבנית במקום אחד, בנקודת הכניסה', builders.sort(), ['index.html']);
 
 // הכתובת אחת, ולכן אין מסך שמדלג עליה אל ה-Orchestrator או אל כל
 // יעד אחר שאינו הכתובת, החוזה, או קובץ בתוך תיקיית המסך עצמו.
@@ -131,5 +160,5 @@ const emptyPass = screens.length === 0;
 report(
   emptyPass
     ? ' (הכתובת נבדקה; אין עדיין מסכים, והם נכנסים במשימות 5 עד 7)'
-    : ` (${screens.length} קובצי מסך, כולם דרך כתובת אחת)`,
+    : ` (${folders.length} מסכים, ${screens.length} קבצים, כולם דרך כתובת אחת)`,
 );

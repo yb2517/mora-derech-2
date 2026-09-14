@@ -37,6 +37,7 @@
   import { createOrchestrator } from './core/orchestrator.js';
   import { createEndpoint } from './screens/endpoint.js';
   import demoHandler, { DEMO_MODULE_IDS } from './tools/demo-modules.js';
+  import { create as createVetoScreen } from './screens/veto/index.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
@@ -181,10 +182,14 @@
       return host;
     }
 
-    // שלושת משטחי המסך. FE-06 במשימה 5, FE-05 במשימה 6, ומסך
-    // הניהול המאוחד במשימה 7. עד אז הרשימה ריקה, וההרכבה מדווחת
-    // על עצמה.
-    const SCREENS = [];
+    // משטחי המסך. FE-05 במשימה 6, ומסך הניהול המאוחד במשימה 7.
+    //
+    // המסך אינו נושא כאן את שם הפונה שלו אלא את מזהה המודול, ושם
+    // הפונה נגזר ממנו בטבלת המודולים. לכן החלפת שם פונה היא עריכת
+    // תא בנתונים (מפה 4.3, מבחן מבנה 06).
+    const SCREENS = [
+      { moduleId: 'FE-06', refKeys: ['error_human_text'], create: createVetoScreen },
+    ];
 
     if (SCREENS.length > 0) {
       const shell = document.createElement('div');
