@@ -10,26 +10,9 @@ import { handle as echoHandler } from '../helpers/echo-module.js';
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
 import referenceFile from '../../data/reference.json' with { type: 'json' };
+import { createChecker } from '../helpers/assert.js';
 
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) passed += 1;
-  else failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-}
-
-async function checkThrows(name, fn) {
-  try {
-    await fn();
-    failures.push(`${name}\n    ציפיתי לזריקה, והקריאה חזרה בשלום`);
-  } catch (thrown) {
-    if (thrown instanceof Error) passed += 1;
-    else failures.push(`${name}\n    נזרק משהו שאינו Error`);
-  }
-}
+const { check, checkThrows, checkThrowsAsync, report } = createChecker('CORE-02 orchestrator');
 
 function memoryStorage() {
   const map = new Map();
@@ -251,19 +234,19 @@ const echoRequest = {
 // =============================================================
 // תקלות הרכבה נופלות בזריקה ואינן מקבלות קוד מומצא
 // =============================================================
-await checkThrows('מודול מותר בלי handler נזרק', async () => {
+await checkThrowsAsync('מודול מותר בלי handler נזרק', async () => {
   const { orchestrator } = build({ handlers: {} });
   await orchestrator.handle(echoRequest);
 });
 
-await checkThrows('handler שנופל מעביר את הזריקה הלאה', async () => {
+await checkThrowsAsync('handler שנופל מעביר את הזריקה הלאה', async () => {
   const { orchestrator } = build({
     handlers: { 'test-echo': () => { throw new Error('המודול נפל'); } },
   });
   await orchestrator.handle(echoRequest);
 });
 
-await checkThrows('בלי Repository נדחה בהרכבה', async () => createOrchestrator({}));
+await checkThrowsAsync('בלי Repository נדחה בהרכבה', async () => createOrchestrator({}));
 
 // =============================================================
 // חוק ברזל 8: רק קודים מהרשימה הסגורה יוצאים מכאן
@@ -328,6 +311,4 @@ await checkThrows('בלי Repository נדחה בהרכבה', async () => createO
 
 // --- סיכום ---
 
-console.log(`CORE-02 orchestrator: ${passed} עברו, ${failures.length} נכשלו`);
-for (const failure of failures) console.log(`  נכשל: ${failure}`);
-if (failures.length > 0) process.exitCode = 1;
+report();

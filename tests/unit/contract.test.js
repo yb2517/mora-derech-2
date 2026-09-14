@@ -12,19 +12,9 @@ import {
   RESPONSE_FIELDS,
 } from '../../core/contract.js';
 import * as contractModule from '../../core/contract.js';
+import { createChecker } from '../helpers/assert.js';
 
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    passed += 1;
-  } else {
-    failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-  }
-}
+const { check, checkThrows, checkThrowsAsync, report } = createChecker('CORE-01 contract');
 
 // מעטפה תקינה לפי 4.1, בנוסח שמופיע ב-usecase-f-07 צעד 1.
 function validEnvelope(overrides = {}) {
@@ -210,10 +200,4 @@ check(
 
 // --- סיכום ---
 
-console.log(`CORE-01 contract: ${passed} עברו, ${failures.length} נכשלו`);
-for (const failure of failures) {
-  console.log(`  נכשל: ${failure}`);
-}
-if (failures.length > 0) {
-  process.exitCode = 1;
-}
+report();

@@ -5,32 +5,9 @@
 //   node tests/unit/errors.test.js
 
 import { ERROR_CODES, ERROR_CODE_LIST, error } from '../../core/errors.js';
+import { createChecker } from '../helpers/assert.js';
 
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    passed += 1;
-  } else {
-    failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-  }
-}
-
-function checkThrows(name, fn) {
-  try {
-    fn();
-    failures.push(`${name}\n    ציפיתי לזריקה, והקריאה חזרה בשלום`);
-  } catch (thrown) {
-    if (thrown instanceof Error) {
-      passed += 1;
-    } else {
-      failures.push(`${name}\n    נזרק משהו שאינו Error: ${String(thrown)}`);
-    }
-  }
-}
+const { check, checkThrows, checkThrowsAsync, report } = createChecker('CORE-01 errors');
 
 // עשרים ושניים הקודים של מפה 4.5, מועתקים לכאן ביד.
 // בדיקת הקבלה של משימה 2 דורשת במפורש הצלבה מול רשימה שיושבת בבדיקה
@@ -173,10 +150,4 @@ try {
 
 // --- סיכום ---
 
-console.log(`CORE-01 errors: ${passed} עברו, ${failures.length} נכשלו`);
-for (const failure of failures) {
-  console.log(`  נכשל: ${failure}`);
-}
-if (failures.length > 0) {
-  process.exitCode = 1;
-}
+report();

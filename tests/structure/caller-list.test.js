@@ -11,22 +11,15 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
+import { createChecker } from '../helpers/assert.js';
+
+const { check, report } = createChecker('מבחן מבנה 06');
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
 
 // הנתונים הם המקום היחיד שבו שם פונה מותר.
 const DATA_FILES = new Set(['registry/modules.json', 'registry/allow-list.json']);
-
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) passed += 1;
-  else failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-}
 
 function collectFiles(dir) {
   const found = [];
@@ -76,6 +69,4 @@ check(
   [],
 );
 
-console.log(`מבחן מבנה 06: ${passed} עברו, ${failures.length} נכשלו (${callers.length} פונים, ${files.length} קובצי קוד)`);
-for (const failure of failures) console.log(`  נכשל: ${failure}`);
-if (failures.length > 0) process.exitCode = 1;
+report(` (${callers.length} פונים, ${files.length} קובצי קוד)`);

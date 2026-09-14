@@ -132,11 +132,22 @@ export function createOrchestrator({
     },
   };
 
+  function shapeResponse(response) {
+    if (response && typeof response === 'object' && 'ok' in response) {
+      return response.ok === true
+        ? okResponse(response.data ?? null)
+        : errorResponse(response.error ?? null);
+    }
+    return okResponse(response ?? null);
+  }
+
   // צעד 5: רישום התשובה תחת אותו request_id, והחזרה.
   async function respond(requestId, request, response) {
-    const shaped = response && typeof response === 'object' && 'ok' in response
-      ? response
-      : okResponse(response ?? null);
+    // אף מודול אינו מגדיר מעטפה משלו (חוק ברזל 1), ולכן ה-Orchestrator
+    // מרכיב את מעטפת התשובה המלאה מכל מה שהמודול החזיר. מודול הדמה,
+    // לפי שורה 7 בתוכנית, מחזיר { ok, data } בלי error, והמעטפה שיוצאת
+    // מכאן נושאת את שלושת השדות של 4.1 בכל מקרה.
+    const shaped = shapeResponse(response);
 
     try {
       await repository.appendAudit(

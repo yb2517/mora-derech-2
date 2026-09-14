@@ -8,29 +8,9 @@ import { createBrowserDriver, TABLE_NAMES } from '../../repository/driver-browse
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
 import referenceFile from '../../data/reference.json' with { type: 'json' };
+import { createChecker } from '../helpers/assert.js';
 
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    passed += 1;
-  } else {
-    failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-  }
-}
-
-function checkThrows(name, fn) {
-  try {
-    fn();
-    failures.push(`${name}\n    ציפיתי לזריקה, והקריאה חזרה בשלום`);
-  } catch (thrown) {
-    if (thrown instanceof Error) passed += 1;
-    else failures.push(`${name}\n    נזרק משהו שאינו Error`);
-  }
-}
+const { check, checkThrows, checkThrowsAsync, report } = createChecker('CORE-04 repository');
 
 // אחסון בזיכרון עם אותו ממשק של אחסון הדפדפן. מאפשר להריץ את הבדיקה
 // בלי דפדפן, ומוכיח שהדרייבר תלוי בממשק ולא במשתנה גלובלי.
@@ -278,10 +258,4 @@ checkThrows('דרייבר דפדפן בלי אחסון נדחה', () => createBr
 
 // --- סיכום ---
 
-console.log(`CORE-04 repository: ${passed} עברו, ${failures.length} נכשלו`);
-for (const failure of failures) {
-  console.log(`  נכשל: ${failure}`);
-}
-if (failures.length > 0) {
-  process.exitCode = 1;
-}
+report();

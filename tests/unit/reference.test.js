@@ -5,19 +5,9 @@
 
 import referenceFile from '../../data/reference.json' with { type: 'json' };
 import { ERROR_CODES, ERROR_CODE_LIST } from '../../core/errors.js';
+import { createChecker } from '../helpers/assert.js';
 
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    passed += 1;
-  } else {
-    failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-  }
-}
+const { check, checkThrows, checkThrowsAsync, report } = createChecker('reference table');
 
 const values = referenceFile.values;
 const pending = referenceFile.pending;
@@ -198,10 +188,4 @@ check(
 
 // --- סיכום ---
 
-console.log(`reference table: ${passed} עברו, ${failures.length} נכשלו`);
-for (const failure of failures) {
-  console.log(`  נכשל: ${failure}`);
-}
-if (failures.length > 0) {
-  process.exitCode = 1;
-}
+report();

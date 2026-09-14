@@ -6,6 +6,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createChecker } from '../helpers/assert.js';
+
+const { check, report } = createChecker('מבחן מבנה 01');
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude']);
@@ -21,16 +24,6 @@ const STORAGE_TOKENS = [
   'localStorage', 'sessionStorage', 'indexedDB', 'openDatabase',
   'DB_URL', 'DB_KEY', 'connectionString',
 ];
-
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) passed += 1;
-  else failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-}
 
 function collectFiles(dir) {
   const found = [];
@@ -85,6 +78,4 @@ check(
   [],
 );
 
-console.log(`מבחן מבנה 01: ${passed} עברו, ${failures.length} נכשלו (${files.length} קובצי קוד, ${touching.length} נוגעים באחסון)`);
-for (const failure of failures) console.log(`  נכשל: ${failure}`);
-if (failures.length > 0) process.exitCode = 1;
+report(` (${files.length} קובצי קוד, ${touching.length} נוגעים באחסון)`);

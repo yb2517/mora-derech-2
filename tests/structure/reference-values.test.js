@@ -12,6 +12,9 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import referenceFile from '../../data/reference.json' with { type: 'json' };
+import { createChecker } from '../helpers/assert.js';
+
+const { check, report } = createChecker('מבחן מבנה 05');
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const REFERENCE_FILE = 'data/reference.json';
@@ -23,19 +26,6 @@ const CODE_EXTENSIONS = ['.js', '.mjs', '.json', '.css', '.html'];
 
 // שדות תיעוד בקובצי הנתונים. הם מפנים לסעיפים במפה ("סעיף 4.2"), ואינם ערכים.
 const DOC_FIELDS = new Set(['source', 'note', 'pending']);
-
-let passed = 0;
-const failures = [];
-
-function check(name, actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    passed += 1;
-  } else {
-    failures.push(`${name}\n    ציפיתי: ${e}\n    קיבלתי: ${a}`);
-  }
-}
 
 function collectFiles(dir) {
   const found = [];
@@ -118,17 +108,14 @@ check(
   [],
 );
 
-console.log(
-  `מבחן מבנה 05: ${passed} עברו, ${failures.length} נכשלו `
-  + `(${enforceable.length} ערכים נאכפים, ${unenforceable.length} חד ספרתיים שאינם ניתנים לאכיפה בסריקה, `
+if (unenforceable.length > 0) {
+  console.log(
+    `  לידיעה, חד ספרתיים שאינם ניתנים לאכיפה בסריקה: `
+    + unenforceable.map((n) => `${n.key}=${n.value}`).join(', '),
+  );
+}
+
+report(
+  ` (${enforceable.length} ערכים נאכפים, ${unenforceable.length} חד ספרתיים, `
   + `${files.length} קובצי קוד)`,
 );
-if (unenforceable.length > 0) {
-  console.log(`  לידיעה, חד ספרתיים: ${unenforceable.map((n) => `${n.key}=${n.value}`).join(', ')}`);
-}
-for (const failure of failures) {
-  console.log(`  נכשל: ${failure}`);
-}
-if (failures.length > 0) {
-  process.exitCode = 1;
-}
