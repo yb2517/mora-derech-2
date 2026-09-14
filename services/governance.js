@@ -322,8 +322,19 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         status: 'approved',
       });
       const audience = payload.audience ?? EVERYONE;
+      const allowed = items.filter(
+        (item) => item.audience === audience || item.audience === EVERYONE,
+      );
+
+      // העוגנים חוזרים עם הפריטים, מפני שמפה 3.2 קובעת ש-FE-04 קורא
+      // "CONTENT_ITEMS ו-GEO_ANCHORS **דרך BE-05**". בלעדיהם FE-04
+      // אינו יכול לבדוק is_crossing לפני המסירה (BL-19), והיה נאלץ
+      // לגעת בישות שאינה שלו.
       return ok({
-        items: items.filter((item) => item.audience === audience || item.audience === EVERYONE),
+        items: allowed,
+        anchors: allowed
+          .map((item) => repository.getAnchorByItem(item.item_id))
+          .filter(Boolean),
         audience,
       });
     },
