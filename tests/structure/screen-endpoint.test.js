@@ -162,10 +162,6 @@ for (const file of code) {
 
 check('אין מסך שמדלג על הכתובת', bypass.sort(), []);
 
-const emptyPass = screens.length === 0;
-
-report(
-  emptyPass
-    ? ' (הכתובת נבדקה; אין עדיין מסכים, והם נכנסים במשימות 5 עד 7)'
-    : ` (${folders.length} מסכים, ${screens.length} קבצים, כולם דרך כתובת אחת)`,
-);
+// שורת הסיכום מדווחת מה נסרק ואינה מצהירה שהסריקה עברה: הצהרה
+// כזאת הייתה מופיעה גם בהרצה אדומה.
+report(` (${folders.length} מסכים, ${screens.length} קובצי מסך נסרקו)`);

@@ -42,6 +42,15 @@ const NOT_YET = {
   '02': 'GW-01 נבנה בשלב 6',
 };
 
+// שלוש הבדיקות האדומות של מפה 6.5. כל אחת שומרת על הגנה במודול
+// שירות, ולכן אף אחת מהן אינה ניתנת לכתיבה לפני שהמודול קיים.
+// הן מופיעות כאן כדי שרמה חסרה תיראה לעין ולא תיעדר בשקט.
+const RED_TESTS = [
+  ['F-05', 'פריט pending במאגר המועמדים', 'BE-04, שלב 4'],
+  ['F-08', 'פריט approved בלי רשומת APPROVALS עובר את L1', 'BE-06, שלב 4'],
+  ['F-09', 'שורת initiated שלא ממודול השיחה נספרת', 'BE-07, שלב 4'],
+];
+
 function testFilesIn(dir) {
   const full = join(ROOT, dir);
   if (!existsSync(full)) return [];
@@ -104,6 +113,16 @@ for (const [number, title, file] of STRUCTURE_TESTS) {
     if (green) structureReady += 1;
   }
   console.log(`  ${number}  ${title.padEnd(42, '.')} ${status}`);
+}
+
+// --- שלוש הבדיקות האדומות של 6.5 ---
+
+console.log(`\n${'='.repeat(72)}`);
+console.log('שלוש הבדיקות האדומות של 6.5');
+console.log('='.repeat(72));
+
+for (const [useCase, title, owner] of RED_TESTS) {
+  console.log(`  ${useCase}  ${title.padEnd(46, '.')} אינה ניתנת לכתיבה: ${owner}`);
 }
 
 // --- סיכום ---

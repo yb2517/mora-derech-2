@@ -153,6 +153,30 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
   check('שלוש שאלות, הודעת מכשיר אחת', shown.length, 1);
 }
 
+// אשכול הכשל של 6.3 מונה "אין קול עברי" ו"הרשאת מיקום נדחתה" כשני
+// מקרים. הכלל "פעם אחת לסשן" הוא לכל קוד ולא לסשן כולו: אילו היה
+// לסשן, ההודעה השנייה הייתה נבלעת מפני שהראשונה כבר נאמרה.
+{
+  intercept = (envelope) => (envelope.module === 'BE-03'
+    ? { ok: false, data: null, error: { code: 'E-LOCATION-NOT-ALLOWED', data: null } }
+    : null);
+
+  for (let i = 0; i < 2; i += 1) {
+    dom.host.querySelector('input').type(`שאלה על מיקום ${i}`);
+    byLabel('שאלה').click();
+    await settle();
+  }
+  intercept = null;
+
+  const voice = referenceFile.values.error_human_text['E-NO-HEBREW-VOICE'];
+  const location = referenceFile.values.error_human_text['E-LOCATION-NOT-ALLOWED'];
+  const shownOf = (text) => dom.host.querySelectorAll('.message')
+    .filter((m) => m.textContent === text).length;
+
+  check('הרשאת מיקום שנדחתה מוצגת', shownOf(location), 1);
+  check('והודעת הקול לא נאמרה שוב', shownOf(voice), 1);
+}
+
 // --- נוהל הסוללה, לפי F-13 תיקון 1 ---
 
 {
