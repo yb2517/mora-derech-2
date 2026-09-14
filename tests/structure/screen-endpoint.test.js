@@ -35,8 +35,14 @@ const FORBIDDEN = [
 ];
 
 // מה שמסך כן רשאי לייבא: את הכתובת, את החוזה (CORE-01, שכל שכבה
-// רשאית לייבא ממנו לפי מבחן 08), וקבצים בתוך תיקיית המסך עצמו.
+// רשאית לייבא ממנו לפי מבחן 08), עזרי תצוגה משותפים תחת screens/,
+// וקבצים בתוך תיקיית המסך עצמו.
+//
+// screens/view.js הוא תשתית מסך ולא מסך: הוא בונה אלמנטים עם
+// מחלקות של DESIGN-01, ואינו שולח מעטפות. שלושה עותקים שלו היו
+// שלושה מקומות שיכולים להיפרד.
 const CONTRACT = ['core/contract.js', 'core/errors.js'];
+const SHARED = ['screens/view.js'];
 
 function collectScreenFiles(dir) {
   const found = [];
@@ -89,7 +95,7 @@ check('הכתובת אינה מייבאת דבר', address?.specifiers ?? null, 
 
 // --- המסכים ---
 
-const screens = files.filter((f) => f.path !== ADDRESS);
+const screens = files.filter((f) => f.path !== ADDRESS && !SHARED.includes(f.path));
 const code = screens.filter((f) => /\.(js|mjs)$/.test(f.path));
 
 check(
@@ -148,6 +154,7 @@ for (const file of code) {
     const target = resolveFrom(file.path, specifier);
     const allowed = target === ADDRESS
       || CONTRACT.includes(target)
+      || SHARED.includes(target)
       || target.startsWith(`${folder}/`);
     if (!allowed) bypass.push(`${file.path} -> ${specifier}`);
   }

@@ -19,7 +19,7 @@
 //   אין בו פעולת "אפס למצב ההתחלה". מסמך הבנייה סעיף 2: הוכרע
 //   10.09 שהיא יוצאת מהמערכת, ולכן היא אינה נבנית כאן מלכתחילה.
 
-import { createElement, panel, statusTag, statusDot } from './view.js';
+import { createElement, panel, statusTag, statusDot, humanError } from '../view.js';
 
 // ארבעת שמות המצב באנגלית הם הקנוניים (מפה 2.2), והעברית ביאור
 // במסך בלבד. זו הסיבה שהמיפוי הזה יושב כאן ולא בנתונים.
@@ -43,7 +43,7 @@ export function create({ host, from, reference, send }) {
   // מצב התצוגה של המסך, ולא מצב עסקי: מה פתוח, מה נבחר, ומה נטען.
   const view = { site: null, items: [], approvals: [], open: null, note: '', warned: false };
 
-  const errorText = (error) => reference?.error_human_text?.[error?.code] ?? error?.code ?? '';
+  const errorText = (error) => humanError(reference?.error_human_text, error);
 
   // כל בקשה יוצאת מכאן, ולכן שם הפונה מוצהר בנקודה אחת.
   async function ask(module, action, payload) {

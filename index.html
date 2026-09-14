@@ -38,6 +38,7 @@
   import { createEndpoint } from './screens/endpoint.js';
   import demoHandler, { DEMO_MODULE_IDS } from './tools/demo-modules.js';
   import { create as createVetoScreen } from './screens/veto/index.js';
+  import { create as createTravelerScreen } from './screens/traveler/index.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
@@ -189,6 +190,14 @@
     // תא בנתונים (מפה 4.3, מבחן מבנה 06).
     const SCREENS = [
       { moduleId: 'FE-06', refKeys: ['error_human_text'], create: createVetoScreen },
+      {
+        moduleId: 'FE-05',
+        refKeys: [
+          'error_human_text', 'safety_opening_text', 'battery_block_text',
+          'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
+        ],
+        create: createTravelerScreen,
+      },
     ];
 
     if (SCREENS.length > 0) {
