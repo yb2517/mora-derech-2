@@ -78,17 +78,31 @@ function freshRepository() {
   const { repository } = freshRepository();
   const names = Object.keys(repository).sort();
 
-  // ארבע הפעולות של שורה 5 בתוכנית, ועוד שתיים שבדיקות הקבלה מחייבות:
-  // listAudit (שורה 5: "appendAudit ואז קריאה") ו-listCallers (שורה 6:
-  // "from ברשימה הסגורה", ורק CORE-04 קורא נתונים).
-  check('הממשק מונה בדיוק את שש הפעולות', names, [
-    'appendAudit', 'getModule', 'getRef', 'listAllowed', 'listAudit', 'listCallers',
+  // שש הפעולות של שלב 1: ארבע משורה 5 בתוכנית, ועוד שתיים שבדיקות
+  // הקבלה מחייבות, listAudit (שורה 5: "appendAudit ואז קריאה")
+  // ו-listCallers (שורה 6: "from ברשימה הסגורה", ורק CORE-04 קורא
+  // נתונים). ואחריהן שתים עשרה הפעולות על הישויות של F-07, משימה 1
+  // בתוכנית שלב 3. הרשימה סגורה: פעולה שאינה כאן אינה קיימת.
+  check('הממשק מונה בדיוק את שמונה עשרה הפעולות', names, [
+    'appendApproval', 'appendAudit', 'appendMou',
+    'getAnchorForItem', 'getItem', 'getModule', 'getRef', 'getSite',
+    'listAllowed', 'listApprovals', 'listAudit', 'listCallers', 'listInstitutes',
+    'listItems', 'listMou', 'listSites', 'listSources',
+    'setItemStatus',
   ]);
 
+  // הכתיבה היחידה שאינה הוספה היא עמודת status של פריט, והיא
+  // מפורשת בשמה: setItemStatus. אין פעולה שמוחקת, אין פעולה
+  // שדורסת טבלה, ואין פעולה שכותבת לעמודה שאינה נקובה בשם.
   check(
     'אין פעולה שנשמעת כמחיקה או כדריסה',
-    names.filter((n) => /delete|remove|drop|clear|truncate|reset|write|update|set/i.test(n)),
+    names.filter((n) => /delete|remove|drop|clear|truncate|reset|write|update/i.test(n)),
     [],
+  );
+  check(
+    'העדכון היחיד הוא עמודה אחת נקובה בשם',
+    names.filter((n) => /^set/.test(n)),
+    ['setItemStatus'],
   );
 }
 
@@ -104,6 +118,7 @@ function liveDriver() {
     tables,
     readTable: (name) => tables[name],
     appendRow: (name, row) => { tables[name].push(row); return row; },
+    updateRow: () => undefined,
   };
 }
 
@@ -189,8 +204,13 @@ function liveDriver() {
 
 {
   const { driver, storage } = freshRepository();
-  check('הדרייבר מכיר ארבע טבלאות', [...TABLE_NAMES], ['modules', 'allow_list', 'audit_log', 'reference']);
-  check('ארבע הטבלאות נזרעו באחסון', storage.size, 4);
+  check('הדרייבר מכיר את ארבע טבלאות המערכת ואת שבע הישויות', [...TABLE_NAMES], [
+    'modules', 'allow_list', 'audit_log', 'reference',
+    'content_items', 'approvals', 'sites', 'sources', 'institutes', 'rights_mou', 'geo_anchors',
+  ]);
+  // שלוש נזרעו מהזרע, ושלוש נפתחו ריקות מפני שהן גדלות בהוספה.
+  // ישות שלא נזרעה ואינה גדלה בהוספה אינה נכתבת לאחסון כלל.
+  check('שש טבלאות באחסון אחרי הזריעה', storage.size, 6);
   check(
     'כל מפתח באחסון נושא את התחילית של המערכת',
     storage.keys().filter((k) => !k.startsWith('mora-derech/')),
@@ -212,7 +232,7 @@ function liveDriver() {
     }
     check(
       `הוספת שורה ל-${table} נחסמת בידי השומר`,
-      message.includes('הוספת שורה מותרת ל-audit_log בלבד'),
+      message.includes('אינה מקבלת הוספת שורה'),
       true,
     );
     check(`הטבלה ${table} לא השתנתה`, JSON.stringify(driver.readTable(table)), before);
@@ -242,6 +262,7 @@ function liveDriver() {
   const fakeCloudDriver = {
     readTable: (name) => tables[name],
     appendRow: (name, row) => { tables[name].push(row); return row; },
+    updateRow: () => undefined,
   };
   const repository = createRepository(fakeCloudDriver);
   repository.appendAudit({ request_id: 'req-008', phase: 'request' });
@@ -252,10 +273,82 @@ function liveDriver() {
 
 // --- דרייבר פגום נדחה בטעינה ---
 
-checkThrows('דרייבר בלי readTable נדחה', () => createRepository({ appendRow() {} }));
-checkThrows('דרייבר בלי appendRow נדחה', () => createRepository({ readTable() {} }));
+checkThrows('דרייבר בלי readTable נדחה', () => createRepository({ appendRow() {}, updateRow() {} }));
+checkThrows('דרייבר בלי appendRow נדחה', () => createRepository({ readTable() {}, updateRow() {} }));
+checkThrows('דרייבר בלי updateRow נדחה', () => createRepository({ readTable() {}, appendRow() {} }));
 checkThrows('בלי דרייבר כלל נדחה', () => createRepository());
 checkThrows('דרייבר דפדפן בלי אחסון נדחה', () => createBrowserDriver({ storage: null }));
+
+// --- הישויות העסקיות של F-07. משימה 1 בתוכנית שלב 3 ---
+
+{
+  const storage = memoryStorage();
+  const driver = createBrowserDriver({
+    storage,
+    seed: {
+      ...seed,
+      content_items: [
+        { item_id: 'it-1', site_id: 's-1', stop_id: 'st-1', status: 'pending', source_id: 'src-1' },
+        { item_id: 'it-2', site_id: 's-1', stop_id: 'st-2', status: 'approved', source_id: 'src-1' },
+        { item_id: 'it-3', site_id: 's-2', stop_id: 'st-9', status: 'draft', source_id: 'src-2' },
+      ],
+      approvals: [{ approval_id: 'ap-1', target: 'it-2', action: 'approve' }],
+      sites: [{ site_id: 's-1', name: 'מסלול', status: 'open' }],
+      sources: [{ source_id: 'src-1' }],
+      institutes: [{ institute_id: 'inst-1' }],
+      rights_mou: [{ mou_id: 'mou-1', institute_id: 'inst-1', scope: ['src-1'] }],
+      geo_anchors: [{ anchor_id: 'an-1', item_id: 'it-1', lat: 31.78, lng: 35.21, verified: true }],
+    },
+  });
+  const repository = createRepository(driver);
+
+  check('listItems בלי מסנן מחזיר הכול', repository.listItems().length, 3);
+  check('listItems לפי מסלול', repository.listItems({ site_id: 's-1' }).length, 2);
+  check('listItems לפי מצב', repository.listItems({ site_id: 's-1', status: 'approved' }).length, 1);
+  check('listItems לפי תחנה', repository.listItems({ stop_id: 'st-2' }).map((r) => r.item_id), ['it-2']);
+  check('getItem על מזהה קיים', repository.getItem('it-1').status, 'pending');
+  check('getItem על מזהה שאינו קיים מחזיר null, ולא קוד שגיאה', repository.getItem('it-9'), null);
+
+  // הכותב היחיד של העמודה הזאת הוא BE-05, לפי BL-09. כאן נבדק
+  // שהפעולה קיימת ועובדת; מי רשאי לקרוא לה נאכף ברשימת המותר.
+  check('setItemStatus משנה את המצב', repository.setItemStatus('it-1', 'approved').status, 'approved');
+  check('והשינוי נשמר', repository.getItem('it-1').status, 'approved');
+  check('setItemStatus על פריט שאינו קיים', repository.setItemStatus('it-9', 'approved'), undefined);
+
+  repository.appendApproval({ approval_id: 'ap-2', target: 'it-1', action: 'approve' });
+  check('appendApproval מוסיף רשומה', repository.listApprovals().length, 2);
+  check('listApprovals לפי target', repository.listApprovals({ target: 'it-1' }).length, 1);
+  checkThrows('רשומת APPROVALS שאינה אובייקט נזרקת', () => repository.appendApproval('ap-3'));
+
+  // APPROVALS היא append-only לפי מפה 2.1: אין בממשק פעולה שעורכת
+  // רשומה, ואין פעולה שמוחקת אותה. הטענה היא על הממשק עצמו.
+  check(
+    'אין בממשק פעולה שעורכת או מוחקת רשומת APPROVALS',
+    Object.keys(repository).filter((name) => /approval/i.test(name)).sort(),
+    ['appendApproval', 'listApprovals'],
+  );
+  checkThrows('הדרייבר אינו מעדכן שורה בטבלה שגדלה בהוספה', () => driver.updateRow('approvals', 'approval_id', 'ap-1', { action: 'reject' }));
+
+  check('getSite', repository.getSite('s-1').name, 'מסלול');
+  check('getSite על מזהה שאינו קיים', repository.getSite('s-9'), null);
+  check('listSites', repository.listSites().length, 1);
+  check('listSources', repository.listSources().length, 1);
+  check('listInstitutes', repository.listInstitutes().length, 1);
+  check('listMou', repository.listMou().length, 1);
+  check('getAnchorForItem', repository.getAnchorForItem('it-1').anchor_id, 'an-1');
+  check('getAnchorForItem לפריט בלי עוגן', repository.getAnchorForItem('it-2'), null);
+
+  repository.appendMou({ mou_id: 'mou-2', institute_id: 'inst-1', scope: ['src-1'] });
+  check('appendMou מוסיף רשומה', repository.listMou().length, 2);
+  checkThrows('רשומת הסכם שאינה אובייקט נזרקת', () => repository.appendMou([]));
+
+  // אין בממשק פעולת מחיקה, בשום ישות.
+  check(
+    'אין בממשק אף פעולה שמוחקת',
+    Object.keys(repository).filter((name) => /delete|remove|drop|clear/i.test(name)),
+    [],
+  );
+}
 
 // --- סיכום ---
 
