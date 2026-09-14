@@ -93,6 +93,9 @@ class Node {
 
   matchesPart(part) {
     if (part.startsWith('.')) return this.classList.includes(part.slice(1));
+    // בורר מזהה נוסף בשלב 3: טופס ההסכם מזוהה לפי id, כפי שהתווית
+    // שלו מצביעה עליו, ולא לפי מחלקת עיצוב.
+    if (part.startsWith('#')) return this.attributes.get('id') === part.slice(1);
     return this.tagName === part;
   }
 

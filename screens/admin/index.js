@@ -196,12 +196,21 @@ export function create({ host, from, reference, send }) {
     control.value = view.form[spec.name] ?? '';
     control.addEventListener('input', () => { view.form[spec.name] = control.value; });
 
-    // שדה שחסר מסומן לפי E-ITEM-INCOMPLETE, שנושא את שמו ב-error.data.
-    const invalid = view.error?.code === 'E-ITEM-INCOMPLETE'
-      && view.error?.data?.field === spec.name;
+    return wrapField(spec.name, spec.label, `admin-${spec.name}`, control);
+  }
 
+  // שדה שחסר מסומן לפי E-ITEM-INCOMPLETE, שנושא את שמו ב-error.data.
+  // המעטפת משותפת לטופס הפריט ולטופס ההסכם: שני טפסים שמציגים
+  // שגיאה בשתי דרכים הם שני מקומות שאחד מהם יישכח, וזה מה שקרה
+  // בטופס ההסכם עד שהרצה בדפדפן הראתה שדה חסר בלי שום חיווי.
+  function fieldIsInvalid(name) {
+    return view.error?.code === 'E-ITEM-INCOMPLETE' && view.error?.data?.field === name;
+  }
+
+  function wrapField(name, label, id, control) {
+    const invalid = fieldIsInvalid(name);
     return createElement('div', { class: invalid ? 'field field--invalid' : 'field' }, [
-      createElement('label', { class: 'field__label', for: `admin-${spec.name}` }, spec.label),
+      createElement('label', { class: 'field__label', for: id }, label),
       control,
       invalid ? createElement('span', { class: 'field__error' }, errorText(view.error)) : null,
     ]);
@@ -310,44 +319,32 @@ export function create({ host, from, reference, send }) {
     //
     // המסך אינו בודק שלמות: השדה החסר חוזר ב-E-ITEM-INCOMPLETE עם
     // שמו, ו-BE-05 הוא שמכריע. שני מקומות שבודקים נפרדים זה מזה.
-    const instituteField = createElement('div', { class: 'field' }, [
-      createElement('label', { class: 'field__label', for: 'mou-institute' }, 'מכון'),
-      (() => {
-        const select = createElement('select', { class: 'field__control', id: 'mou-institute' },
-          [createElement('option', { value: '' }, 'בחירת מכון')].concat(
-            view.institutes.map((i) => createElement('option', { value: i.institute_id }, i.name ?? i.institute_id)),
-          ));
-        select.value = view.mouForm.institute_id;
-        select.addEventListener('input', () => { view.mouForm.institute_id = select.value; });
-        return select;
-      })(),
-    ]);
+    const instituteSelect = createElement('select', { class: 'field__control', id: 'mou-institute' },
+      [createElement('option', { value: '' }, 'בחירת מכון')].concat(
+        view.institutes.map((i) => createElement('option', { value: i.institute_id }, i.name ?? i.institute_id)),
+      ));
+    instituteSelect.value = view.mouForm.institute_id;
+    instituteSelect.addEventListener('input', () => { view.mouForm.institute_id = instituteSelect.value; });
+    const instituteField = wrapField('institute_id', 'מכון', 'mou-institute', instituteSelect);
 
-    const scopeField = createElement('div', { class: 'field' }, [
-      createElement('label', { class: 'field__label' }, 'היקף ההסכם, המקורות שהוא מכסה'),
-      createElement('div', { class: 'btn-row' }, view.sources.map((source) => {
-        const box = createElement('input', { type: 'checkbox', id: `mou-src-${source.source_id}` });
-        box.checked = view.mouForm.scope.includes(source.source_id);
-        box.addEventListener('change', () => {
-          const chosen = new Set(view.mouForm.scope);
-          if (box.checked) chosen.add(source.source_id);
-          else chosen.delete(source.source_id);
-          view.mouForm.scope = [...chosen];
-        });
-        return createElement('label', { class: 'text-sm', for: `mou-src-${source.source_id}` },
-          [box, source.name ?? source.source_id]);
-      })),
-    ]);
+    const scopeBoxes = createElement('div', { class: 'btn-row' }, view.sources.map((source) => {
+      const box = createElement('input', { type: 'checkbox', id: `mou-src-${source.source_id}` });
+      box.checked = view.mouForm.scope.includes(source.source_id);
+      box.addEventListener('change', () => {
+        const chosen = new Set(view.mouForm.scope);
+        if (box.checked) chosen.add(source.source_id);
+        else chosen.delete(source.source_id);
+        view.mouForm.scope = [...chosen];
+      });
+      return createElement('label', { class: 'text-sm', for: `mou-src-${source.source_id}` },
+        [box, source.name ?? source.source_id]);
+    }));
+    const scopeField = wrapField('scope', 'היקף ההסכם, המקורות שהוא מכסה', 'mou-scope', scopeBoxes);
 
-    const validField = createElement('div', { class: 'field' }, [
-      createElement('label', { class: 'field__label', for: 'mou-valid' }, 'בתוקף עד'),
-      (() => {
-        const input = createElement('input', { class: 'field__control', id: 'mou-valid', type: 'date' });
-        input.value = view.mouForm.valid_until;
-        input.addEventListener('input', () => { view.mouForm.valid_until = input.value; });
-        return input;
-      })(),
-    ]);
+    const validInput = createElement('input', { class: 'field__control', id: 'mou-valid', type: 'date' });
+    validInput.value = view.mouForm.valid_until;
+    validInput.addEventListener('input', () => { view.mouForm.valid_until = validInput.value; });
+    const validField = wrapField('valid_until', 'בתוקף עד', 'mou-valid', validInput);
 
     const registerMou = createElement('button', { class: 'btn btn--primary', type: 'button' }, 'רישום הסכם');
     registerMou.addEventListener('click', () => act('BE-05', 'register_mou', {
