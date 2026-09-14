@@ -71,12 +71,18 @@ check(
   ['./tools/demo-modules.js'],
 );
 
-// --- 3. קוראת את שלוש הטבלאות ---
+// --- 3. קוראת את טבלאות הנתונים ---
+//
+// נתוני ההדגמה נוספו בשלב 3: הישויות העסקיות נזרעות מהם, ובלעדיהם
+// אין ל-BE-05 מה לקרוא. השורה הזאת יורדת בשלב 7 יחד עם הקובץ.
 
-const TABLES = ['registry/modules.json', 'registry/allow-list.json', 'data/reference.json'];
+const TABLES = [
+  'registry/modules.json', 'registry/allow-list.json', 'data/reference.json',
+  'data/demo/demo-data.json',
+];
 
 check(
-  'קוראת את שלוש טבלאות הנתונים',
+  'קוראת את כל טבלאות הנתונים',
   TABLES.filter((path) => !code.includes(path)),
   [],
 );

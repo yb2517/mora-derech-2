@@ -29,13 +29,15 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const ENTRY_HTML = 'index.html';
 const DEFAULT_OUT = join('dist', 'mora-derech-2.html');
 
-// שלוש טבלאות הנתונים, בדיוק כפי ש-TABLE_SOURCES בנקודת הכניסה
+// טבלאות הנתונים, בדיוק כפי ש-TABLE_SOURCES בנקודת הכניסה
 // מונה אותן. הן נכנסות לקובץ כבלוקים, ונקודת הכניסה כבר מעדיפה
 // בלוק על פני fetch.
 const TABLES = {
   modules: 'registry/modules.json',
   allow_list: 'registry/allow-list.json',
   reference: 'data/reference.json',
+  // נתוני ההדגמה, שמשלב 3 נזרעים לישויות. יורדים בשלב 7.
+  demo: 'data/demo/demo-data.json',
 };
 
 const read = (relativePath) => readFileSync(join(ROOT, relativePath), 'utf8');

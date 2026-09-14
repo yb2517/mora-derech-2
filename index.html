@@ -22,7 +22,7 @@
   וגם המקום שמרכיב את המערכת, ולכן אין קובץ הרכבה נפרד.
 
   מה הקובץ הזה עושה, ואת זה בלבד:
-    1. קורא את שלוש טבלאות הנתונים.
+    1. קורא את טבלאות הנתונים ואת נתוני ההדגמה.
     2. בונה את דרייבר האחסון, את ה-Repository ואת ה-Orchestrator.
     3. מגיש את המסכים, ומזריק לכל אחד את שם הפונה שלו ואת ערכי
        ה-reference שהוא צריך.
@@ -41,12 +41,20 @@
   import { create as createTravelerScreen } from './screens/traveler/index.js';
   import { create as createAdminScreen } from './screens/admin/index.js';
 
-  // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
+  // הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
     modules: './registry/modules.json',
     allow_list: './registry/allow-list.json',
     reference: './data/reference.json',
+    demo: './data/demo/demo-data.json',
   };
+
+  // הישויות שנזרעות מנתוני ההדגמה, משימה 7 בתוכנית שלב 3. כל שורה
+  // בהן נושאת is_demo, וההסרה היא שלב 7: מחיקת הקובץ ומחיקת השורה
+  // הזאת. הרשימה היא שמות טבלאות בלבד, ואין בה משמעות עסקית.
+  const SEEDED_ENTITIES = [
+    'content_items', 'approvals', 'sites', 'sources', 'institutes', 'rights_mou', 'geo_anchors',
+  ];
 
   // שני מצבי טעינה, ואותם נתונים בשניהם.
   //
@@ -64,25 +72,36 @@
   }
 
   async function loadTables() {
-    const [modules, allowList, reference] = await Promise.all(
-      ['modules', 'allow_list', 'reference'].map(loadTable),
+    const [modules, allowList, reference, demo] = await Promise.all(
+      ['modules', 'allow_list', 'reference', 'demo'].map(loadTable),
     );
     // צורת הזריעה של הדרייבר: הטבלה היא מה שה-Repository קורא,
     // ולכן reference נזרעת בערכים עצמם ולא במעטפת הקובץ.
-    return { modules, allow_list: allowList, reference: reference.values };
+    const entities = Object.fromEntries(
+      SEEDED_ENTITIES.map((name) => [name, demo[name] ?? []]),
+    );
+    return { modules, allow_list: allowList, reference: reference.values, ...entities };
   }
 
   // טעינת ה-handlers מתוך הנתונים. עזרי בדיקה אינם נטענים כאן:
   // מערך הבדיקות מרכיב לעצמו מפה משלו, ונקודת הכניסה של המערכת
   // אינה טוענת קוד בדיקה.
-  async function loadHandlers(modulesTable) {
+  // מודול שזקוק ל-Repository מייצא create ומקבל אותו בהזרקה, כמו
+  // ה-Orchestrator וכמו הכתובת. מודול בלי תלות מייצא default.
+  // ACTIONS, אם קיים, אומר מה המודול מממש בפועל בשלב הזה.
+  async function loadHandlers(modulesTable, dependencies) {
     const entries = [];
     for (const row of modulesTable.modules) {
       if (typeof row.handler !== 'string' || row.handler === '') continue;
       if (row.handler.startsWith('tests/')) continue;
       try {
         const loaded = await import(`./${row.handler}`);
-        if (typeof loaded.default === 'function') entries.push([row.id, loaded.default]);
+        const handler = typeof loaded.create === 'function'
+          ? loaded.create(dependencies)
+          : loaded.default;
+        if (typeof handler === 'function') {
+          entries.push([row.id, { handler, actions: loaded.ACTIONS ?? null }]);
+        }
       } catch {
         // המודול טרם נבנה. מטופל למעלה.
       }
@@ -129,14 +148,31 @@
     // יעד הניתוב של CORE-02"). מודול שקובצו טרם נבנה נשאר בלי
     // handler, וה-Orchestrator מחזיר עליו E-MODULE-FAILED. זו
     // התנהגות מוגדרת ולא תקלה, והיא נראית לעין.
-    const handlers = await loadHandlers(seed.modules);
+    const built = await loadHandlers(seed.modules, { repository });
+    const handlers = Object.fromEntries(
+      Object.entries(built).map(([id, entry]) => [id, entry.handler]),
+    );
 
-    // החזרת שלב 2: כל עוד מודול שירות אינו קיים, ההדגמה עומדת
-    // במקומו כדי שיהיה מה להציג על המסך. ברגע ש-services/governance.js
-    // ייכנס בשלב 3, הוא ייטען מהשורה שבנתונים וההדגמה תפסיק לענות
-    // עליו מעצמה. ההסרה בשלב 7 היא מחיקת שלוש השורות האלה ושל הקובץ.
+    // ההחזרה, ומשלב 3 היא לפי פעולה ולא לפי מודול.
+    //
+    // מודול שנבנה חלקית מצהיר ב-ACTIONS מה הוא מממש. פעולה שברשימה
+    // מגיעה אליו, וכל השאר ממשיכה להדגמה ומסומנת is_demo. בלי זה
+    // היו שתי אפשרויות גרועות: מודול אמיתי שאינו עונה על מחצית
+    // הפעולות, או הדגמה שממשיכה לענות במקום מודול שכבר קיים.
+    //
+    // ההכרעה הזאת יושבת בהרכבה ולא במודול, מפני שמודול שמכיר את
+    // ההדגמה הוא מודול שמייבא מודול (חוק ברזל 2). ההסרה בשלב 7 היא
+    // מחיקת הלולאה הזאת ושל הקובץ.
     for (const id of DEMO_MODULE_IDS) {
-      if (!handlers[id]) handlers[id] = demoHandler;
+      const entry = built[id];
+      if (!entry) {
+        handlers[id] = demoHandler;
+      } else if (Array.isArray(entry.actions)) {
+        const covered = new Set(entry.actions);
+        handlers[id] = (request) => (covered.has(request?.action)
+          ? entry.handler(request)
+          : demoHandler(request));
+      }
     }
 
     const orchestrator = createOrchestrator({ repository, handlers });

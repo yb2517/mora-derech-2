@@ -91,12 +91,13 @@ check('עזרי בדיקה אינם באריזה', /__registry\["tests\//.test(b
 
 // --- זהות: מה שבפנים הוא מה שבקבצים ---
 
-// שלוש הטבלאות נכנסות כבלוקים, בצורה שנקודת הכניסה כבר מחפשת
+// הטבלאות נכנסות כבלוקים, בצורה שנקודת הכניסה כבר מחפשת
 // (היא מעדיפה בלוק על פני fetch, ולכן אותו קוד רץ בשני המצבים).
 const TABLES = {
   modules: 'registry/modules.json',
   allow_list: 'registry/allow-list.json',
   reference: 'data/reference.json',
+  demo: 'data/demo/demo-data.json',
 };
 
 for (const [name, path] of Object.entries(TABLES)) {
@@ -159,7 +160,7 @@ check('וגם היא מסתיימת בהצלחה', second.status, 0);
 // --- הסקריפט אינו מקור אמת שני ---
 
 // שמות מודולים כתובים בסקריפט היו הופכים אותו לרשימה שנייה שצריך
-// לתחזק לצד הנתונים. הוא מכיר את נקודת הכניסה ואת שלוש הטבלאות,
+// לתחזק לצד הנתונים. הוא מכיר את נקודת הכניסה ואת הטבלאות,
 // ולא את מי שהן מצביעות עליו.
 const script = source('tools/bundle.js');
 const named = ['core/orchestrator.js', 'screens/veto/', 'screens/traveler/', 'screens/admin/',
