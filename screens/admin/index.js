@@ -45,6 +45,9 @@ const ITEM_FIELDS = [
 export function create({ host, from, reference, send }) {
   const view = {
     role: ROLES[0].role,
+    // טופס ההסכם, משימה 8 בתוכנית שלב 3. נפרד מטופס הפריט, מפני
+    // ששני טפסים שחולקים אובייקט אחד דורסים זה את זה.
+    mouForm: { institute_id: '', scope: [], valid_until: '' },
     site: null,
     items: [],
     sources: [],
@@ -137,7 +140,10 @@ export function create({ host, from, reference, send }) {
     const response = await ask(module, action, payload);
     if (!absorb(response)) return render();
     view.message = response.data?.acknowledged ?? action;
-    render();
+    // משלב 3 חלק מהכתיבות משנות רשומות באמת, ולכן המסך נטען מחדש
+    // ומראה את מה שנרשם. כתיבה שעדיין עומדת על ההדגמה תיטען
+    // מחדש גם היא, ותראה את אותם נתונים: זה מה שאמור לקרות.
+    await load();
   }
 
   async function openItem(itemId) {
@@ -298,8 +304,58 @@ export function create({ host, from, reference, send }) {
       ]);
     });
 
-    const registerMou = createElement('button', { class: 'btn', type: 'button' }, 'רישום הסכם');
-    registerMou.addEventListener('click', () => act('BE-05', 'register_mou', {}));
+    // טופס ההסכם, usecase-f-07 צעד 12: מכון, היקף המקורות ותאריך
+    // תוקף. שם השדה valid_until מסומן [טרם נקבע] במפה לפי
+    // decision-02, והוא נשלח בשם שנתוני ההדגמה כבר כותבים.
+    //
+    // המסך אינו בודק שלמות: השדה החסר חוזר ב-E-ITEM-INCOMPLETE עם
+    // שמו, ו-BE-05 הוא שמכריע. שני מקומות שבודקים נפרדים זה מזה.
+    const instituteField = createElement('div', { class: 'field' }, [
+      createElement('label', { class: 'field__label', for: 'mou-institute' }, 'מכון'),
+      (() => {
+        const select = createElement('select', { class: 'field__control', id: 'mou-institute' },
+          [createElement('option', { value: '' }, 'בחירת מכון')].concat(
+            view.institutes.map((i) => createElement('option', { value: i.institute_id }, i.name ?? i.institute_id)),
+          ));
+        select.value = view.mouForm.institute_id;
+        select.addEventListener('input', () => { view.mouForm.institute_id = select.value; });
+        return select;
+      })(),
+    ]);
+
+    const scopeField = createElement('div', { class: 'field' }, [
+      createElement('label', { class: 'field__label' }, 'היקף ההסכם, המקורות שהוא מכסה'),
+      createElement('div', { class: 'btn-row' }, view.sources.map((source) => {
+        const box = createElement('input', { type: 'checkbox', id: `mou-src-${source.source_id}` });
+        box.checked = view.mouForm.scope.includes(source.source_id);
+        box.addEventListener('change', () => {
+          const chosen = new Set(view.mouForm.scope);
+          if (box.checked) chosen.add(source.source_id);
+          else chosen.delete(source.source_id);
+          view.mouForm.scope = [...chosen];
+        });
+        return createElement('label', { class: 'text-sm', for: `mou-src-${source.source_id}` },
+          [box, source.name ?? source.source_id]);
+      })),
+    ]);
+
+    const validField = createElement('div', { class: 'field' }, [
+      createElement('label', { class: 'field__label', for: 'mou-valid' }, 'בתוקף עד'),
+      (() => {
+        const input = createElement('input', { class: 'field__control', id: 'mou-valid', type: 'date' });
+        input.value = view.mouForm.valid_until;
+        input.addEventListener('input', () => { view.mouForm.valid_until = input.value; });
+        return input;
+      })(),
+    ]);
+
+    const registerMou = createElement('button', { class: 'btn btn--primary', type: 'button' }, 'רישום הסכם');
+    registerMou.addEventListener('click', () => act('BE-05', 'register_mou', {
+      institute_id: view.mouForm.institute_id,
+      scope: [...view.mouForm.scope],
+      valid_until: view.mouForm.valid_until,
+      covers_content_contribution: true,
+    }));
 
     const registerInstitute = createElement('button', { class: 'btn', type: 'button' }, 'רישום מכון');
     registerInstitute.addEventListener('click', () => act('BE-05', 'register_institute', {}));
@@ -312,6 +368,9 @@ export function create({ host, from, reference, send }) {
       rows.length > 0
         ? createElement('table', { class: 'table' }, rows)
         : createElement('p', { class: 'empty' }, 'אין הסכמים רשומים.'),
+      instituteField,
+      scopeField,
+      validField,
       createElement('p', { class: 'text-sm text-muted' },
         'הדלקת האכיפה חוסמת את מסך המטייל כל עוד המסלול אינו נעול.'),
       createElement('div', { class: 'btn-row' }, [registerInstitute, registerMou, toggle]),

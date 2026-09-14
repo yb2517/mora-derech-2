@@ -191,3 +191,13 @@ export default function demoHandler(request) {
 
 /** מזהי המודולים שההדגמה עומדת במקומם. נקרא בנקודת הכניסה ובבדיקה. */
 export const DEMO_MODULE_IDS = Object.freeze(Object.keys(RESPONSES));
+
+/**
+ * מה ההדגמה עונה עליו, לפי מודול. נוסף בשלב 3, כשההחזרה הפכה
+ * להיות לפי פעולה ולא לפי מודול: הבדיקה מצליבה את הרשימה הזאת מול
+ * ה-ACTIONS של המודולים שנבנו, ומוודאת שאין פעולה בחוזה שאיש
+ * אינו עונה עליה.
+ */
+export const DEMO_ACTIONS = Object.freeze(Object.fromEntries(
+  Object.entries(RESPONSES).map(([id, table]) => [id, Object.freeze(Object.keys(table))]),
+));

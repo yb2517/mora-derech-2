@@ -41,7 +41,7 @@ const MOVES = [
 
 export function create({ host, from, reference, send }) {
   // מצב התצוגה של המסך, ולא מצב עסקי: מה פתוח, מה נבחר, ומה נטען.
-  const view = { site: null, items: [], approvals: [], open: null, note: '', warned: false };
+  const view = { site: null, gate: null, items: [], approvals: [], open: null, note: '', warned: false, done: null };
 
   const errorText = (error) => humanError(reference?.error_human_text, error);
 
@@ -62,6 +62,7 @@ export function create({ host, from, reference, send }) {
     const gate = await ask('BE-06', 'get_gate', {});
     if (!gate.ok) return showError(gate.error);
     view.site = gate.data?.site ?? null;
+    view.gate = gate.data?.gate ?? null;
 
     const siteId = view.site?.site_id;
     const [items, approvals] = await Promise.all([
@@ -108,18 +109,36 @@ export function create({ host, from, reference, send }) {
       note: view.note,
     });
     if (!response.ok) return showError(response.error);
+
+    // המצב באמת השתנה משלב 3, ולכן המסך נטען מחדש ואינו מצייר
+    // מזיכרונו: הפריט, המונים, פס השערים ויומן ההחלטות מגיעים
+    // כולם מהרשומות. זה גם מה שמראה לחוקר את הרשומה שנוצרה,
+    // כפי שבדיקת הקבלה של השלב דורשת.
     view.warned = false;
-    render(response.data);
+    view.note = '';
+    view.open = null;
+    view.done = response.data;
+    await load();
   }
 
   // --- תצוגה ---
 
+  // פס השערים. BL-08: השער פתוח כאשר המסלול נעול ו-M-06 גדול או
+  // שווה 1, ושני התנאים מוצגים בנפרד כדי שיהיה ברור מה חסר. המצב
+  // מגיע מ-BE-06 ואינו מחושב כאן.
   function gateStrip() {
-    const open = view.site?.status === 'locked';
+    const gate = view.gate;
+    const open = gate?.open === true;
     return createElement('div', { class: 'gate' }, [
       createElement('strong', {}, 'שער B'),
       createElement('span', { class: open ? 'gate__lock gate__lock--open' : 'gate__lock' },
-        open ? 'המסלול נעול' : 'המסלול פתוח'),
+        open ? 'פתוח' : 'חסום'),
+      createElement('span', { class: 'text-sm' },
+        gate?.locked ? 'המסלול נעול' : 'המסלול פתוח'),
+      createElement('span', { class: 'text-sm' },
+        `M-06: ${gate?.m06 ?? 0}${gate?.m06 >= 1 ? ', הסכם חתום' : ', אין הסכם חתום'}`),
+      createElement('span', { class: 'text-sm text-muted' },
+        gate?.enforced ? 'האכיפה דולקת' : 'האכיפה כבויה'),
       createElement('span', { class: 'text-sm' }, view.site?.name ?? ''),
     ]);
   }
@@ -197,7 +216,7 @@ export function create({ host, from, reference, send }) {
     )));
   }
 
-  function render(acknowledged) {
+  function render() {
     const list = view.items.length === 0
       ? createElement('p', { class: 'empty' }, 'אין פריטים במסלול.')
       : createElement('ul', { class: 'list' }, view.items.map(itemRow));
@@ -206,9 +225,13 @@ export function create({ host, from, reference, send }) {
     const log = panel('יומן ההחלטות', decisionLog());
 
     const children = [gateStrip()];
-    if (acknowledged) {
+    if (view.done) {
+      // הודעת האישור הקצרה של usecase-f-07 צעד 11, ובה מה שבאמת
+      // קרה: המעבר שנרשם, ולא "הפעולה נשלחה".
       children.push(createElement('div', { class: 'message message--done' },
-        `הפעולה ${acknowledged.acknowledged} נשלחה.`));
+        `${STATE_LABEL[view.done.from_status] ?? view.done.from_status}`
+        + ` ${STATE_LABEL[view.done.status] ?? view.done.status}, ונרשם ביומן ההחלטות.`));
+      view.done = null;
     }
     children.push(createElement('div', { class: 'layout layout--split' }, [items, log]));
 

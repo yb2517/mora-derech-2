@@ -130,7 +130,11 @@ check(
   buttons().find((b) => labelOf(b) === 'דחייה').click();
   await settle();
 
-  check('הלחיצה השנייה נשלחה', sent.at(-1).action, 'reject');
+  // משלב 3 המסך נטען מחדש אחרי מעבר שהצליח, ולכן המעטפה האחרונה
+  // היא כבר הקריאה החוזרת. הטענה מחפשת את מעטפת המעבר עצמה.
+  const lastMove = sent.filter((envelope) => envelope.action === 'reject').at(-1);
+  check('הלחיצה השנייה נשלחה', lastMove.action, 'reject');
+  check('ואחריה המסך נטען מחדש מהרשומות', sent.at(-1).action, 'listApprovals');
   check('אישור הקבלה מוצג', dom.host.querySelectorAll('.message--done').length, 1);
 }
 
@@ -144,9 +148,10 @@ check(
   buttons().find((b) => labelOf(b) === 'דחייה').click();
   await settle();
 
+  const move = sent.filter((envelope) => envelope.action === 'reject').at(-1);
   check('עם הערה אין תזכורת', dom.host.querySelectorAll('.message--warn').length, 0);
-  check('ההערה נשלחה במעטפה', sent.at(-1).payload.note, 'נימוק הבדיקה');
-  check('הפריט נשלח במעטפה', typeof sent.at(-1).payload.item_id, 'string');
+  check('ההערה נשלחה במעטפה', move.payload.note, 'נימוק הבדיקה');
+  check('הפריט נשלח במעטפה', typeof move.payload.item_id, 'string');
 }
 
 // --- המסך מבצע את פעולותיו ואותן בלבד ---
