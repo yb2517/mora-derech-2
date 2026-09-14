@@ -560,11 +560,189 @@ const ITEM = {
     ['i-adults', 'i-all']);
 }
 
-// --- ההיקף: הנעילה היא משימה 4 ---
+// ---------------------------------------------------------------------
+// משימה 4 בתוכנית שלב 4: הנעילה, usecase-f-08 צעדים 10 עד 12
+// ---------------------------------------------------------------------
+
+// מסלול שכל ארבעת התנאים מתקיימים בו. הוא נבנה מהמסלול של הבדיקות
+// הקודמות בכך שכל פריט הוכרע, לכל תחנה יש מאושר, לכל מאושר עוגן
+// מאומת ורשומת אישור, ולמקורות יש הסכם בתוקף.
+function lockableRepository(overrides = {}) {
+  const repository = fakeRepository(overrides);
+  repository.data.items = [
+    { item_id: 'i-a', site_id: 's-1', stop_id: 'st-1', status: 'approved', source_id: 'src-1', text: 'טקסט', page: 3, audience: 'כולם' },
+    { item_id: 'i-b', site_id: 's-1', stop_id: 'st-2', status: 'approved', source_id: 'src-1', text: 'טקסט', page: 5, audience: 'כולם' },
+  ];
+  repository.data.anchors = [
+    { anchor_id: 'an-a', item_id: 'i-a', lat: 31.781, lng: 35.219, verified: true, verified_at: 'T', is_crossing: false },
+    { anchor_id: 'an-b', item_id: 'i-b', lat: 31.782, lng: 35.218, verified: true, verified_at: 'T', is_crossing: false },
+  ];
+  repository.data.approvals = [
+    { approval_id: 'ap-a', target: 'i-a', action: 'approve', from_status: 'pending', to_status: 'approved' },
+    { approval_id: 'ap-b', target: 'i-b', action: 'approve', from_status: 'pending', to_status: 'approved' },
+  ];
+  repository.data.mou = [{
+    mou_id: 'mou-1', institute_id: 'inst-1', scope: ['src-1'],
+    signed_at: '2026-09-01T00:00:00.000Z', valid_until: '2099-01-01T00:00:00.000Z',
+  }];
+  return repository;
+}
+
+const lockEnvelope = (payload = {}) => envelope('lock_site', payload, 'screen-owner');
+
+// --- בדיקת הקבלה: נעילה שכל תנאיה מתקיימים ---
 
 {
-  const handle = create(options(fakeRepository()));
-  checkThrows('lock_site אינו מיושם בשלב הזה', () => handle(envelope('lock_site', {})));
+  const repository = lockableRepository();
+  const handle = create(options(repository));
+  const before = repository.data.approvals.length;
+  const response = handle(lockEnvelope({ site_id: 's-1' }));
+
+  check('הנעילה מוצלחת', response.ok, true);
+  check('המסלול נעול', repository.getSite('s-1').status, 'locked');
+  check('locked_at נרשם', typeof repository.getSite('s-1').locked_at, 'string');
+  check('corpus_version הוא 1 בנעילה הראשונה', repository.getSite('s-1').corpus_version, 1);
+  check('נרשמה רשומה אחת', repository.data.approvals.length - before, 1);
+
+  const record = repository.data.approvals.at(-1);
+  check('הרשומה היא על המסלול', record.target, 's-1');
+  check('והמעבר הוא open ל-locked', [record.from_status, record.to_status], ['open', 'locked']);
+  check('והמבצע הוא בעלת הפרויקט', record.who, 'screen-owner');
+  check('וגרסת הקורפוס נרשמה בהערה', record.note, 'corpus_version 1');
+}
+
+// --- בדיקת הקבלה: תחנה בלי פריט מאושר ---
+
+{
+  const repository = lockableRepository();
+  repository.data.items = repository.data.items.filter((row) => row.stop_id !== 'st-2');
+  repository.data.anchors = repository.data.anchors.filter((row) => row.item_id !== 'i-b');
+  const handle = create(options(repository));
+  const response = handle(lockEnvelope({ site_id: 's-1' }));
+
+  check('הנעילה נדחית', response.error.code, 'E-LOCK-REFUSED');
+  check('רשימת הכשלים נושאת את L2', response.error.data.failed, ['L2']);
+  check('והתחנה המכשילה חוזרת בשמה',
+    response.error.data.conditions.find((row) => row.id === 'L2').failing, ['st-2']);
+  check('והמסלול לא השתנה', repository.getSite('s-1').status, 'open');
+  check('ולא נרשמה רשומה', repository.data.approvals.length, 2);
+}
+
+// --- ההגנה של הבדיקה האדומה השנייה, דרך הפעולה ---
+
+{
+  const repository = lockableRepository();
+  // פריט approved שהוזרק ישירות, בלי שעבר את הווטו.
+  repository.data.items.push({
+    item_id: 'i-smuggled', site_id: 's-1', stop_id: 'st-1', status: 'approved',
+    source_id: 'src-1', text: 'טקסט', page: 9, audience: 'כולם',
+  });
+  repository.data.anchors.push({
+    anchor_id: 'an-s', item_id: 'i-smuggled', lat: 31.781, lng: 35.219, verified: true, verified_at: 'T', is_crossing: false,
+  });
+  const handle = create(options(repository));
+  const response = handle(lockEnvelope({ site_id: 's-1' }));
+
+  check('פריט מאושר בלי רשומה חוסם נעילה', response.error.code, 'E-LOCK-REFUSED');
+  check('והכשל הוא L1', response.error.data.failed, ['L1']);
+  check('והפריט חוזר בשמו',
+    response.error.data.conditions.find((row) => row.id === 'L1').failing, ['i-smuggled']);
+}
+
+// --- שאר התנאים חוסמים גם הם ---
+
+{
+  const repository = lockableRepository();
+  repository.data.anchors[1].verified = false;
+  check('עוגן שלא אומת חוסם נעילה',
+    create(options(repository))(lockEnvelope({ site_id: 's-1' })).error.data.failed, ['L3']);
+}
+
+{
+  const repository = lockableRepository();
+  repository.data.mou = [];
+  check('בלי הסכם בתוקף אין נעילה',
+    create(options(repository))(lockEnvelope({ site_id: 's-1' })).error.data.failed, ['L4']);
+}
+
+{
+  const repository = lockableRepository();
+  repository.data.items.push({
+    item_id: 'i-open', site_id: 's-1', stop_id: 'st-1', status: 'pending',
+    source_id: 'src-1', text: 'טקסט', page: 11, audience: 'כולם',
+  });
+  check('פריט שטרם הוכרע חוסם נעילה',
+    create(options(repository))(lockEnvelope({ site_id: 's-1' })).error.data.failed, ['L1']);
+}
+
+// --- BL-01: כשל כתיבת הרשומה מבטל את הנעילה ---
+
+{
+  const repository = lockableRepository({ failApprovals: true });
+  const handle = create(options(repository));
+  const response = handle(lockEnvelope({ site_id: 's-1' }));
+
+  check('כשל היומן מחזיר E-APPROVAL-WRITE-FAILED', response.error.code, 'E-APPROVAL-WRITE-FAILED');
+  check('והמסלול נשאר פתוח', repository.getSite('s-1').status, 'open');
+  check('ו-corpus_version לא התקדם', repository.getSite('s-1').corpus_version, null);
+}
+
+// --- L6: נעילה שנייה מקדמת את המונה, ועריכה מאפסת את המצב ---
+
+{
+  const repository = lockableRepository();
+  const handle = create(options(repository));
+  handle(lockEnvelope({ site_id: 's-1' }));
+
+  handle(envelope('edit_item', { item_id: 'i-a', text: 'טקסט מתוקן' }, 'screen-content'));
+  check('העריכה פתחה את המסלול', repository.getSite('s-1').status, 'open');
+  check('והפריט חזר ל-draft', repository.getItem('i-a').status, 'draft');
+
+  // שני תנאים נכשלים, ולא אחד: הפריט חזר ל-draft (L1), ואיתו
+  // התחנה שלו איבדה את הפריט המאושר היחיד שלה (L2).
+  check('נעילה מחדש דורשת את התנאים מחדש',
+    handle(lockEnvelope({ site_id: 's-1' })).error.data.failed, ['L1', 'L2']);
+
+  // הפריט חוזר במסלול המלא: הגשה, אישור, ואז נעילה שנייה.
+  handle(envelope('submit', { item_id: 'i-a' }, 'screen-veto'));
+  handle(envelope('approve', { item_id: 'i-a' }, 'screen-veto'));
+  const second = handle(lockEnvelope({ site_id: 's-1' }));
+
+  check('הנעילה השנייה מצליחה', second.ok, true);
+  check('ו-corpus_version התקדם ל-2', repository.getSite('s-1').corpus_version, 2);
+}
+
+{
+  const handle = create(options(lockableRepository()));
+  check('נעילת מסלול שאינו קיים נדחית',
+    handle(lockEnvelope({ site_id: 's-9' })).error.code, 'E-LOCK-REFUSED');
+}
+
+// --- ההיקף: המודול שלם מול מפה 4.2 ---
+
+{
+  const repository = fakeRepository();
+  const handle = create(options(repository));
+  const actions = [
+    'submit', 'approve', 'reject', 'return',
+    'register_mou', 'register_institute', 'register_source',
+    'create_item', 'edit_item', 'verify_anchor', 'register_exit_point', 'lock_site',
+    'listApprovedByStop', 'nearestExitPoint',
+    'listItems', 'getItem', 'listApprovals', 'getSite', 'listSources',
+    'listInstitutes', 'listMou', 'listExitPoints',
+  ];
+  // הפעולה עשויה להיכשל עסקית, ואסור לה לזרוק: זריקה פירושה
+  // E-MODULE-FAILED, כלומר פעולה שלא נבנתה.
+  const notBuilt = actions.filter((action) => {
+    try {
+      handle(envelope(action, { site_id: 's-1', item_id: 'i-draft' }, 'screen-content'));
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  check('כל עשרים ושתיים הפעולות של 4.2 מיושמות', notBuilt, []);
+  checkThrows('ופעולה שאינה במפה נזרקת', () => handle(envelope('לא קיימת', {})));
 }
 
 // --- המודול זקוק ל-Repository בהזרקה, ואינו יודע להשיג אותו לבד ---

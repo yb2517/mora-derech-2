@@ -27,6 +27,8 @@ import {
   ITEM_STATUSES,
   SYSTEM,
   distanceMeters,
+  lockReadiness,
+  nextCorpusVersion,
   siteReopensOn,
   withinBounds,
 } from '../core/business-logic.js';
@@ -586,6 +588,70 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
       };
       repository.appendExitPoint(record);
       return ok({ exit_point: record });
+    },
+
+    /**
+     * נעילת המסלול, usecase-f-08 צעדים 10 עד 12, ו-BL-06.
+     *
+     * L1 עד L4 נבדקים **מחדש בליבה** ברגע הנעילה, ולא נלקחים
+     * מתצוגת המוכנות של צעד 9: בין התצוגה ללחיצה יכול היה להיכנס
+     * פריט חדש. תנאי אחד שנכשל מחזיר E-LOCK-REFUSED עם רשימת
+     * הכשלים, ואין שינוי מצב (מפה 4.5, ושורת BE-05 במפה 6.1).
+     *
+     * L5 הוא הפעולה עצמה: היא מגיעה במעטפה מאדם, ונרשמת ברשומת
+     * APPROVALS ברמת המסלול עם corpus_version. הסדר הוא של BL-01,
+     * הרשומה לפני המצב, ולכן נעילה שהיומן לא קלט אינה קורית.
+     */
+    lock_site: ({ payload = {}, from }) => {
+      const site = repository.getSite(payload.site_id);
+      if (!site) return failed('E-LOCK-REFUSED', { site_id: payload.site_id ?? null, failed: ['L2'] });
+
+      const readiness = lockReadiness({
+        site,
+        items: repository.listItems({ site_id: site.site_id }),
+        anchors: repository.listAnchors({ site_id: site.site_id }),
+        approvals: repository.listApprovals(),
+        sources: repository.listSources(),
+        mou: repository.listMou(),
+        at: now(),
+      });
+
+      if (!readiness.ready) {
+        return failed('E-LOCK-REFUSED', {
+          site_id: site.site_id,
+          failed: readiness.failed,
+          conditions: readiness.conditions,
+        });
+      }
+
+      const version = nextCorpusVersion(site);
+      const at = now();
+      const record = approvalFor({
+        who: from,
+        target: site.site_id,
+        action: 'lock_site',
+        from: site.status,
+        to: 'locked',
+        note: typeof payload.note === 'string' ? payload.note : '',
+      });
+      // corpus_version אינו שדה של APPROVALS במפה 2.1, ו-usecase-f-08
+      // סעיף 4 דורש ש-L5 יירשם עם "מי, מתי, ומספר גרסת קורפוס".
+      // הוא נכנס להערה ולא כשדה חדש, מפני שהוספת שדה לישות היא שינוי
+      // Schema לפי CLAUDE.md סעיף 9.3. מדווח כפער.
+      record.note = record.note === ''
+        ? `corpus_version ${version}`
+        : `${record.note} (corpus_version ${version})`;
+
+      return recordThen(record, () => ok({
+        site: repository.updateSite(site.site_id, {
+          status: 'locked',
+          locked_at: at,
+          corpus_version: version,
+        }),
+        approval: record,
+        corpus_version: version,
+        readiness,
+      }));
     },
 
     // --- רישום ההסכם והמכון (usecase-f-07 צעדים 12 ו-13) ---
