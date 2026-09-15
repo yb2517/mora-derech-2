@@ -18,7 +18,7 @@ export const ERROR_CODES = Object.freeze({
   'E-ENVELOPE-INVALID': 'שדה חובה חסר או payload לא תקין',
   'E-AUDIT-WRITE-FAILED': 'לא ניתן לרשום את הבקשה; אינה מנותבת',
   'E-TRANSITION-DENIED': 'מעבר מצב שאינו בטבלה 2.2',
-  'E-ITEM-INCOMPLETE': 'שדה חסר ביצירה או בעריכה; error.data מכיל את שם השדה',
+  'E-ITEM-INCOMPLETE': 'שדה חסר ברישום או בעריכה של ישות שהמודול הוא הבעלים שלה, פריט והסכם בכללן; error.data מכיל את שם השדה',
   'E-ANCHOR-OUT-OF-BOUNDS': 'קואורדינטות מחוץ לגבולות המסלול',
   'E-APPROVAL-WRITE-FAILED': 'רשומת APPROVALS לא נכתבה; המעבר בוטל',
   'E-LOCK-REFUSED': 'תנאי נעילה נכשל; error.data מכיל את רשימת הכשלים',

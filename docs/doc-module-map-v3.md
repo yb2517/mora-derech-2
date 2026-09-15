@@ -1,6 +1,6 @@
 # מפת המודולים: מורה הדרך 2.0, מסלול יפו
 
-סטטוס: גרסה 3.3, מאושרת 14.09.2026. גרסה 1 אושרה 11.09.2026; גרסה 2 (DESIGN-01 והמיפוי שורה לשורה) לא הובאה לאישור בנפרד ונבלעה בגרסה 3, שאושרה 12.09.2026.
+סטטוס: גרסה 3.4, מאושרת 15.09.2026. גרסה 1 אושרה 11.09.2026; גרסה 2 (DESIGN-01 והמיפוי שורה לשורה) לא הובאה לאישור בנפרד ונבלעה בגרסה 3, שאושרה 12.09.2026.
 תאריך: 12.09.2026
 מה נוסף בגרסה 3: ההכרעות של doc-decision-round-01 שאושרו 12.09; דרישת הבטיחות F-13 ותיקון הסוללה; ישות EXIT_POINTS; רישום דחיית F-14 מ-v1.
 נוצר לפי: template-module-map.md (פריט 47, גרסה 1.2), חלק ב, ולפי guide-use-case-creation.md (פריט 55) חלק ד: קיבוץ צעדי מקרי השימוש לפי סוג הרכיב. זהו מסמך האב של הארכיטקטורה. שלושת מסמכי הבן (אוטומציה, סוכנים בקוד, ממשקים) נגזרים ממנו.
@@ -25,13 +25,13 @@
 
 | הישות | השדות | המצבים | המעברים המותרים ומי מעביר |
 |---|---|---|---|
-| SITES (המסלול) | site_id, name, stops (רשימת תחנות סדורה), status, locked_at, corpus_version, bounds [הצעה] | open, locked | open ל-locked: BE-05, בפעולת lock_site של screen-owner, אחרי L1 עד L4. locked ל-open: BE-05, אוטומטית, בכל create_item או edit_item במסלול (L6) |
+| SITES (המסלול) | site_id, name, stops (רשימת תחנות סדורה), status, locked_at, corpus_version, bounds (מלבן: north, south, east, west; שדה חובה, פער 43, הוכרע 15.09.2026) | open, locked | open ל-locked: BE-05, בפעולת lock_site של screen-owner, אחרי L1 עד L4. locked ל-open: BE-05, אוטומטית, בכל create_item או edit_item במסלול (L6) |
 | CONTENT_ITEMS (הפריט) | item_id, site_id, stop_id, name, text, source_id, page, word_count, status, audience (כולם, מבוגרים בלבד; הוכרע 12.09) | draft, pending, approved, rejected | לפי טבלת המעברים 2.2. כותב יחיד: BE-05 |
 | GEO_ANCHORS (העוגן) | anchor_id, item_id, lat, lng, verified, verified_at, is_crossing (ברירת מחדל false, F-13) | לא מאומת, מאומת | verify_anchor של screen-content דרך BE-05 |
 | SOURCES (המקור) | source_id, name, file, publisher | אין מצב | נכתב ב-create של screen-content דרך BE-05 |
 | INSTITUTES (המכון) | institute_id, name | אין מצב | screen-owner דרך BE-05 |
-| RIGHTS_MOU (ההסכם) | mou_id, institute_id, scope (רשימת source_id), signed_at, valid_until [שם השדה טרם נקבע, decision-02], covers_content_contribution (הוכרע 12.09: ההסכם מכסה אישור וגם תרומת תוכן) | בתוקף, פג | screen-owner דרך BE-05 (usecase-f-07 צעד 12) |
-| APPROVALS (יומן ההחלטות) | approval_id, time, who, target (item_id או site_id), action, from_status, to_status, note | append-only, אין מצב | נכתב בלבד, בידי BE-05, בכל מעבר מצב. אין עריכה ואין מחיקה |
+| RIGHTS_MOU (ההסכם) | mou_id, institute_id, scope (רשימת source_id), signed_at, valid_until (פער 42, הוכרע 15.09.2026, וסוגר את decision-02), covers_content_contribution (הוכרע 12.09: ההסכם מכסה אישור וגם תרומת תוכן) | בתוקף, פג | screen-owner דרך BE-05 (usecase-f-07 צעד 12) |
+| APPROVALS (יומן ההחלטות) | approval_id, time, who, target (item_id או site_id), action, from_status, to_status, note | append-only, אין מצב | נכתב בלבד, בידי BE-05, בכל מעבר מצב. אין עריכה ואין מחיקה. **who נושא את שם הפונה ולא אדם** כל עוד אין אימות זהות (פער 41, הוכרע 15.09.2026): היומן מעיד שהאישור עבר במסלול המורשה, ואינו מעיד על אדם. זיהוי משתמש הוא תנאי לפני שהפאנל נמסר למכון, ומאותו רגע who נושא user_id |
 | ADMIN_USERS (המשתמשים המנהליים) | user_id, role (researcher, owner, content), institute_id | אין מצב | screen-owner. אימות זהות: אין ב-v1 (הוכרע 12.09), סיסמה לפני שהפאנל יוצא למכון |
 | SESSIONS (הסשן) | session_id (אקראי), site_id, started_at, ended_at, completed, last_stop_id, flags (no_location, no_hebrew_voice, simulator, partial_log, low_battery_warned, ended_on_battery, ended_on_battery_block), previous_session_id | open, closed | open ל-closed: BE-07, בפעולת session_end של screen-traveler, בהגעה לנקודה האחרונה, או ב-close_stale של system-timer |
 | EXIT_POINTS (נקודת יציאה) | exit_id, site_id, lat, lng, name, type | אין מצב | screen-content, באימות השטח. נדרשת מנוהל הסוללה (F-13 תיקון 1). ROUTE_PATH ו-route_type נדחו מ-v1 עם F-14 |
@@ -69,7 +69,7 @@
 | BL-05 | אין מועמד מעל relevance_threshold: תשובת ההימנעות בנוסח הנעול, בלי השלמה | usecase-f-05 K3 |
 | BL-06 | נעילת מסלול רק כשמתקיימים L1 עד L5: כל פריט הוכרע ולכל approved רשומה; לכל תחנה approved אחד לפחות; לכל approved עמוד, מקור ועוגן מאומת; כל מקור תחת הסכם בתוקף; נעילה היא פעולת אדם מתועדת עם corpus_version | usecase-f-08 סעיף 4 |
 | BL-07 | יצירה או עריכה של פריט במסלול locked מחזירה את המסלול ל-open ואת הפריט ל-draft (L6) | usecase-f-08 סעיף 4, usecase-f-07 זרימה ה |
-| BL-08 | שער B פתוח כאשר המסלול locked ו-M-06 גדול או שווה 1. כאשר enforce_gate_b כבוי, המצב מוצג ואינו נאכף | usecase-f-07 צעד 14, usecase-f-08 צעד 13 |
+| BL-08 | שער B פתוח כאשר המסלול locked ו-M-06 גדול או שווה 1. כאשר enforce_gate_b כבוי, המצב מוצג ואינו נאכף. מסלול בלי אף פריט approved: אין מקור לכסות, ולכן M-06 הוא אפס והשער אינו נפתח (פער 47, הוכרע 15.09.2026) | usecase-f-07 צעד 14, usecase-f-08 צעד 13 |
 | BL-09 | כותב אחד לכל עמודה: CONTENT_ITEMS, GEO_ANCHORS, SITES, APPROVALS, RIGHTS_MOU, SOURCES, INSTITUTES, EXIT_POINTS: BE-05. SESSIONS, INTERACTIONS: BE-07. audit_log: ה-Orchestrator | המצגת, כל מקרי השימוש |
 | BL-10 | יומן ההחלטות (APPROVALS) חוסם פעולה כשאינו נכתב; יומן האינטראקציות (INTERACTIONS) לעולם אינו חוסם את החוויה בשטח, מנסה שוב ומסמן partial_log | usecase-f-09 זרימה א |
 | BL-11 | סדר בדיקת הפונה קבוע: from קיים; from ברשימה הסגורה; שורה ברשימת המותר עבור from, module, action. בקשה שלא נרשמה ב-audit_log אינה מנותבת | המצגת חלק ב |
@@ -193,6 +193,11 @@
 | BE-07 | close_stale | F-09 צעד 7 | system-timer |
 | BE-07 | compute_metrics, export | F-09 צעד 8 | screen-owner |
 
+**שתי הבהרות שנפתחו בשלב 3 והוכרעו 15.09.2026:**
+
+- **תשובה אחת לכל פעולה, ואין תשובה מורכבת משני מודולים** (פער 39). usecase-f-07 צעד 11 מתאר תשובה אחת הנושאת גם את המעבר וגם את מצב השער, ומודול אינו קורא למודול (חוק ברזל 2). המסך שולח שתי בקשות: המעבר ל-BE-05, ומצב השער ל-BE-06. המפה גוברת על נוסח הצעד, והצעד יתוקן בגרסה הבאה של מקרה השימוש.
+- **בקשה בלי site_id** (פער 46). הממשק חד מסלולי ומודל הנתונים רב מסלולי, ואין פעולה שמודיעה למסך על איזה מסלול הוא עובד. פעולה שמקבלת site_id פועלת עליו; פעולה בלי site_id פועלת על המסלול היחיד, וכשיש יותר מאחד היא מחזירה null עם ok. מסלול שני מחייב פעולה או פרמטר, ואינו נכנס בשקט.
+
 ### 4.3 רשימת המותר
 
 השורות של 4.2, שורה לכל צירוף from, module, action, עם allowed = true. שורות tool-simulator: allowed = false בייצור. הוספת מסך או פונה: שורה, לא קוד. כל צירוף שאינו ברשימה: E-ALLOW-DENIED.
@@ -218,7 +223,7 @@
 | E-ENVELOPE-INVALID | שדה חובה חסר או payload לא תקין | CORE-01 מזהה, CORE-02 מחזיר |
 | E-AUDIT-WRITE-FAILED | לא ניתן לרשום את הבקשה; אינה מנותבת | CORE-02 |
 | E-TRANSITION-DENIED | מעבר מצב שאינו בטבלה 2.2 | BE-05 |
-| E-ITEM-INCOMPLETE | שדה חסר ביצירה או בעריכה; error.data מכיל את שם השדה | BE-05 |
+| E-ITEM-INCOMPLETE | שדה חסר ברישום או בעריכה של ישות שהמודול הוא הבעלים שלה, פריט והסכם בכללן; error.data מכיל את שם השדה | BE-05 |
 | E-ANCHOR-OUT-OF-BOUNDS | קואורדינטות מחוץ לגבולות המסלול | BE-05 |
 | E-APPROVAL-WRITE-FAILED | רשומת APPROVALS לא נכתבה; המעבר בוטל | BE-05 |
 | E-LOCK-REFUSED | תנאי נעילה נכשל; error.data מכיל את רשימת הכשלים | BE-05 |
@@ -237,6 +242,8 @@
 | E-MODULE-FAILED | המודול לא החזיר תשובה: אינו רשום, או נפל בזמן הטיפול | CORE-02 |
 
 "אסור" ו"טרם נקבע" הם שני קודים שונים: E-ALLOW-DENIED לעומת E-REF-EMPTY.
+
+**הרשימה נשארת סגורה גם במקרה שאין לו קוד** (פער 44, הוכרע 15.09.2026): כשל בכתיבת המצב **אחרי** שרשומת APPROVALS כבר נכתבה משאיר רשומה בלי מעבר, ואין לו קוד ייעודי. הוא צף כ-E-MODULE-FAILED, ואין מוסיפים קוד בשבילו. הכיוון ההפוך, שהוא ההגנה של BL-01, מכוסה ב-E-APPROVAL-WRITE-FAILED, והכיוון הזה נסגר בטרנזקציה עם דרייבר הענן בשלב 5.
 
 ## 5. תרשימים
 
@@ -355,6 +362,8 @@ doc-module-feature-breakdown.md (31.08.2026, 19 מודולים) קדם לתבנ�
 **הצעת היעילות מסעיף 7 במפה הקודמת** (תשובות מיוצרות מראש): התייתרה. בלי מודל שפה בזמן ריצה, התשובה היא ממילא ציטוט מפריט מאושר.
 
 ## 10. יומן גרסאות
+
+גרסה 3.4, 15.09.2026: תשעת הפערים שדוח שלב 3 החזיר, בהכרעת בעלת הפרויקט (אישור כולל של ההמלצות, לפי doc-stage-03-decisions). 2.1: SITES.bounds חדל להיות [הצעה] ונעשה שדה חובה בצורת מלבן (פער 43); שם שדה התוקף ב-RIGHTS_MOU נקבע valid_until ו-decision-02 נסגרת (פער 42); שורת APPROVALS אומרת במפורש ש-who נושא שם פונה ולא אדם, ושזיהוי משתמש הוא תנאי לפני מסירת הפאנל למכון (פער 41). 2.3: BL-08 קובע שמסלול בלי פריט approved מחזיר M-06 אפס (פער 47). 4.2: נוספו שתי הבהרות, תשובה אחת לכל פעולה במקום תשובה שמחייבת מודול לקרוא למודול (פער 39), ובקשה בלי site_id (פער 46). 4.5: ההסבר של E-ITEM-INCOMPLETE הורחב מפריט לכל ישות (פער 45), ונרשם שכשל כתיבת מצב אחרי רשומת APPROVALS צף כ-E-MODULE-FAILED בלי קוד חדש (פער 44). לא נוסף ולא הוסר אף מודול, אף פעולה ואף קוד שגיאה, והרשימה הסגורה נשארה על 23. שום דבר שאושר בגרסה 3.3 לא בוטל.
 
 גרסה 3.3, 14.09.2026: פער 31 שנפתח במשימה 6 של שלב 2, בהכרעת בעלת הפרויקט. 2.4: נוסף המפתח privacy_opening_text בקורא FE-05. doc-build-03-interfaces סעיף 2.2 מחייב משפט פרטיות בתחילת הסשן ו-PRD סעיף 25 קובע את תוכנו, ולא היה לו מפתח בטבלה. הנוסח עצמו ממתין למילת אישור, ולכן הערך ריק והמסך מחזיר E-REF-EMPTY עם שם המפתח ואינו ממציא נוסח למשפחה. שום דבר שאושר בגרסה 3.2 לא בוטל.
 
