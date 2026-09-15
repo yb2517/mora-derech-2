@@ -52,7 +52,8 @@
         "listSources",
         "listInstitutes",
         "listMou",
-        "listExitPoints"
+        "listExitPoints",
+        "listAnchors"
       ]
     },
     {
