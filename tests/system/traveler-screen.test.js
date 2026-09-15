@@ -261,11 +261,15 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
   check('מתחת לסף החסימה המסך נחסם', dom.host.querySelectorAll('.notice-screen').length, 1);
   check('במסך החסימה אין אינטראקציה', buttons().length, 0);
   check('נקודת היציאה נשלפה', sent.at(-1).action, 'nearestExitPoint');
-  check(
-    'נוסח החסימה מגיע מהטבלה',
-    dom.host.textContent.includes(referenceFile.values.battery_block_text),
-    true,
-  );
+  // שלב 5: התבנית ממולאת בשלושת המשתנים (F-13 תיקון 1 סעיף 1). בלי
+  // מיקום מהאוטומציה, המרחק והכיוון אינם ידועים ונאמרים ככאלה, ולא
+  // מוצגים סוגריים למשפחה.
+  const exitPoint = repository.listExitPoints()[0];
+  const filledBlock = referenceFile.values.battery_block_text
+    .split('[נקודת ציון]').join(exitPoint.name)
+    .split('[מטרים]').join('לא ידוע')
+    .split('[רוח השמיים]').join('לא ידוע');
+  check('נוסח החסימה מגיע מהטבלה, ממולא', dom.host.textContent.includes(filledBlock), true);
 
   // חידוש רק מעל סף החידוש, ולא בעצם החזרה מעל סף החסימה.
   await screen.setBatteryLevel(block + 1);
@@ -351,4 +355,149 @@ check(
 }
 
 dom.restore();
+
+// =====================================================================
+// שלב 5, משימה 8: אוזניים, פה וסוללה
+// =====================================================================
+
+// המסך מקבל ציוד מדומה בצורת CONN-01 ו-CONN-02, ואת מה שההרכבה
+// יודעת על המכשיר. המודולים האמיתיים נשארים מאחורי הכתובת האחת.
+{
+  const voiceCalls = [];
+  const voiceListeners = new Map();
+  let hebrewVoice = false;
+  const voice = {
+    speak: async (text) => {
+      voiceCalls.push(['speak', text]);
+      for (const fn of voiceListeners.get(hebrewVoice ? 'start' : 'unavailable') ?? []) fn({ text });
+      return hebrewVoice
+        ? { ok: true, data: { duration_ms: 1200, interrupted: false, chunks: 1 } }
+        : { ok: false, error: { code: 'E-NO-HEBREW-VOICE', data: null } };
+    },
+    stop: () => { voiceCalls.push(['stop']); return { ok: true, data: { stopped: true } }; },
+    on: (event, fn) => { if (!voiceListeners.has(event)) voiceListeners.set(event, new Set()); voiceListeners.get(event).add(fn); },
+    hasVoice: () => hebrewVoice,
+    voicesLoaded: async () => [],
+  };
+
+  let heard = { ok: true, data: { text: 'שאלה בקול' } };
+  const microphone = {
+    available: () => true,
+    listen: async () => heard,
+    stop: () => ({ ok: true, data: { stopped: false } }),
+  };
+
+  let position = null;
+  const device = {
+    flags: () => ['simulator'],
+    position: () => position,
+    direction: () => 'צפון מזרח',
+    stop: () => 'stop-demo-a',
+  };
+
+  const events = [];
+  const stage5Dom = installDom();
+  const sent5 = [];
+  const send5 = async (envelope) => { sent5.push(envelope); return realSend(envelope); };
+  const withDevice = create({ host: stage5Dom.host, from: caller, reference, send: send5, voice, microphone, device });
+  for (const name of ['session:start', 'session:end', 'battery:block', 'battery:resume']) {
+    withDevice.on(name, (detail) => events.push([name, detail?.session?.session_id ?? detail?.session_id ?? null]));
+  }
+  const buttons5 = () => stage5Dom.host.querySelectorAll('button');
+  const byLabel5 = (label) => buttons5().find((b) => b.textContent.trim() === label);
+
+  // --- תחילת הסשן: הדגלים, משפט הבטיחות בקול, אירוע מחזור החיים ---
+
+  byLabel5('התחלת הטיול').click();
+  await settle();
+
+  const started = sent5.find((e) => e.action === 'session_start');
+  check('session_start נושא את דגלי המכשיר: סימולטור, ובלי קול עברי', started.payload.flags.sort(), ['no_hebrew_voice', 'simulator']);
+  const session5 = repository.getSession(withDevice.state().session_id);
+  check('הדגלים נרשמו בסשן', session5.flags.sort(), ['no_hebrew_voice', 'simulator']);
+  check('משפט הבטיחות נאמר פעם אחת, לפני כל תוכן', voiceCalls[0], ['speak', referenceFile.values.safety_opening_text]);
+  check('אירוע session:start יצא עם מזהה הסשן', events, [['session:start', session5.session_id]]);
+  check('בלי קול עברי: ההודעה מוצגת פעם אחת', stage5Dom.host.querySelectorAll('.message')
+    .filter((m) => m.textContent === referenceFile.values.error_human_text['E-NO-HEBREW-VOICE']).length, 1);
+  check('ומה שהיה נאמר מוצג כטקסט', stage5Dom.host.textContent.includes(referenceFile.values.safety_opening_text), true);
+  check('שני מגעים בהליכה, גם עם מיקרופון', buttons5().map((b) => b.textContent.trim()), ['שאלה', 'סיום הטיול']);
+
+  // --- שאלה בקול: הכפתור בלי הקלדה פותח את המיקרופון ---
+
+  byLabel5('שאלה').click();
+  await settle();
+  const askedByVoice = sent5.filter((e) => e.module === 'BE-03').at(-1);
+  check('התמלול נשלח כשאלה, כמות שהוא', askedByVoice.payload.question, 'שאלה בקול');
+  check('התחנה הנוכחית מגיעה מהאוטומציה דרך ההרכבה', askedByVoice.payload.stop_id, 'stop-demo-a');
+  check('מה שדיבר נעצר לפני ההאזנה', voiceCalls.some((c) => c[0] === 'stop'), true);
+
+  // --- קליטה שנכשלה: ניסיון שנכשל, לא יזימה ---
+
+  const before = repository.listInteractions({ session_id: session5.session_id }).length;
+  heard = { ok: false, error: { code: 'E-SPEECH-NOT-RECOGNIZED', data: {} } };
+  byLabel5('שאלה').click();
+  await settle();
+  const rows5 = repository.listInteractions({ session_id: session5.session_id });
+  check('שקט: נרשם attempt_failed ולא initiated', rows5.slice(before).map((r) => r.type), ['attempt_failed']);
+  check('והנוסח לאדם מוצג', stage5Dom.host.textContent.includes(referenceFile.values.error_human_text['E-SPEECH-NOT-RECOGNIZED']), true);
+
+  heard = { ok: false, aborted: true, error: null };
+  byLabel5('שאלה').click();
+  await settle();
+  check('ביטול בידי המשפחה: לא נרשם דבר', repository.listInteractions({ session_id: session5.session_id }).length, rows5.length);
+
+  // --- הודעה מהמכשיר אחרי ההתחלה, דרך ההרכבה ---
+
+  withDevice.notify({ ok: false, error: { code: 'E-LOCATION-NOT-ALLOWED', data: null } });
+  withDevice.notify({ ok: false, error: { code: 'E-LOCATION-NOT-ALLOWED', data: null } });
+  check('הרשאת מיקום שנדחתה מוצגת פעם אחת', stage5Dom.host.querySelectorAll('.message')
+    .filter((m) => m.textContent === referenceFile.values.error_human_text['E-LOCATION-NOT-ALLOWED']).length, 1);
+  check('והדגל no_location נוסף', withDevice.state().flags.includes('no_location'), true);
+
+  // --- הסוללה עם מיקום: התראה, חסימה עם מרחק וכיוון, חידוש ---
+
+  position = { lat: 31.7811, lng: 35.2192 };
+  await withDevice.setBatteryLevel(referenceFile.values.battery_warn_percent);
+  await settle();
+  check('ההתראה כוללת את נקודת היציאה, המרחק והכיוון', stage5Dom.host.querySelector('.message--warn').textContent.includes('צפון מזרח'), true);
+  const exitAt = withDevice.state().exit;
+  check('המרחק חושב ב-BE-05 מהמיקום שנשלח', Number.isFinite(Number(exitAt.distance)), true);
+
+  hebrewVoice = true;
+  voiceCalls.length = 0;
+  await withDevice.setBatteryLevel(4);
+  await settle();
+  check('חסימה: אירוע battery:block יצא', events.at(-1), ['battery:block', session5.session_id]);
+  check('הקול נעצר ואז הודעת החסימה נאמרה פעם אחת', voiceCalls.map((c) => c[0]), ['stop', 'speak']);
+  const filled = referenceFile.values.battery_block_text
+    .split('[נקודת ציון]').join(exitAt.name)
+    .split('[מטרים]').join(exitAt.distance)
+    .split('[רוח השמיים]').join('צפון מזרח');
+  check('ההודעה ממולאת בשלושת המשתנים', voiceCalls[1][1], filled);
+  check('והיא נשארת כטקסט סטטי', stage5Dom.host.textContent.includes(filled), true);
+
+  await withDevice.setBatteryLevel(4);
+  await settle();
+  check('סוללה שנשארת נמוכה: אין הודעה שנייה', voiceCalls.length, 2);
+
+  await withDevice.setBatteryLevel(referenceFile.values.battery_resume_percent + 1);
+  await settle();
+  check('חידוש: אירוע battery:resume יצא', events.at(-1), ['battery:resume', session5.session_id]);
+
+  // --- סיום אחרי התראה: ended_on_battery, והקול נעצר ---
+
+  await withDevice.setBatteryLevel(referenceFile.values.battery_warn_percent - 1);
+  await settle();
+  byLabel5('סיום הטיול').click();
+  await settle();
+  const ended = sent5.find((e) => e.action === 'session_end');
+  // no_hebrew_voice נשאר: הוא נלמד בסשן הזה, גם אם הקול הופיע אחר כך.
+  check('session_end נושא את הדגלים שנצברו, ובהם ended_on_battery ו-no_location',
+    ended.payload.flags.sort(), ['ended_on_battery', 'no_hebrew_voice', 'no_location', 'simulator']);
+  check('הסשן נסגר עם הדגלים', repository.getSession(session5.session_id).flags.sort(),
+    ['ended_on_battery', 'no_hebrew_voice', 'no_location', 'simulator']);
+  check('אירוע session:end יצא', events.at(-1), ['session:end', session5.session_id]);
+  check('מגע אחד אחרי הסיום', buttons5().map((b) => b.textContent.trim()), ['התחלת הטיול']);
+}
+
 report(` (${sent.length} מעטפות)`);
