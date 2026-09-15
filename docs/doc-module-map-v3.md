@@ -226,7 +226,7 @@
 | E-ENVELOPE-INVALID | שדה חובה חסר או payload לא תקין | CORE-01 מזהה, CORE-02 מחזיר |
 | E-AUDIT-WRITE-FAILED | לא ניתן לרשום את הבקשה; אינה מנותבת | CORE-02 |
 | E-TRANSITION-DENIED | מעבר מצב שאינו בטבלה 2.2, ובכלל זה בקשת מעבר על פריט שאינו קיים: אין לו מצב נוכחי, ולכן אין לו שורה בטבלה | BE-05 |
-| E-ITEM-INCOMPLETE | שדה חסר ביצירה או בעריכה; error.data מכיל את שם השדה | BE-05 |
+| E-ITEM-INCOMPLETE | שדה חסר ברישום או בעריכה של ישות שהמודול הוא הבעלים שלה, פריט והסכם בכללן; error.data מכיל את שם השדה | BE-05 |
 | E-ANCHOR-OUT-OF-BOUNDS | קואורדינטות מחוץ לגבולות המסלול | BE-05 |
 | E-APPROVAL-WRITE-FAILED | רשומת APPROVALS לא נכתבה; המעבר בוטל | BE-05 |
 | E-LOCK-REFUSED | תנאי נעילה נכשל; error.data מכיל את רשימת הכשלים | BE-05 |
