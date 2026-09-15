@@ -114,14 +114,20 @@ export function create({
     }
   }
 
+  // ההמתנה לרשימת הקולות נעשית פעם אחת: מכשיר בלי קולות כלל אינו
+  // משלם שנייה בכל השמעה. voiceschanged מאוחר עדיין נקלט, מפני
+  // שהרשימה נקראת מהמנוע בכל קריאה.
+  let waitedForVoices = false;
+
   /** ממתין לרשימת הקולות כשהמנוע טרם טען אותה. */
   function voicesLoaded() {
-    if (voices().length > 0) return Promise.resolve(voices());
+    if (voices().length > 0 || waitedForVoices) return Promise.resolve(voices());
     return new Promise((resolve) => {
       let settled = false;
       const done = () => {
         if (settled) return;
         settled = true;
+        waitedForVoices = true;
         resolve(voices());
       };
       if (typeof engine.addEventListener === 'function') {
