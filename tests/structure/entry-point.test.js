@@ -54,11 +54,30 @@ check(
 // הכניסה: הוא נרשם ב-modules.json וה-Orchestrator מנתב אליו.
 // הרשימה הזאת תגדל בשלבים 3 עד 6, והשורה הזאת היא שתיפול ראשונה
 // אם מישהו ינסה לעקוף את הניתוב.
-const BYPASS = ['services/', 'connectors/', 'automation/', 'gateways/', 'tests/'];
+const BYPASS = ['services/', 'automation/', 'gateways/', 'tests/'];
 
 check(
   'אינה מייבאת מודול שירות ואינה מייבאת עזר בדיקה',
   imports.filter((specifier) => BYPASS.some((dir) => specifier.includes(dir))).sort(),
+  [],
+);
+
+// /connectors/ ירדה מהרשימה בהכרעת פער B-34 (מפה 3.8, סעיף 4.1):
+// מתאם אינו פונה ואינו נמען, אלא ציוד שמוזרק למודול שמשתמש בו,
+// כפי שדרייבר האחסון מוזרק ל-CORE-04. מי שמזריק הוא מי שמרכיב,
+// ולכן נקודת הכניסה רשאית לייבא אותם, **ורק אותם**.
+//
+// ההגנה לא נחלשה, היא הועברה: מבחן מבנה 08 ממשיך לאסור על מודול
+// לייבא מתאם, ולכן AUTO-01 אינו יכול לייבא את CONN-03 בעצמו. אם
+// ההזרקה תיעקף, הבדיקה ההיא תיפול.
+const MODULE_DIRS_ALLOWED_AT_COMPOSITION = ['connectors/'];
+const moduleImports = imports.filter((specifier) => /(services|connectors|automation|gateways)\//.test(specifier));
+
+check(
+  'מודול היחיד שהיא רשאית לייבא הוא מתאם',
+  moduleImports.filter(
+    (specifier) => !MODULE_DIRS_ALLOWED_AT_COMPOSITION.some((dir) => specifier.includes(dir)),
+  ).sort(),
   [],
 );
 

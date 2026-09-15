@@ -320,6 +320,21 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
       });
     },
 
+    /**
+     * עוגני המסלול, לפונה module-geofence (פער B-35, מפה 3.8).
+     *
+     * AUTO-01 נדרש למדוד מרחק לכל עוגני המסלול ולבחור את הקרוב
+     * (usecase-f-01-f-03 צעד 3), ולא הייתה לו דרך מורשית לבקש
+     * אותם: listApprovedByStop מחזירה עוגנים, אבל לפי תחנה שכבר
+     * זוהתה, וזו בדיוק הידיעה שחסרה לו לפני המדידה.
+     *
+     * מוחזרים עוגני המסלול כולם, מאומתים ושאינם מאומתים. הסינון
+     * שייך למי שמחליט, ו-BL-15 הוא של AUTO-01.
+     */
+    listAnchors: ({ payload = {} }) => ok({
+      anchors: repository.listAnchors({ site_id: payload.site_id }),
+    }),
+
     listApprovals: ({ payload = {} }) => ok({ approvals: repository.listApprovals(payload) }),
 
     getSite: ({ payload = {} }) => ok({ site: repository.getSite(payload.site_id) }),

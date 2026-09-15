@@ -62,7 +62,7 @@ orchestrator = createOrchestrator({
 const rows = allowFile.rows.filter((row) => row.is_demo !== true);
 const demoRows = allowFile.rows.filter((row) => row.is_demo === true);
 
-check('רשימת המותר נושאת את שורות 4.2', rows.length, 44);
+check('רשימת המותר נושאת את שורות 4.2', rows.length, 46);
 check('ושלוש שורות הדגמה שיורדות בשלב 7', demoRows.length, 3);
 
 // סשן פתוח, כדי ששורות ה-log לא ייפלו על E-SESSION-CLOSED לפני
@@ -103,6 +103,8 @@ const PAYLOADS = {
   listInstitutes: {},
   listMou: {},
   listExitPoints: { site_id: 'site-demo-jaffa' },
+  // פער B-35: העוגנים של המסלול, לפונה module-geofence
+  listAnchors: { site_id: 'site-demo-jaffa' },
   get_gate: { site_id: 'site-demo-jaffa' },
   get_lock_readiness: { site_id: 'site-demo-jaffa' },
   set_enforce: { enforce: false },

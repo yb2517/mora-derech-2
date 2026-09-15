@@ -71,6 +71,8 @@ const ACTIONS_IN_MAP = {
     // שמונה פעולות הקריאה, פער 30, מפה גרסה 3.2
     'listItems', 'getItem', 'listApprovals', 'getSite',
     'listSources', 'listInstitutes', 'listMou', 'listExitPoints',
+    // פער B-35, מפה גרסה 3.8
+    'listAnchors',
   ],
   'BE-06': ['get_gate', 'get_lock_readiness', 'set_enforce'],
   'BE-04': ['retrieve'],
@@ -111,6 +113,9 @@ const ROWS_IN_MAP = [
   ['screen-owner', 'BE-05', 'listInstitutes'],
   ['screen-owner', 'BE-05', 'listMou'],
   ['screen-content', 'BE-05', 'listExitPoints'],
+  // פער B-35: AUTO-01 מודד מרחק לעוגני המסלול ולנקודות היציאה
+  ['module-geofence', 'BE-05', 'listAnchors'],
+  ['module-geofence', 'BE-05', 'listExitPoints'],
   ['screen-veto', 'BE-06', 'get_gate'],
   ['screen-traveler', 'BE-06', 'get_gate'],
   ['screen-owner', 'BE-06', 'get_lock_readiness'],
@@ -231,7 +236,7 @@ check(
   ROWS_IN_MAP.length,
 );
 
-check('ארבעים ושישה צירופים ב-4.2, אחרי פערים 11 ו-30', ROWS_IN_MAP.length, 46);
+check('ארבעים ושמונה צירופים ב-4.2, אחרי פערים 11, 30 ו-B-35', ROWS_IN_MAP.length, 48);
 
 const keyOf = (r) => `${r.from}|${r.module}|${r.action}`;
 const keysInFile = rows.map(keyOf).sort();
@@ -370,9 +375,9 @@ check(
 // שלב 7: שאילתה על is_demo מחזירה אפס אחרי ההסרה. כאן נבדק שההסרה
 // היא מחיקת שורות מסומנות ולא עבודת ידיים.
 check(
-  'הסרת כל המסומן בשלב 7 מחזירה 22 מודולים ו-44 שורות ייצור',
+  'הסרת כל המסומן בשלב 7 מחזירה 22 מודולים ו-46 שורות ייצור',
   [allModules.filter((m) => !m.is_demo).length, productionRows.length],
-  [22, 44],
+  [22, 46],
 );
 
 // --- סיכום ---

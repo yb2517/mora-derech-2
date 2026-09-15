@@ -286,6 +286,18 @@
       "module": "BE-05",
       "action": "listExitPoints",
       "allowed": true
+    },
+    {
+      "from": "module-geofence",
+      "module": "BE-05",
+      "action": "listAnchors",
+      "allowed": true
+    },
+    {
+      "from": "module-geofence",
+      "module": "BE-05",
+      "action": "listExitPoints",
+      "allowed": true
     }
   ]
 }
