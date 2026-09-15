@@ -33,6 +33,10 @@ function ok(data) {
   return { ok: true, data };
 }
 
+// דגל הסשן שמסך המטייל רושם כשהסימולטור הוא מקור הדגימות (מפה 2.1
+// שורת SESSIONS, BL-16). השם יושב כאן, ליד מי שהוא מסמן.
+export const SESSION_FLAG = 'simulator';
+
 /**
  * @param {object} options
  * @param {() => number} [options.clock] השעון במילישניות, לחותמת הזמן.
@@ -66,6 +70,7 @@ export function create({ clock = () => Date.now() } = {}) {
 
     available: () => true,
     watching: () => stream !== null,
+    flag: SESSION_FLAG,
 
     /**
      * המסלול להליכה: רשימת נקודות { stop_id, lat, lng, name }. בדרך

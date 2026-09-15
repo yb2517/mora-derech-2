@@ -24,12 +24,19 @@
   מה הקובץ הזה עושה, ואת זה בלבד:
     1. קורא את שלוש טבלאות הנתונים.
     2. בונה את דרייבר האחסון, את ה-Repository ואת ה-Orchestrator.
-    3. מגיש את המסכים, ומזריק לכל אחד את שם הפונה שלו ואת ערכי
-       ה-reference שהוא צריך.
+    3. בונה את המתאמים מהמכשיר ומזריק אותם למי שמשתמש בהם (מפה 4.1
+       גרסה 3.8: "נקודת הכניסה היא שמרכיבה את המתאמים ומזריקה אותם,
+       ולכן היא רשאית לייבא מ-/connectors/ בלבד").
+    4. טוענת את מודולי האוטומציה מטבלת המודולים, ומחברת אותם למחזור
+       חיי הסשן שהמסך חושף (הכרעות 6 ו-7 בתוכנית שלב 5).
+    5. מגישה את המסכים, ומזריקה לכל אחד את שם הפונה שלו, את ערכי
+       ה-reference שהוא צריך, ואת הציוד שלו.
 
   מה הוא אינו עושה: אינו מכיל לוגיקה עסקית, אינו נוגע באחסון (חוק
   ברזל 3: רק הדרייבר), ואינו מחזיק שם פונה או ערך משתנה ככתוב בקוד.
   שניהם נקראים מהנתונים, ולכן מסך חדש הוא שורה בטבלה (מפה 4.3).
+  הוא מחבר ואינו מחליט: הרדיוס, המינון והסף יושבים במודולים, וכל
+  ערך ב-reference (תוכנית שלב 5 סעיף 7, סיכון 3).
 -->
 <script type="module">
   import { createBrowserDriver } from './repository/driver-browser.js';
@@ -40,6 +47,9 @@
   import { create as createVetoScreen } from './screens/veto/index.js';
   import { create as createTravelerScreen } from './screens/traveler/index.js';
   import { create as createAdminScreen } from './screens/admin/index.js';
+  import { create as createTts } from './connectors/tts.js';
+  import { create as createStt } from './connectors/stt.js';
+  import { create as createLocation } from './connectors/location.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
   const TABLE_SOURCES = {
@@ -92,7 +102,10 @@
   // CORE-02, הקריאה נרשמת ב-audit_log, ואין ייבוא בין מודולים
   // (חוקי ברזל 2 ו-7). שם הפונה אינו כתוב בקוד המודול, בדיוק כפי
   // שאינו כתוב בקוד המסך (מפה 4.3, מבחן מבנה 06).
-  async function loadHandlers(modulesTable, repository, send) {
+  //
+  // ומשלב 5 גם ציוד (מפה 4.1 גרסה 3.8): מנוע הקול וממשק הדריכה של
+  // הטיימר. מודול שאינו זקוק להם מתעלם מהם.
+  async function loadHandlers(modulesTable, repository, send, equipment) {
     const entries = [];
     for (const row of modulesTable.modules) {
       if (typeof row.handler !== 'string' || row.handler === '') continue;
@@ -100,12 +113,31 @@
       try {
         const loaded = await import(`./${row.handler}`);
         if (typeof loaded.create === 'function') {
-          entries.push([row.id, loaded.create({ repository, send, caller: row.caller ?? null })]);
+          entries.push([row.id, loaded.create({ repository, send, caller: row.caller ?? null, ...equipment })]);
         } else if (typeof loaded.default === 'function') {
           entries.push([row.id, loaded.default]);
         }
       } catch {
         // המודול טרם נבנה. מטופל למעלה.
+      }
+    }
+    return Object.fromEntries(entries);
+  }
+
+  // טעינת המודולים שאינם נמענים: עמודת file בטבלת המודולים (הכרעה 6
+  // בתוכנית שלב 5). הם פונים בלי פעולה, ולכן ה-Orchestrator אינו
+  // מנתב אליהם, והם נטענים מהנתונים ולא בייבוא (מפה 4.1 גרסה 3.8).
+  // הפונקציה מחזירה את הקוד הטעון; ההרכבה עצמה, מי מקבל איזה ציוד,
+  // נעשית ב-boot לפי מזהה המודול.
+  async function loadModules(modulesTable) {
+    const entries = [];
+    for (const row of modulesTable.modules) {
+      if (typeof row.file !== 'string' || row.file === '') continue;
+      try {
+        const loaded = await import(`./${row.file}`);
+        if (typeof loaded.create === 'function') entries.push([row.id, { create: loaded.create, caller: row.caller ?? null }]);
+      } catch {
+        // המודול טרם נבנה.
       }
     }
     return Object.fromEntries(entries);
@@ -138,10 +170,64 @@
     return element;
   }
 
+  function button(label, onClick, primary = false) {
+    const element = document.createElement('button');
+    element.type = 'button';
+    element.className = primary ? 'btn btn--primary' : 'btn';
+    element.textContent = label;
+    element.addEventListener('click', onClick);
+    return element;
+  }
+
   async function boot() {
     const seed = await loadTables();
     const driver = createBrowserDriver({ seed });
     const repository = createRepository(driver);
+
+    // ערכי ה-reference שמסך או מתאם צריך, מוזרקים בזמן ההרכבה.
+    //
+    // מפה 2.4 מטילה על FE-05 לקרוא את מפתחות הסוללה ואת משפט
+    // הבטיחות, ועל CONN-02 ו-CONN-03 את הקול ואת קצב הדגימה, אבל מסך
+    // אינו קורא ל-Repository (doc-build-03-interfaces סעיף 5) ומתאם
+    // אינו מכיר אותו. ההזרקה כאן פותרת את זה בלי פעולה חדשה: הם
+    // מקבלים ערכים, ולא גישה.
+    //
+    // ערך חסר עובר כמות שהוא, null או undefined, ואינו מומצא כאן.
+    // מי שאינו יכול לתפקד בלעדיו הוא שמחזיר E-REF-EMPTY (מפה 4.5:
+    // "היכן נזרק: הליבה"; חוק ברזל 5).
+    function referenceFor(keys) {
+      return Object.freeze(Object.fromEntries(keys.map((key) => [key, repository.getRef(key)])));
+    }
+
+    // שם הפונה של מסך אינו כתוב כאן: הוא תכונה של המודול בטבלת
+    // המודולים, ולכן הוספת מסך היא שורה בנתונים (מפה 4.3, מבחן
+    // מבנה 06). מודול בלי שם פונה אינו יכול לשלוח מעטפה.
+    function callerOf(moduleId) {
+      const row = repository.getModule(moduleId);
+      if (!row || typeof row.caller !== 'string' || row.caller === '') {
+        throw new Error(`למודול ${moduleId} אין שם פונה בטבלת המודולים`);
+      }
+      return row.caller;
+    }
+
+    // --- המתאמים: ציוד מהמכשיר, מפה 4.1 גרסה 3.8 ---
+    //
+    // מופע אחד של מנוע הקול לכל מי שמדבר (הכרעה 3): FE-04, BE-03
+    // ו-FE-05. כך stop של אחד עוצר את מה שהאחר התחיל, ואירועי
+    // ההשמעה מגיעים למסך לתצוגה. שפת הזיהוי היא שפת החוזה; המתאם
+    // מתרגם אותה למנוע (הכרעה 16).
+    const voice = createTts({
+      engine: globalThis.speechSynthesis ?? null,
+      Utterance: globalThis.SpeechSynthesisUtterance ?? null,
+      reference: referenceFor(['voice_id', 'voice_rate']),
+    });
+    const microphone = createStt({
+      Recognition: globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition ?? null,
+    });
+    const location = createLocation({
+      geolocation: globalThis.navigator?.geolocation ?? null,
+      reference: referenceFor(['location_sample_interval_s']),
+    });
 
     // מפת ה-handlers של ה-Orchestrator: מזהה מודול לפונקציה.
     //
@@ -162,7 +248,37 @@
       },
     });
 
-    const handlers = await loadHandlers(seed.modules, repository, send);
+    // --- מודולי האוטומציה והסימולטור, מטבלת המודולים ---
+    //
+    // הסימולטור מוצע רק כל עוד שורותיו ברשימת המותר קיימות (הכרעה
+    // 19): הסרתן בשלב 7 מכבה אותו בלי שינוי קוד. מקור הדגימות של
+    // AUTO-01 הוא בורר שההרכבה מחזיקה: המכשיר, או הסימולטור כשהוא
+    // מסומן. AUTO-01 אינו יודע איזה מהשניים קיבל (מבחן ההחלפה).
+    const loadedModules = await loadModules(seed.modules);
+    const simulatorRows = loadedModules['TOOL-01']
+      ? seed.allow_list.rows.filter((row) => row.from === loadedModules['TOOL-01'].caller && row.is_demo === true)
+      : [];
+    const simulator = simulatorRows.length > 0 ? loadedModules['TOOL-01'].create({}) : null;
+    const devState = { simulator: false };
+    const simulatorOn = () => simulator !== null && devState.simulator;
+
+    const sampleSource = {
+      start: (args) => (simulatorOn() ? simulator : location).start(args),
+      stop: () => {
+        simulator?.stop();
+        return location.stop();
+      },
+      available: () => true,
+    };
+
+    const timer = loadedModules['AUTO-02']
+      ? loadedModules['AUTO-02'].create({ repository, send, caller: loadedModules['AUTO-02'].caller })
+      : null;
+    const geofence = loadedModules['AUTO-01']
+      ? loadedModules['AUTO-01'].create({ repository, send, caller: loadedModules['AUTO-01'].caller, location: sampleSource })
+      : null;
+
+    const handlers = await loadHandlers(seed.modules, repository, send, { voice, timer });
 
     // החזרת שלב 2: כל עוד מודול שירות אינו קיים, ההדגמה עומדת
     // במקומו כדי שיהיה מה להציג על המסך. משלב 3 שני מודולים אמיתיים
@@ -177,51 +293,39 @@
     // שהופך את "כל מסך פונה לכתובת אחת" למבנה ולא להסכמה.
     orchestrator = createOrchestrator({ repository, handlers });
 
-    // שם הפונה של מסך אינו כתוב כאן: הוא תכונה של המודול בטבלת
-    // המודולים, ולכן הוספת מסך היא שורה בנתונים (מפה 4.3, מבחן
-    // מבנה 06). מודול בלי שם פונה אינו יכול לשלוח מעטפה.
-    function callerOf(moduleId) {
-      const row = repository.getModule(moduleId);
-      if (!row || typeof row.caller !== 'string' || row.caller === '') {
-        throw new Error(`למודול ${moduleId} אין שם פונה בטבלת המודולים`);
-      }
-      return row.caller;
-    }
+    // טיימר הסשנים: פעם אחת עכשיו, ואז תקופתית (הכרעה 12).
+    if (timer) timer.start({});
 
-    // ערכי ה-reference שמסך צריך, מוזרקים בזמן ההרכבה.
-    //
-    // מפה 2.4 מטילה על FE-05 לקרוא את מפתחות הסוללה ואת משפט
-    // הבטיחות, אבל מסך אינו קורא ל-Repository (doc-build-03-interfaces
-    // סעיף 5), ואין ב-4.2 פעולה שמחזירה ערכי reference. ההזרקה כאן
-    // פותרת את השניים בלי פעולה חדשה ובלי שורה חדשה ברשימת המותר:
-    // המסך מקבל ערכים, ולא גישה.
-    //
-    // ערך חסר עובר כמות שהוא, null או undefined, ואינו מומצא כאן.
-    // המסך שאינו יכול לתפקד בלעדיו הוא שמחזיר E-REF-EMPTY (מפה 4.5:
-    // "היכן נזרק: הליבה"; חוק ברזל 5).
-    function referenceFor(keys) {
-      return Object.freeze(Object.fromEntries(keys.map((key) => [key, repository.getRef(key)])));
-    }
-
-    // הגשת מסך: המסך מקבל את הכתובת האחת, את שם הפונה שלו ואת
-    // ערכיו, ואינו מקבל את ה-Repository ואינו מקבל את ה-Orchestrator.
+    // הגשת מסך: המסך מקבל את הכתובת האחת, את שם הפונה שלו, את ערכיו
+    // ואת הציוד שלו, ואינו מקבל את ה-Repository ואינו מקבל את
+    // ה-Orchestrator.
     //
     // מסך נושא בדרך כלל מזהה מודול אחד. מסך הניהול נושא שניים,
     // מפני שהוא מאחד את FE-07 ואת FE-08 (הוכרע 12.09), ורשימת
     // המותר ממשיכה להבחין ביניהם לפי from. לכן from יכול להיות
     // שם אחד, או מפה ממזהה מודול לשם.
-    function mountScreen({ moduleId, moduleIds, refKeys = [], create }) {
+    function mountScreen({ moduleId, moduleIds, refKeys = [], create, equipment = {} }) {
       const host = document.createElement('div');
-      create({
+      const screen = create({
         host,
         from: moduleIds
           ? Object.freeze(Object.fromEntries(moduleIds.map((id) => [id, callerOf(id)])))
           : callerOf(moduleId),
         reference: referenceFor(refKeys),
         send,
+        ...equipment,
       });
-      return host;
+      return { host, screen };
     }
+
+    // מה שההרכבה יודעת על המכשיר, למסך המטייל (הכרעות 10 ו-11):
+    // דגל הסימולטור, הדגימה האחרונה של AUTO-01, והכיוון ממנה.
+    const device = {
+      flags: () => (simulatorOn() && simulator ? [simulator.flag] : []),
+      position: () => geofence?.current().sample ?? null,
+      direction: (from, to) => geofence?.direction(from, to) ?? null,
+      stop: () => geofence?.current().stop_id ?? null,
+    };
 
     // משטחי המסך. FE-05 במשימה 6, ומסך הניהול המאוחד במשימה 7.
     //
@@ -243,6 +347,7 @@
           'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
         ],
         create: createTravelerScreen,
+        equipment: { voice, microphone, device },
       },
       {
         moduleIds: ['FE-07', 'FE-08'],
@@ -251,49 +356,105 @@
       },
     ];
 
-    if (SCREENS.length > 0) {
-      const shell = document.createElement('div');
-      shell.append(...SCREENS.map(mountScreen));
-      render(shell);
-      return;
+    const mounted = SCREENS.map(mountScreen);
+    const traveler = mounted[SCREENS.findIndex((screen) => screen.moduleId === 'FE-05')].screen;
+
+    // --- מחזור חיי הסשן, מהמסך אל האוטומציה (הכרעה 7) ---
+    //
+    // המסך חושף אירועים ואינו מכיר את המודול; כאן הם מתחברים.
+    // הרשאת מיקום שנדחתה מגיעה מ-AUTO-01 ולא מתשובה למעטפה של המסך,
+    // ולכן היא נמסרת לו דרך notify.
+    function startWalking({ session, site_id: siteId }) {
+      if (!geofence || !session) return;
+      geofence.start({
+        session_id: session.session_id,
+        site_id: siteId,
+        onError: (response) => traveler.notify(response),
+      }).then((started) => {
+        if (!started.ok) traveler.notify(started);
+      });
     }
 
-    render(panel('ההרכבה', compositionReport(repository, seed, handlers)));
+    function stopWalking(sessionId) {
+      geofence?.stop();
+      if (sessionId) timer?.cancel(sessionId);
+    }
+
+    traveler.on('session:start', startWalking);
+    traveler.on('session:end', ({ session_id: sessionId }) => stopWalking(sessionId));
+    traveler.on('battery:block', ({ session_id: sessionId }) => stopWalking(sessionId));
+    traveler.on('battery:resume', startWalking);
+
+    // --- מפלס הסוללה, מהמכשיר אל המסך (הכרעה 10) ---
+    //
+    // מכשיר שאינו חושף מפלס: הנוהל אינו נורה (usecase-f-13 סעיף 8).
+    if (typeof globalThis.navigator?.getBattery === 'function') {
+      globalThis.navigator.getBattery().then((battery) => {
+        const push = () => traveler.setBatteryLevel(Math.round(battery.level * 100));
+        battery.addEventListener('levelchange', push);
+        push();
+      }).catch(() => {});
+    }
+
+    const shell = document.createElement('div');
+    shell.append(...mounted.map((entry) => entry.host));
+    if (simulator) shell.append(simulatorPanel({ repository, simulator, devState, traveler }));
+    render(shell);
   }
 
-  // דוח ההרכבה: מה נטען ומה נרשם. אינו שולח מעטפה ואינו כותב שורה,
-  // מפני ש-audit_log הוא יומן append-only של המערכת, ובדיקה עצמית
-  // שרצה בכל טעינת דף הייתה מזהמת אותו. הפרק הזה מוחלף בהגשת
-  // המסכים במשימה 5.
-  function compositionReport(repository, seed, handlers) {
-    const rows = [
-      ['מודולים רשומים', seed.modules.modules.length],
-      ['שורות ברשימת המותר', seed.allow_list.rows.length],
-      ['מפתחות בטבלת ה-reference', Object.keys(seed.reference).length],
-      ['פונים מוכרים', repository.listCallers().length],
-      ['מודולים עם handler', Object.keys(handlers).length],
-      ['שורות ביומן הבקשות', repository.listAudit().length],
-    ];
+  // פאנל הסימולטור, פיתוח בלבד (TOOL-01, ותוכנית שלב 5 סעיף 8):
+  // "סימולטור במקום GPS", כפתור לכל נקודה במסלול, ו"המשך ללכת".
+  // הפאנל קיים רק כל עוד שורות הסימולטור ברשימת המותר קיימות, והוא
+  // נעלם בשלב 7 יחד איתן. שדה הסוללה כאן מדמה את המכשיר בשולחן
+  // העבודה, כדי ש-BL-20 ייבדק בדפדפן בלי לרוקן טלפון.
+  function simulatorPanel({ repository, simulator, devState, traveler }) {
+    const body = document.createElement('div');
 
-    const table = document.createElement('table');
-    table.className = 'table';
-    for (const [label, value] of rows) {
-      const tr = document.createElement('tr');
-      const th = document.createElement('th');
-      th.textContent = label;
-      const td = document.createElement('td');
-      td.textContent = String(value);
-      tr.append(th, td);
-      table.append(tr);
-    }
+    const toggleField = document.createElement('div');
+    toggleField.className = 'field';
+    const toggleLabel = document.createElement('label');
+    toggleLabel.className = 'field__label';
+    const toggle = document.createElement('input');
+    toggle.type = 'checkbox';
+    toggle.addEventListener('change', () => { devState.simulator = toggle.checked; });
+    toggleLabel.append(toggle, document.createTextNode(' סימולטור במקום GPS'));
+    toggleField.append(toggleLabel);
+    body.append(toggleField);
+
+    // המסלול להליכה: עוגני המסלול הטעון, בסדר התחנות, עם שם הפריט.
+    const points = repository.listAnchors().map((anchor) => {
+      const item = repository.getItem(anchor.item_id);
+      return { stop_id: item?.stop_id ?? null, lat: anchor.lat, lng: anchor.lng, name: item?.name ?? anchor.anchor_id };
+    });
+    simulator.load(points);
+
+    const row = document.createElement('div');
+    row.className = 'btn-row';
+    points.forEach((point, index) => {
+      row.append(button(`${index + 1}. ${point.name}`, () => simulator.arriveAt(index)));
+    });
+    row.append(button('המשך ללכת', () => simulator.walkOn()));
+    row.append(button('דגימה גרועה (80 מטר)', () => simulator.arriveAt(0, { accuracy_m: 80 })));
+    body.append(row);
+
+    const batteryField = document.createElement('div');
+    batteryField.className = 'field';
+    const batteryLabel = document.createElement('label');
+    batteryLabel.className = 'field__label';
+    batteryLabel.textContent = 'סוללה, הדגמה (אחוזים)';
+    const battery = document.createElement('input');
+    battery.className = 'field__control';
+    battery.type = 'number';
+    battery.addEventListener('change', () => traveler.setBatteryLevel(Number(battery.value)));
+    batteryField.append(batteryLabel, battery);
+    body.append(batteryField);
 
     const note = document.createElement('p');
     note.className = 'text-sm text-muted';
-    note.textContent = 'אין עדיין מסכים. ההרכבה עצמה נבדקת כאן, והמסכים נכנסים במשימות 5 עד 7.';
+    note.textContent = 'כלי פיתוח. הדגימות עוברות דרך ה-geofence האמיתי, והסשן מסומן simulator ואינו נספר במדדים.';
+    body.append(note);
 
-    const wrapper = document.createElement('div');
-    wrapper.append(table, note);
-    return wrapper;
+    return panel('סימולטור ההליכה', body);
   }
 
   boot().catch((thrown) => {
