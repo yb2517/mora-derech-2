@@ -59,13 +59,48 @@ function fakeSend({ stops = {}, anchors = [], logOk = true } = {}) {
 
 const repository = (reference = REFERENCE) => ({ getRef: (key) => reference[key] });
 
-function build({ stops, anchors, clock = fakeClock(), reference, logOk } = {}) {
+/**
+ * ממשק הדריכה המזויף של AUTO-02 (משימה 7 בתוכנית שלב 5, הכרעה 8):
+ * מתעד כל דריכה וכל ביטול, ואינו מפעיל דבר.
+ */
+function fakeTimer() {
+  const armed = [];
+  const cancelled = [];
+  return {
+    armed,
+    cancelled,
+    arm: (request) => { armed.push(request); return { ok: true, data: { armed: true, seconds: request.seconds } }; },
+    cancel: (sessionId) => { cancelled.push(sessionId); return { ok: true, data: { cancelled: true } }; },
+  };
+}
+
+/**
+ * מנוע הקול המזויף: עונה כמו CONN-02, עם משך קבוע, ומתעד מה נאמר.
+ * noVoice מדמה מכשיר בלי קול עברי.
+ */
+function fakeVoice({ durationMs = 3000, noVoice = false, failure = null } = {}) {
+  const spoken = [];
+  const stopped = [];
+  return {
+    spoken,
+    stopped,
+    speak: async (text) => {
+      if (failure) return failure;
+      if (noVoice) return { ok: false, error: { code: 'E-NO-HEBREW-VOICE', data: {} } };
+      spoken.push(text);
+      return { ok: true, data: { duration_ms: durationMs, interrupted: false, chunks: 1 } };
+    },
+    stop: () => { stopped.push(true); return { ok: true, data: { stopped: true } }; },
+  };
+}
+
+function build({ stops, anchors, clock = fakeClock(), reference, logOk, voice = null, timer = fakeTimer() } = {}) {
   const send = fakeSend({ stops, anchors, logOk });
-  const handle = create({ repository: repository(reference), send, caller: CALLER, clock });
+  const handle = create({ repository: repository(reference), send, caller: CALLER, clock, voice, timer });
   const call = (action, payload) => handle({
     from: 'module-geofence', module: 'FE-04', action, payload, lang: 'he',
   });
-  return { handle, send, call, clock };
+  return { handle, send, call, clock, timer, voice };
 }
 
 const SESSION = 'sess-1';
@@ -104,7 +139,7 @@ const SESSION = 'sess-1';
 
 {
   const clock = fakeClock();
-  const { call } = build({
+  const { call, timer } = build({
     stops: { 'st-1': [item('i-1', 'st-1')], 'st-2': [item('i-2', 'st-2')] },
     anchors: [anchor('i-1'), anchor('i-2')],
     clock,
@@ -121,6 +156,8 @@ const SESSION = 'sess-1';
   check('**והיא מוחזקת 15 שניות**', second.data.hold_for_s, 15);
   check('וטיימר נדרך', second.data.timer_armed, true);
   check('והסיבה היא המינון', second.data.reason, 'gap');
+  check('**הטיימר נדרך ל-15 שניות, דרך הציוד המוזרק** (שלב 5, הכרעה 8)',
+    timer.armed.map((r) => [r.session_id, r.stop_id, r.item_id, r.seconds]), [[SESSION, 'st-2', 'i-2', 15]]);
 }
 
 {
@@ -435,6 +472,106 @@ checkThrows('בלי Repository אין מודול', () => create({}));
     try { handle({ from: 'module-geofence', module: 'FE-04', action, payload: { session_id: SESSION }, lang: 'he' }); return false; } catch { return true; }
   });
   check('שלוש הפעולות של 4.2 מיושמות', notBuilt, []);
+}
+
+// =====================================================================
+// שלב 5, משימה 7: הקול והטיימר המוזרקים
+// =====================================================================
+
+// --- מסירה עם קול: הפריט נאמר, המשך נרשם, והמינון נמדד מהסיום ---
+
+{
+  const clock = fakeClock();
+  const voice = fakeVoice({ durationMs: 3000 });
+  const { call, send } = build({
+    stops: { 'st-1': [item('i-1', 'st-1', 'טקסט הפריט.')], 'st-2': [item('i-2', 'st-2')] },
+    anchors: [anchor('i-1'), anchor('i-2')],
+    clock,
+    voice,
+  });
+
+  const first = await call('arrive', { session_id: SESSION, site_id: 's-1', stop_id: 'st-1' });
+  check('המנוע קיבל את טקסט הפריט כפי שאושר', voice.spoken, ['טקסט הפריט.']);
+  check('התשובה נושאת את המשך ואינה בכתב', [first.data.duration_ms, first.data.displayed_as_text], [3000, false]);
+
+  const pushed = send.sent.find((r) => r.module === 'BE-07' && r.payload.type === 'pushed');
+  check('שורת pushed נושאת duration_ms ו-displayed_as_text', [pushed.payload.duration_ms, pushed.payload.displayed_as_text], [3000, false]);
+}
+
+// --- בלי קול עברי: השורה נרשמת מיד, בכתב ---
+
+{
+  const voice = fakeVoice({ noVoice: true });
+  const { call, send } = build({
+    stops: { 'st-1': [item('i-1', 'st-1')] }, anchors: [anchor('i-1')], voice,
+  });
+  const response = await call('arrive', { session_id: SESSION, site_id: 's-1', stop_id: 'st-1' });
+  check('הפריט נמסר בכתב', [response.data.delivered.item_id, response.data.displayed_as_text, response.data.duration_ms], ['i-1', true, null]);
+  const pushed = send.sent.find((r) => r.module === 'BE-07' && r.payload.type === 'pushed');
+  check('השורה מסומנת displayed_as_text', [pushed.payload.displayed_as_text, pushed.payload.duration_ms], [true, null]);
+}
+
+// --- ערך חסר בטבלת ה-reference עולה כמות שהוא, בלי שורת יומן ---
+
+{
+  const voice = fakeVoice({ failure: { ok: false, error: { code: 'E-REF-EMPTY', data: { key: 'voice_id' } } } });
+  const { call, send } = build({
+    stops: { 'st-1': [item('i-1', 'st-1')] }, anchors: [anchor('i-1')], voice,
+  });
+  const response = await call('arrive', { session_id: SESSION, site_id: 's-1', stop_id: 'st-1' });
+  check('E-REF-EMPTY של הקול חוזר מ-arrive', [response.ok, response.error.code, response.error.data.key], [false, 'E-REF-EMPTY', 'voice_id']);
+  check('ולא נרשמה מסירה', send.sent.some((r) => r.payload?.type === 'pushed'), false);
+}
+
+// --- פריט שני של אותה נקודה: הטיימר נדרך למרווח המלא מסיום המסירה ---
+
+{
+  const { call, timer } = build({
+    stops: { 'st-1': [item('i-1', 'st-1'), item('i-2', 'st-1')] },
+    anchors: [anchor('i-1'), anchor('i-2')],
+  });
+  const response = await call('arrive', { session_id: SESSION, site_id: 's-1', stop_id: 'st-1' });
+  check('הראשון נמסר, השני מוחזק, והטיימר דרוך', [response.data.delivered.item_id, response.data.held.item_id, response.data.timer_armed], ['i-1', 'i-2', true]);
+  check('הטיימר נדרך ל-delivery_gap_s מלא', timer.armed.map((r) => [r.item_id, r.seconds]), [['i-2', 20]]);
+}
+
+// --- יציאה מהנקודה מבטלת את הטיימר של הפריט המוחזק ---
+
+{
+  const clock = fakeClock();
+  const { call, timer } = build({
+    stops: { 'st-1': [item('i-1', 'st-1')], 'st-2': [item('i-2', 'st-2')] },
+    anchors: [anchor('i-1'), anchor('i-2')],
+    clock,
+  });
+  await call('arrive', { session_id: SESSION, site_id: 's-1', stop_id: 'st-1' });
+  clock.advance(5);
+  await call('arrive', { session_id: SESSION, site_id: 's-1', stop_id: 'st-2' });
+  const left = await call('leave', { session_id: SESSION, site_id: 's-1', stop_id: 'st-2' });
+  check('הפריט נזנח', left.data.abandoned, 'i-2');
+  check('והטיימר בוטל', timer.cancelled, [SESSION]);
+}
+
+// --- חוב טכני 17: היומן אומר שהסשן נסגר, ו-FE-04 שוכח אותו ---
+
+{
+  const { call, handle, timer } = build({
+    stops: { 'st-1': [item('i-1', 'st-1'), item('i-2', 'st-1')] },
+    anchors: [anchor('i-1'), anchor('i-2')],
+    logOk: false,
+  });
+  // היומן המזויף עונה בכשל כללי; כאן נחליף אותו לכשל של סשן סגור.
+  const { send } = build({ stops: { 'st-1': [item('i-1', 'st-1'), item('i-2', 'st-1')] }, anchors: [anchor('i-1'), anchor('i-2')] });
+  const closedSend = async (request) => {
+    if (request.module === 'BE-07') return { ok: false, error: { code: 'E-SESSION-CLOSED', data: {} } };
+    return send(request);
+  };
+  const closedHandle = create({ repository: repository(), send: closedSend, caller: CALLER, timer });
+  const response = await closedHandle({ from: 'module-geofence', module: 'FE-04', action: 'arrive', payload: { session_id: SESSION, site_id: 's-1', stop_id: 'st-1' }, lang: 'he' });
+  check('המסירה עצמה קרתה: היומן אינו חוסם את החוויה (BL-10)', response.data.delivered.item_id, 'i-1');
+  check('הסשן נשכח: אין מצב ואין פריט מוחזק', closedHandle.stateOf(SESSION), null);
+  check('הטיימר של הסשן בוטל', timer.cancelled.includes(SESSION), true);
+  void call; void handle;
 }
 
 report();

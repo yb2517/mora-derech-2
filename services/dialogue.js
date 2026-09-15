@@ -18,6 +18,13 @@
 //
 // ולכן גם אין כאן ייבוא של errors.js: המודול אינו מייצר קוד שגיאה
 // משלו. כשל של השליפה חוזר למעלה עם הקוד שבו הוא ירד.
+//
+// **משימה 7 בתוכנית שלב 5**: המודול מקבל את מנוע הקול, CONN-02, כציוד
+// מוזרק (מפה 4.1 גרסה 3.8, הכרעה 3), אותו מופע שמוזרק ל-FE-04. וזו
+// ההכרעה הפתוחה 12 במפה, שנסגרה בהכרעה 4 של תוכנית שלב 5 בדרך ג:
+// פריט נדחף שמדבר נעצר כשמגיעה שאלה, לא דרך פעולה חדשה ב-FE-04
+// אלא דרך stop של הציוד המשותף. הפריט אינו מתחדש (הכרעה 6 של
+// תוכנית שלב 4). התשובה נשמעת דרך אותו ציוד, ומשך ההשמעה נרשם.
 
 function ok(data) {
   return { ok: true, data };
@@ -34,7 +41,7 @@ function defaultNow() {
  * @param {string} [options.caller] שם הפונה, מטבלת המודולים ולא מהקוד.
  * @param {() => string} [options.now]
  */
-export function create({ repository, send, caller, now = defaultNow } = {}) {
+export function create({ repository, send, caller, now = defaultNow, voice = null } = {}) {
   if (!repository) {
     throw new Error('BE-03 זקוק ל-Repository');
   }
@@ -45,20 +52,39 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
   let active = null;
 
   /**
-   * **פער 44, ולא השמטה**: usecase-f-04 צעד 5 מטיל על המודול הזה
-   * להשהות מסירה נדחפת, וצעד 12 מטיל על FE-04 לחדש אותה. מפה 4.2
-   * אינה נותנת ל-module-dialogue אף פעולה ב-FE-04, ורשימת המותר
-   * אינה נושאת שורה כזאת, ולכן אין ערוץ בין השניים. הוספת שורה
-   * היא הרחבת היקף, והיא עוצרת לפי CLAUDE.md סעיף 9.5.
+   * **פער 44 ודרכו לסגירה**: usecase-f-04 צעד 5 מטיל על המודול הזה
+   * להשהות מסירה נדחפת, ומפה 4.2 אינה נותנת ל-module-dialogue אף
+   * פעולה ב-FE-04. שני החצאים של ההשהיה מתקיימים בלי ערוץ כזה:
    *
-   * מה שכן מתקיים היום, וזו שורת BE-03 במפה 6.1: פריט מוחזק
-   * **נשאר מוחזק** כשמגיעה שאלה, מפני ש-FE-04 משחרר רק ב-release,
-   * ושאלה אינה release. הצד שאינו מתקיים הוא עצירת פריט שכבר מדבר,
-   * ואין לו משמעות בשלב הזה: מנוע הקול הוא CONN-02, שלב 5.
+   *   פריט מוחזק **נשאר מוחזק** (מפה 6.1, שורת BE-03), מפני ש-FE-04
+   *   משחרר רק ב-release או ב-leave, ושאלה אינה אף אחד מהם.
+   *
+   *   פריט שכבר מדבר **נעצר**, דרך stop של מנוע הקול המשותף
+   *   (הכרעה 4 בתוכנית שלב 5, דרך ג). FE-04 שהמתין לסיום ההשמעה
+   *   מקבל אותה כקטיעה ורושם את המשך שהושמע בפועל.
    */
   function markActive(question) {
     active = { question, at: now() };
+    if (voice && typeof voice.stop === 'function') voice.stop();
     return active;
+  }
+
+  /**
+   * ההשמעה של התשובה, דרך הציוד המוזרק. בלי מנוע: בכתב, כמו בשלב 4.
+   * בלי קול עברי: המסך מציג (usecase-f-04 זרימה ד).
+   */
+  async function speak(text) {
+    if (!voice || typeof voice.speak !== 'function') {
+      return { displayed_as_text: true, duration_ms: null };
+    }
+    const response = await voice.speak(text);
+    if (response.ok) {
+      return { displayed_as_text: false, duration_ms: response.data.duration_ms ?? null };
+    }
+    if (response.error?.code === 'E-NO-HEBREW-VOICE') {
+      return { displayed_as_text: true, duration_ms: null };
+    }
+    return { failure: response };
   }
 
   const ACTIONS = {
@@ -101,6 +127,13 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
       // ואין ניסוח. הקיצוץ כבר נעשה ב-BE-04 מול answer_max_words.
       const spoken = retrieval.data.answer;
 
+      // צעד 9: ההשמעה. ערך חסר בטבלת ה-reference עולה כמות שהוא.
+      const speech = await speak(spoken);
+      if (speech.failure) {
+        active = null;
+        return speech.failure;
+      }
+
       // צעד 10, ו-usecase-f-04 זרימה ג3: שאלה שקיבלה הימנעות היא
       // עדיין יזימה, ונספרת ב-M-01. לכן השורה נשלחת בשני המקרים.
       const logged = await logInitiated({
@@ -109,6 +142,8 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
         question,
         sourceItem: retrieval.data.source_item,
         isFallback: retrieval.data.is_fallback === true,
+        durationMs: speech.duration_ms,
+        displayedAsText: speech.displayed_as_text,
       });
 
       active = null;
@@ -118,6 +153,8 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
         is_fallback: retrieval.data.is_fallback === true,
         source_item: retrieval.data.source_item,
         source_page: retrieval.data.source_page,
+        displayed_as_text: speech.displayed_as_text,
+        duration_ms: speech.duration_ms,
         // המסך צריך לדעת אם היזימה נרשמה: סשן עם יומן חלקי אינו
         // נכנס למדגם של M-01 (BL-16), וזה מתחיל כאן.
         logged,
@@ -132,7 +169,9 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
    * BL-10: יומן האינטראקציות לעולם אינו חוסם את החוויה בשטח. כשל
    * שליחה נרשם בתשובה ואינו הופך אותה לשגיאה: המשפחה כבר שמעה.
    */
-  async function logInitiated({ sessionId, stopId, question, sourceItem, isFallback }) {
+  async function logInitiated({
+    sessionId, stopId, question, sourceItem, isFallback, durationMs = null, displayedAsText = false,
+  }) {
     if (typeof send !== 'function' || !sessionId || !caller) return false;
     try {
       const response = await send({
@@ -147,6 +186,8 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
           question,
           source_item: sourceItem ?? null,
           is_fallback: isFallback,
+          duration_ms: durationMs,
+          displayed_as_text: displayedAsText,
         },
       });
       return response.ok === true;
