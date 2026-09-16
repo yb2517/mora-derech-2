@@ -38,6 +38,14 @@ const TABLES = {
   reference: 'data/reference.json',
 };
 
+// בלוק ההגדרות (decision-05 סעיף 3, משימה 13.4 בתוכנית חלק ב):
+// שמות משתני הסביבה שמותר להזריק לקובץ הארוז יושבים ב-.env.example,
+// בשמות בלבד. הסקריפט אינו מכיר אף שם בעצמו: הוא קורא את הרשימה,
+// ואם כל השמות שבה מוגדרים בסביבה הוא כותב אותם כבלוק שנקודת
+// הכניסה מוסרת לדרייבר. חלק מהשמות בלבד הוא טעות שעוצרת, ואף שם
+// הוא אריזה בלי ענן, כמו היום. הערכים אינם במאגר: הם בסביבה בלבד.
+const ENV_EXAMPLE = '.env.example';
+
 const read = (relativePath) => readFileSync(join(ROOT, relativePath), 'utf8');
 const exists = (relativePath) => existsSync(join(ROOT, relativePath));
 
@@ -276,7 +284,24 @@ function tableBlock(name, path) {
   return `<script type="application/json" data-table="${name}">\n${text.trim()}\n</script>`;
 }
 
-function build() {
+function configBlock(env) {
+  const names = read(ENV_EXAMPLE)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && !line.startsWith('#'))
+    .map((line) => line.split('=')[0]);
+  const present = names.filter((name) => typeof env[name] === 'string' && env[name] !== '');
+  if (present.length === 0) return '';
+  if (present.length < names.length) {
+    const missing = names.filter((name) => !present.includes(name));
+    throw new Error(`בלוק ההגדרות דורש את כל השמות שב-${ENV_EXAMPLE}; חסרים: ${missing.join(', ')}`);
+  }
+  const values = Object.fromEntries(names.map((name) => [name, env[name]]));
+  const text = JSON.stringify(values).replace(/<\//g, '<\\/');
+  return `<script type="application/json" data-config>\n${text}\n</script>\n`;
+}
+
+function build(env = process.env) {
   const html = read(ENTRY_HTML);
 
   // 1. גוף הסקריפט של נקודת הכניסה.
@@ -323,7 +348,7 @@ function build() {
 
   const out = head.replace(
     /<script type="module">[\s\S]*?<\/script>/,
-    `${tables}\n\n${script}`,
+    `${configBlock(env)}${tables}\n\n${script}`,
   );
 
   return { out, modules, styles, handlers };
@@ -354,5 +379,5 @@ if (outward.length > 0) {
 
 const size = (Buffer.byteLength(out, 'utf8') / 1024).toFixed(0);
 console.log(`נארז: ${target}`);
-console.log(`  ${modules.size} מודולים, ${Object.keys(TABLES).length} טבלאות נתונים, ${size}KB`);
+console.log(`  ${modules.size} מודולים, ${Object.keys(TABLES).length} טבלאות נתונים, ${size}KB${out.includes('data-config>') ? ', עם בלוק הגדרות לענן' : ''}`);
 if (handlers.length > 0) console.log(`  handlers מטבלת המודולים: ${handlers.join(', ')}`);

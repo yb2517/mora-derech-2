@@ -36,7 +36,7 @@ check('יש קובץ HTML אחד בשורש', rootPages, [ENTRY]);
 const imports = [...code.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((m) => m[1]);
 
 check(
-  'מייבאת את הדרייבר, את ה-Repository, את ה-Orchestrator, את הכתובת, את המסכים ואת שלושת המתאמים',
+  'מייבאת את שני הדרייברים, את ה-Repository, את ה-Orchestrator, את הכתובת, את המסכים ואת שלושת המתאמים',
   imports.slice().sort(),
   [
     './connectors/location.js',
@@ -44,6 +44,7 @@ check(
     './connectors/tts.js',
     './core/orchestrator.js',
     './repository/driver-browser.js',
+    './repository/driver-cloud.js',
     './repository/index.js',
     './screens/admin/index.js',
     './screens/endpoint.js',

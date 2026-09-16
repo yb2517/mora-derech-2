@@ -1,0 +1,62 @@
+# פריסת הקובץ הארוז ל-GitHub Pages. פער 61, הכרעת בעלת הפרויקט 16.09.2026:
+# הדומיין של ספק המסד אינו מגיש דף HTML שרץ, ולכן הכתובת לטלפון יושבת
+# ב-GitHub Pages של המאגר.
+#
+# מה קורה כאן: אותה אריזה של tools/bundle.js, עם שני משתני הסביבה
+# מסודות המאגר (Settings, Secrets and variables, Actions). הערכים אינם
+# במאגר: הם בכספת של GitHub, וסקריפט האריזה קורא אותם בזמן הריצה, בדיוק
+# כפי שמסמך הבנייה סעיף 3 קובע. הקובץ שנוצר עולה ל-Pages כ-index.html.
+#
+# מתי: בכל דחיפה ל-main, וגם בהפעלה ידנית מכל ענף (Actions, Deploy to
+# Pages, Run workflow). ההפעלה הידנית מאפשרת לפרוס את stage-5 לפני
+# המיזוג, לאימות בטלפון.
+#
+# תנאי מוקדם, פעם אחת, בהגדרות המאגר: Pages, Source: GitHub Actions.
+
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the test suite
+        run: node tests/run-all.js
+      - name: Bundle with the environment names from .env.example
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          mkdir -p site
+          node tools/bundle.js site/index.html
+          grep -q 'data-config>' site/index.html || { echo "no config block: are the two secrets set?"; exit 1; }
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

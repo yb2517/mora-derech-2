@@ -260,7 +260,12 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
   await settle();
   check('מתחת לסף החסימה המסך נחסם', dom.host.querySelectorAll('.notice-screen').length, 1);
   check('במסך החסימה אין אינטראקציה', buttons().length, 0);
-  check('נקודת היציאה נשלפה', sent.at(-1).action, 'nearestExitPoint');
+  check('נקודת היציאה נשלפה', sent.some((e) => e.action === 'nearestExitPoint'), true);
+
+  // פער 57, מפה 3.9: החסימה סוגרת את הסשן עם הדגל, בלי מגע.
+  const blockedSession = repository.listSessions().find((row) => row.flags.includes('ended_on_battery_block'));
+  check('**החסימה סגרה את הסשן עם ended_on_battery_block**', Boolean(blockedSession && blockedSession.ended_at !== null), true);
+  check('הסגירה יצאה במעטפת session_end מהמסך', sent.at(-1).action, 'session_end');
   // שלב 5: התבנית ממולאת בשלושת המשתנים (F-13 תיקון 1 סעיף 1). בלי
   // מיקום מהאוטומציה, המרחק והכיוון אינם ידועים ונאמרים ככאלה, ולא
   // מוצגים סוגריים למשפחה.
@@ -279,6 +284,11 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
   await screen.setBatteryLevel(resume + 1);
   await settle();
   check('מעל סף החידוש המסך חוזר', Boolean(byLabel('שאלה')), true);
+
+  // החידוש פותח סשן חדש שמצביע על זה שנחסם.
+  const resumedSession = repository.listSessions().find((row) => row.ended_at === null);
+  check('**החידוש פתח סשן חדש שמצביע על הקודם**',
+    [Boolean(resumedSession), resumedSession?.previous_session_id], [true, blockedSession?.session_id]);
 }
 
 // --- סף חסר אינו מומצא ---
@@ -467,7 +477,9 @@ dom.restore();
   voiceCalls.length = 0;
   await withDevice.setBatteryLevel(4);
   await settle();
-  check('חסימה: אירוע battery:block יצא', events.at(-1), ['battery:block', session5.session_id]);
+  check('חסימה: אירוע battery:block יצא', events.some((e) => e[0] === 'battery:block' && e[1] === session5.session_id), true);
+  check('הסשן שנחסם נסגר עם ended_on_battery_block וכל מה שנלמד בו',
+    repository.getSession(session5.session_id).flags.sort(), ['ended_on_battery_block', 'no_hebrew_voice', 'no_location', 'simulator']);
   check('הקול נעצר ואז הודעת החסימה נאמרה פעם אחת', voiceCalls.map((c) => c[0]), ['stop', 'speak']);
   const filled = referenceFile.values.battery_block_text
     .split('[נקודת ציון]').join(exitAt.name)
@@ -482,7 +494,9 @@ dom.restore();
 
   await withDevice.setBatteryLevel(referenceFile.values.battery_resume_percent + 1);
   await settle();
-  check('חידוש: אירוע battery:resume יצא', events.at(-1), ['battery:resume', session5.session_id]);
+  const resumed5 = withDevice.state().session_id;
+  check('חידוש: סשן חדש, מקושר לקודם', [resumed5 !== session5.session_id, repository.getSession(resumed5).previous_session_id], [true, session5.session_id]);
+  check('חידוש: אירוע battery:resume יצא עם הסשן החדש', events.at(-1), ['battery:resume', resumed5]);
 
   // --- סיום אחרי התראה: ended_on_battery, והקול נעצר ---
 
@@ -490,13 +504,14 @@ dom.restore();
   await settle();
   byLabel5('סיום הטיול').click();
   await settle();
-  const ended = sent5.find((e) => e.action === 'session_end');
+  // שני session_end בסשן הזה: של החסימה (פער 57) ושל הסיום. הבדיקה על האחרון.
+  const ended = sent5.filter((e) => e.action === 'session_end').at(-1);
   // no_hebrew_voice נשאר: הוא נלמד בסשן הזה, גם אם הקול הופיע אחר כך.
   check('session_end נושא את הדגלים שנצברו, ובהם ended_on_battery ו-no_location',
     ended.payload.flags.sort(), ['ended_on_battery', 'no_hebrew_voice', 'no_location', 'simulator']);
-  check('הסשן נסגר עם הדגלים', repository.getSession(session5.session_id).flags.sort(),
+  check('הסשן המקושר נסגר עם הדגלים', repository.getSession(resumed5).flags.sort(),
     ['ended_on_battery', 'no_hebrew_voice', 'no_location', 'simulator']);
-  check('אירוע session:end יצא', events.at(-1), ['session:end', session5.session_id]);
+  check('אירוע session:end יצא', events.at(-1), ['session:end', resumed5]);
   check('מגע אחד אחרי הסיום', buttons5().map((b) => b.textContent.trim()), ['התחלת הטיול']);
 }
 

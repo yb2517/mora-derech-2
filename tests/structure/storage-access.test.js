@@ -17,16 +17,27 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude', 'dist']);
 const CODE_EXTENSIONS = ['.js', '.mjs', '.html'];
 
-// הדרייבר של שלבים 1 עד 4. בשלב 5 ייווסף driver-cloud.js, ולכן הכלל
-// נבדק לפי מקום ולא לפי שם: כל נגיעה באחסון יושבת תחת repository/.
+// שני הדרייברים, כל אחד בקובץ אחד (decision-05 סעיף 6: "מבחן מבנה 01
+// ממשיך לדרוש שחיפוש מחרוזת החיבור יחזיר קובץ אחד, וזה יהיה
+// driver-cloud.js"). הכלל נבדק לפי מקום ולפי סוג: כל נגיעה באחסון
+// יושבת תחת repository/, אחסון הדפדפן בקובץ אחד, ומחרוזת החיבור
+// לענן בקובץ אחד. פער 59 בתוכנית חלק ב.
 const DRIVER_DIR = 'repository/';
 const BROWSER_DRIVER = 'repository/driver-browser.js';
+const CLOUD_DRIVER = 'repository/driver-cloud.js';
 
-// שמות שמסמנים נגיעה באחסון או במחרוזת חיבור.
-const STORAGE_TOKENS = [
-  'localStorage', 'sessionStorage', 'indexedDB', 'openDatabase',
+// שמות שמסמנים נגיעה באחסון הדפדפן.
+const BROWSER_TOKENS = ['localStorage', 'sessionStorage', 'indexedDB', 'openDatabase'];
+
+// שמות שמסמנים את מחרוזת החיבור לענן: שמות משתני הסביבה של הספק
+// (מסמך הבנייה 2.8 סעיף 3), נתיב ה-REST שלו, והשמות שהיו הצעה
+// לפני ההכרעה.
+const CLOUD_TOKENS = [
+  'SUPABASE_URL', 'SUPABASE_ANON_KEY', '/rest/v1/', 'supabase.co',
   'DB_URL', 'DB_KEY', 'connectionString',
 ];
+
+const STORAGE_TOKENS = [...BROWSER_TOKENS, ...CLOUD_TOKENS];
 
 function collectFiles(dir) {
   const found = [];
@@ -58,7 +69,19 @@ const touching = files
   .map((f) => f.path)
   .sort();
 
-check('קובץ אחד בלבד נוגע באחסון', touching, [BROWSER_DRIVER]);
+check('שני קבצים בלבד נוגעים באחסון, שני הדרייברים', touching, [BROWSER_DRIVER, CLOUD_DRIVER]);
+
+const touchingBrowser = files
+  .filter((f) => BROWSER_TOKENS.some((token) => f.code.includes(token)))
+  .map((f) => f.path)
+  .sort();
+check('אחסון הדפדפן בקובץ אחד', touchingBrowser, [BROWSER_DRIVER]);
+
+const touchingCloud = files
+  .filter((f) => CLOUD_TOKENS.some((token) => f.code.includes(token)))
+  .map((f) => f.path)
+  .sort();
+check('מחרוזת החיבור לענן בקובץ אחד', touchingCloud, [CLOUD_DRIVER]);
 
 check(
   'אין נגיעה באחסון מחוץ ל-repository',
@@ -71,6 +94,11 @@ check(
 const driver = files.find((f) => f.path === BROWSER_DRIVER);
 check('קובץ הדרייבר נסרק', Boolean(driver), true);
 check('הדרייבר אכן נוגע באחסון', driver.code.includes('localStorage'), true);
+
+const cloud = files.find((f) => f.path === CLOUD_DRIVER);
+check('קובץ דרייבר הענן נסרק', Boolean(cloud), true);
+check('דרייבר הענן אכן נושא את שמות משתני הסביבה', ['SUPABASE_URL', 'SUPABASE_ANON_KEY'].every((token) => cloud.code.includes(token)), true);
+check('דרייבר הענן אינו נוגע באחסון הדפדפן', BROWSER_TOKENS.filter((token) => cloud.code.includes(token)), []);
 
 // ממשק ה-Repository עצמו אינו נוגע באחסון: הוא מקבל דרייבר.
 const repositoryIndex = files.find((f) => f.path === 'repository/index.js');
