@@ -28,6 +28,12 @@
 // נוהל הסוללה (BL-20, F-13 תיקון 1): הסף וההשוואה כאן, לפי מפה 2.4
 // ומפה 6.1. מקור המדידה מגיע מהמכשיר דרך ההרכבה (הכרעה 10), ומיקום
 // המשפחה לחישוב נקודת היציאה מגיע מ-AUTO-01 דרך ההרכבה (הכרעה 11).
+//
+// **פער 57, מפה 3.9**: החסימה סוגרת את הסשן ב-session_end עם הדגל
+// ended_on_battery_block, וחידוש מעל סף החידוש פותח סשן חדש
+// ב-session_start, ש-BE-07 מקשר לקודם ב-previous_session_id. כך הדגל
+// נרשם בלי מגע, גם כשהמכשיר כבה במסך החסימה, ונשירה מסוללה אינה
+// נספרת כנשירה מחוסר עניין.
 
 import { createElement, panel, humanError } from '../view.js';
 
@@ -77,6 +83,8 @@ export function create({ host, from, reference, send, voice = null, microphone =
     nowSpeaking: null,
     listening: false,
     battery: BATTERY.OK,
+    blockedSite: null,
+    blockedSession: null,
     exit: null,
     blockedByGate: false,
     notices: new Set(),
@@ -212,6 +220,8 @@ export function create({ host, from, reference, send, voice = null, microphone =
     view.sessionFlags.clear();
     view.battery = BATTERY.OK;
     view.exit = null;
+    view.blockedSite = null;
+    view.blockedSession = null;
     render();
     emit('session:end', { session_id: sessionId });
   }
@@ -356,7 +366,10 @@ export function create({ host, from, reference, send, voice = null, microphone =
         // ההודעה פעם אחת בקול, ומשאיר אותה כטקסט סטטי (תיקון 1 סעיף 2).
         emit('battery:block', { session_id: view.session?.session_id });
         stopVoice();
-        if (view.session) speak(blockText());
+        if (view.session) {
+          speak(blockText());
+          await closeOnBlock();
+        }
       }
       return;
     }
@@ -365,8 +378,9 @@ export function create({ host, from, reference, send, voice = null, microphone =
       // חידוש רק מעל סף החידוש, ולא בעצם העלייה מעל סף החסימה.
       if (percent >= resume) {
         view.battery = BATTERY.OK;
+        await reopenAfterBlock();
         render();
-        emit('battery:resume', { session: view.session, site_id: view.session?.site_id });
+        emit('battery:resume', { session: view.session, site_id: view.session?.site_id ?? view.blockedSite });
       }
       return;
     }
@@ -382,6 +396,43 @@ export function create({ host, from, reference, send, voice = null, microphone =
     }
 
     render();
+  }
+
+  /**
+   * פער 57: החסימה סוגרת את הסשן עם הדגל. הסשן נסגר גם כשהמכשיר
+   * כבה במסך הסטטי, מפני שהסגירה קורית ברגע החסימה ולא במגע.
+   */
+  async function closeOnBlock() {
+    const flags = [...currentFlags(), 'ended_on_battery_block'];
+    const sessionId = view.session?.session_id;
+    view.blockedSite = view.session?.site_id ?? view.site?.site_id ?? null;
+    view.blockedSession = sessionId ?? null;
+    const response = await ask('BE-07', 'session_end', { session_id: sessionId, flags });
+    if (!absorb(response)) return;
+    view.session = null;
+    view.answer = null;
+    view.nowSpeaking = null;
+  }
+
+  /**
+   * פער 57: החידוש פותח סשן חדש, ו-BE-07 מקשר אותו לקודם כשהמסך
+   * שולח את מזהה הסשן שנסגר (מפה 2.1: "סשן שנסגר פותח סשן חדש עם
+   * previous_session_id שמצביע עליו"). משפטי הפתיחה אינם נאמרים שוב:
+   * המשפחה שמעה אותם בסשן שנחסם.
+   */
+  async function reopenAfterBlock() {
+    if (view.session || !view.blockedSite) return;
+    const response = await ask('BE-07', 'session_start', {
+      site_id: view.blockedSite,
+      session_id: view.blockedSession ?? undefined,
+      flags: currentFlags(),
+    });
+    if (!absorb(response)) return;
+    view.session = response.data?.session ?? null;
+    view.resumed = response.data?.resumed === true;
+    view.blockedSite = null;
+    view.blockedSession = null;
+    view.error = null;
   }
 
   /**
