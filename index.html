@@ -392,8 +392,27 @@
       },
     ];
 
-    const mounted = SCREENS.map(mountScreen);
-    const traveler = mounted[SCREENS.findIndex((screen) => screen.moduleId === 'FE-05')].screen;
+    // --- בחירת המסך (מפה 4.3, פער 63, הוכרע 16.09.2026) ---
+    //
+    // הפרמטר screen בכתובת נושא שם פונה, והוא בוחר מסך אחד. בלי
+    // פרמטר: הרכבת הפיתוח, כל המסכים יחד עם פאנל הסימולטור. השם
+    // מושווה לשמות הפונים שבנתונים, ולא לשם כתוב כאן: המסך מצהיר מי
+    // הוא מטבלת המודולים (מבחן מבנה 03), וההרכבה משתמשת באותה הצהרה.
+    // הפרמטר בוחר מה מוצג ואינו מרשה דבר: מה כל מסך רשאי לבקש נקבע
+    // ברשימת המותר בלבד.
+    const wanted = new URL(globalThis.location.href).searchParams.get('screen');
+    const development = wanted === null;
+    const visible = development
+      ? SCREENS
+      : SCREENS.filter((screen) => (screen.moduleIds ?? [screen.moduleId]).some((id) => callerOf(id) === wanted));
+    if (visible.length === 0) {
+      render(failure(`אין מסך בשם ${wanted}. שם המסך הוא שם הפונה שלו בטבלת המודולים.`));
+      return;
+    }
+
+    const mounted = visible.map(mountScreen);
+    const travelerIndex = visible.findIndex((screen) => screen.moduleId === 'FE-05');
+    const traveler = travelerIndex === -1 ? null : mounted[travelerIndex].screen;
 
     // --- מחזור חיי הסשן, מהמסך אל האוטומציה (הכרעה 7) ---
     //
@@ -416,15 +435,17 @@
       if (sessionId) timer?.cancel(sessionId);
     }
 
-    traveler.on('session:start', startWalking);
-    traveler.on('session:end', ({ session_id: sessionId }) => { stopWalking(sessionId); syncSoon(); });
-    traveler.on('battery:block', ({ session_id: sessionId }) => stopWalking(sessionId));
-    traveler.on('battery:resume', startWalking);
+    if (traveler) {
+      traveler.on('session:start', startWalking);
+      traveler.on('session:end', ({ session_id: sessionId }) => { stopWalking(sessionId); syncSoon(); });
+      traveler.on('battery:block', ({ session_id: sessionId }) => stopWalking(sessionId));
+      traveler.on('battery:resume', startWalking);
+    }
 
     // --- מפלס הסוללה, מהמכשיר אל המסך (הכרעה 10) ---
     //
     // מכשיר שאינו חושף מפלס: הנוהל אינו נורה (usecase-f-13 סעיף 8).
-    if (typeof globalThis.navigator?.getBattery === 'function') {
+    if (traveler && typeof globalThis.navigator?.getBattery === 'function') {
       globalThis.navigator.getBattery().then((battery) => {
         const push = () => traveler.setBatteryLevel(Math.round(battery.level * 100));
         battery.addEventListener('levelchange', push);
@@ -434,7 +455,11 @@
 
     const shell = document.createElement('div');
     shell.append(...mounted.map((entry) => entry.host));
-    if (simulator) shell.append(simulatorPanel({ repository, simulator, devState, traveler }));
+    // פאנל הסימולטור הוא כלי פיתוח (מסמך הבנייה סעיף 5: TOOL-01, פיתוח
+    // בלבד), ולכן הוא מוצג בהרכבת הפיתוח בלבד, ורק כשמסך המטייל בה.
+    if (simulator && development && traveler) {
+      shell.append(simulatorPanel({ repository, simulator, devState, traveler }));
+    }
     render(shell);
   }
 
