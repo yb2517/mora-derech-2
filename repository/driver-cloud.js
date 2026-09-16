@@ -56,7 +56,24 @@ export const TABLE_NAMES = Object.freeze([...SEEDED_ONLY, ...APPEND_ONLY, ...ENT
 /** הטבלאות שיושבות במסד (הכרעה ב1). */
 export const CLOUD_TABLES = Object.freeze([REFERENCE, ...APPEND_ONLY, ...ENTITIES]);
 
-// המפתח הראשי של כל טבלה (הכרעה ב5), לסדר יציב בקריאה.
+/** המפתח הראשי של כל טבלה בענן (הכרעה ב5): שדה המזהה של המפה. */
+export const PRIMARY_KEYS = Object.freeze({
+  reference: 'key',
+  audit_log: 'request_id',
+  approvals: 'approval_id',
+  interactions: 'interaction_id',
+  content_items: 'item_id',
+  sites: 'site_id',
+  sources: 'source_id',
+  institutes: 'institute_id',
+  rights_mou: 'mou_id',
+  geo_anchors: 'anchor_id',
+  exit_points: 'exit_id',
+  sessions: 'session_id',
+});
+
+// סדר הקריאה: לפי זמן היכן שיש, ואחרת לפי המפתח, כדי שהמראה תהיה
+// יציבה בין משיכות.
 const ORDER_BY = Object.freeze({
   reference: 'key',
   audit_log: 'at,phase',
