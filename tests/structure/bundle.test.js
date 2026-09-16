@@ -61,7 +61,7 @@ const source = (path) => readFileSync(join(ROOT, path), 'utf8');
 const entry = source('index.html');
 const entryImports = [...entry.matchAll(/from\s+'\.\/([^']+)'/g)].map((m) => m[1]);
 
-check('נקודת הכניסה מייבאת שמונה מודולים', entryImports.length, 8);
+check('נקודת הכניסה מייבאת אחד עשר מודולים: שמונה משלב 2 ושלושת המתאמים משלב 5', entryImports.length, 11);
 
 const missing = entryImports.filter((path) => !bundle.includes(`__registry[${JSON.stringify(path)}]`));
 check('כל מודול שנקודת הכניסה מייבאת נמצא באריזה', missing, []);
@@ -79,6 +79,20 @@ const handlers = modulesTable.modules
   .filter((handler) => typeof handler === 'string' && handler !== '')
   .filter((handler) => !handler.startsWith('tests/'))
   .filter((handler) => existsSync(join(ROOT, handler)));
+
+// עמודת file (הכרעה 6 בתוכנית שלב 5): מודול שנטען בהרכבה ואינו
+// מנותב נארז מאותה סיבה.
+const loadedByComposition = modulesTable.modules
+  .map((row) => row.file)
+  .filter((file) => typeof file === 'string' && file !== '')
+  .filter((file) => existsSync(join(ROOT, file)));
+
+check('שלושה מודולים נטענים בהרכבה', loadedByComposition.length, 3);
+check(
+  'כל מודול שנטען בהרכבה נארז',
+  loadedByComposition.filter((path) => !bundle.includes(`__registry[${JSON.stringify(path)}]`)),
+  [],
+);
 
 check(
   'כל handler קיים מטבלת המודולים נארז',

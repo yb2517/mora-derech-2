@@ -330,9 +330,17 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
      *
      * מוחזרים עוגני המסלול כולם, מאומתים ושאינם מאומתים. הסינון
      * שייך למי שמחליט, ו-BL-15 הוא של AUTO-01.
+     *
+     * כל עוגן נושא גם את stop_id של הפריט שלו (משימה 5 בתוכנית שלב
+     * 5): לעוגן עצמו אין תחנה במפה 2.1, ו-arrive של AUTO-01 נושא
+     * stop_id. ל-module-geofence אין פעולה שקוראת פריטים, ולכן
+     * הבעלים של שתי הישויות מצרף את השדה, ואינו נותן גישה.
      */
     listAnchors: ({ payload = {} }) => ok({
-      anchors: repository.listAnchors({ site_id: payload.site_id }),
+      anchors: repository.listAnchors({ site_id: payload.site_id }).map((anchor) => ({
+        ...anchor,
+        stop_id: repository.getItem(anchor.item_id)?.stop_id ?? null,
+      })),
     }),
 
     listApprovals: ({ payload = {} }) => ok({ approvals: repository.listApprovals(payload) }),

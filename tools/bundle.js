@@ -287,9 +287,11 @@ function build() {
   // 2. סגור הגרף: מה שנקודת הכניסה מייבאת, ועוד כל handler שרשום
   //    בטבלת המודולים וקובצו קיים. עזרי בדיקה אינם נארזים, בדיוק
   //    כפי שנקודת הכניסה אינה טוענת אותם.
+  //    מודול שנטען בהרכבה ואינו מנותב (עמודת file, הכרעה 6 בתוכנית
+  //    שלב 5) נארז מאותה סיבה: הוא בנתונים, ולא בגרף הייבוא.
   const modulesTable = JSON.parse(read(TABLES.modules));
   const handlers = modulesTable.modules
-    .map((row) => row.handler)
+    .flatMap((row) => [row.handler, row.file])
     .filter((handler) => typeof handler === 'string' && handler !== '')
     .filter((handler) => !handler.startsWith('tests/'))
     .filter((handler) => exists(handler));

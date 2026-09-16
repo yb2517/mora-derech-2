@@ -68,8 +68,13 @@ const DECIDED_IN_MAP = {
   battery_resume_percent: 20,
 };
 
-// מפתחות שאין להם ערך מוכרע במסמך מאושר.
-const EXPECTED_EMPTY = ['voice_id', 'voice_rate', 'privacy_opening_text', 'model_tier'];
+// מפתחות שאין להם ערך מוכרע במסמך מאושר. voice_id ו-voice_rate ירדו
+// מהרשימה בהכרעה 5 של תוכנית שלב 5 (15.09.2026): בורר השפה he
+// והקצב 0.95, מהחילוץ מאב הטיפוס.
+const EXPECTED_EMPTY = ['privacy_opening_text', 'model_tier'];
+
+check('voice_id הוא בורר שפה, לפי הכרעה 5 של שלב 5', values.voice_id, 'he');
+check('voice_rate הוא הקצב מאב הטיפוס', values.voice_rate, 0.95);
 
 // --- המפתחות מול 2.4 ---
 

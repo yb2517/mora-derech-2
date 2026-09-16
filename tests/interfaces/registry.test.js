@@ -151,12 +151,33 @@ const idsInFile = modules.map((m) => m.id);
 check('המזהים והסדר זהים למפה', idsInFile, MODULE_IDS_IN_MAP);
 check('אין מזהה כפול', idsInFile.length - new Set(idsInFile).size, 0);
 
+// עמודת file, הכרעה 6 בתוכנית שלב 5: מודול שנטען בהרכבה ואינו
+// מנותב. שלושה כאלה, ולהם חמישה שדות; לכל השאר ארבעה.
+const LOADED_NOT_ROUTED = ['AUTO-01', 'AUTO-02', 'TOOL-01'];
+
 check(
-  'לכל מודול ארבעה שדות: id, caller, handler, actions',
+  'לכל מודול ארבעה שדות: id, caller, handler, actions, ולנטען בהרכבה גם file',
   modules
-    .filter((m) => JSON.stringify(Object.keys(m)) !== JSON.stringify(['id', 'caller', 'handler', 'actions']))
+    .filter((m) => {
+      const keys = JSON.stringify(Object.keys(m));
+      return LOADED_NOT_ROUTED.includes(m.id)
+        ? keys !== JSON.stringify(['id', 'caller', 'handler', 'actions', 'file'])
+        : keys !== JSON.stringify(['id', 'caller', 'handler', 'actions']);
+    })
     .map((m) => m.id),
   [],
+);
+
+check(
+  'מודול עם file הוא פונה בלי handler ובלי פעולות',
+  modules.filter((m) => 'file' in m && !(m.caller && m.handler === null && m.actions.length === 0)).map((m) => m.id),
+  [],
+);
+
+check(
+  'קובץ המודול הנטען יושב בתיקייה שמסמך הבנייה סעיף 5 קובע',
+  modules.filter((m) => 'file' in m).map((m) => [m.id, m.file]),
+  [['AUTO-01', 'automation/geofence.js'], ['AUTO-02', 'automation/timer.js'], ['TOOL-01', 'tools/simulator.js']],
 );
 
 // --- שמות הפונים, מפה 4.1 ---

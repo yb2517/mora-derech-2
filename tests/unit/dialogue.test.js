@@ -239,4 +239,61 @@ checkThrows('בלי Repository אין מודול', () => create({}));
   }));
 }
 
+// =====================================================================
+// שלב 5, משימה 7: הקול המוזרק, והכרעה 4 (דרך ג להכרעה הפתוחה 12)
+// =====================================================================
+
+function fakeVoice({ durationMs = 2500, noVoice = false } = {}) {
+  const calls = [];
+  return {
+    calls,
+    speak: async (text) => {
+      calls.push(['speak', text]);
+      if (noVoice) return { ok: false, error: { code: 'E-NO-HEBREW-VOICE', data: {} } };
+      return { ok: true, data: { duration_ms: durationMs, interrupted: false, chunks: 1 } };
+    },
+    stop: () => { calls.push(['stop']); return { ok: true, data: { stopped: true } }; },
+  };
+}
+
+const askWithVoice = (send, voice, payload) => create({ repository, send, caller: CALLER, now: () => NOW, voice })({
+  from: 'screen-traveler', module: 'BE-03', action: 'ask', payload, lang: 'he',
+});
+
+{
+  const send = fakeSend();
+  const voice = fakeVoice();
+  const response = await askWithVoice(send, voice, PAYLOAD);
+
+  check('**שאלה בזמן שפריט מדבר: המנוע מקבל stop ואז את התשובה** (הכרעה 4)',
+    voice.calls, [['stop'], ['speak', ANSWER.data.answer]]);
+  check('התשובה נושאת את המשך ואינה בכתב', [response.data.duration_ms, response.data.displayed_as_text], [2500, false]);
+  const initiated = send.sent.find((r) => r.module === 'BE-07');
+  check('שורת initiated נושאת duration_ms ו-displayed_as_text', [initiated.payload.duration_ms, initiated.payload.displayed_as_text], [2500, false]);
+  check('ה-stop קדם לקריאה ל-BE-04: העצירה ברגע השאלה, לא ברגע התשובה',
+    voice.calls[0][0] === 'stop' && send.sent[0].module === 'BE-04', true);
+}
+
+{
+  const send = fakeSend();
+  const voice = fakeVoice({ noVoice: true });
+  const response = await askWithVoice(send, voice, PAYLOAD);
+  check('בלי קול עברי: התשובה בכתב, והשאלה עדיין נספרת', [response.ok, response.data.displayed_as_text, response.data.duration_ms, response.data.logged], [true, true, null, true]);
+}
+
+{
+  const send = fakeSend({ retrieval: ABSTENTION });
+  const voice = fakeVoice();
+  const response = await askWithVoice(send, voice, PAYLOAD);
+  check('הימנעות נאמרת בקול באותו נוסח נעול', voice.calls.at(-1), ['speak', ABSTENTION.data.answer]);
+  check('והיא עדיין הימנעות', response.data.is_fallback, true);
+}
+
+{
+  const send = fakeSend({ retrieval: { ok: false, error: { code: 'E-QUESTION-INVALID', data: {} } } });
+  const voice = fakeVoice();
+  const response = await askWithVoice(send, voice, PAYLOAD);
+  check('שאלה לא תקינה: המנוע נעצר, ואינו משמיע דבר', [response.error.code, voice.calls], ['E-QUESTION-INVALID', [['stop']]]);
+}
+
 report();
