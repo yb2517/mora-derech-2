@@ -48,6 +48,13 @@ check('הדרייבר מכיר את אותן טבלאות של דרייבר הד
 check('שתים עשרה טבלאות בענן, שתיים עם הקוד', [CLOUD_TABLES.length, TABLE_NAMES.length - CLOUD_TABLES.length], [12, 2]);
 checkThrows('בלי כתובת: נזרק, עם שמות המשתנים', () => createCloudDriver({ key: KEY_VALUE, fetch: () => {} }));
 checkThrows('בלי רשת: נזרק', () => createCloudDriver({ url: URL_VALUE, key: KEY_VALUE, fetch: null }));
+{
+  const net = fakePostgrest({ tables: { reference: referenceRows() } });
+  const driver = createCloudDriver({ env: { SUPABASE_URL: URL_VALUE, SUPABASE_ANON_KEY: KEY_VALUE }, fetch: net.fetch, seed });
+  await driver.load();
+  check('הערכים נקראים מאובייקט משתני הסביבה לפי ENV_NAMES', net.calls[0].headers.apikey, KEY_VALUE);
+  check('הכתובת נבנית מהערך', net.calls[0].method, 'GET');
+}
 
 {
   const { driver } = build();
@@ -78,7 +85,7 @@ checkThrows('בלי רשת: נזרק', () => createCloudDriver({ url: URL_VALUE,
   check('appendRow מחזיר את השורה', returned, row);
   check('השורה בזיכרון מיד, לפני שהרשת ענתה', driver.readTable('approvals').length, 1);
   await settle();
-  check('התור התרוקן', driver.pending(), 0);
+  check('התור התרוקן', driver.queued(), 0);
   check('השורה במסד', net.rows('approvals'), [row]);
   const post = net.calls.find((c) => c.method === 'POST');
   check('ההוספה מבקשת תשובה מינימלית', post.headers.Prefer, 'return=minimal');
@@ -98,7 +105,7 @@ checkThrows('בלי רשת: נזרק', () => createCloudDriver({ url: URL_VALUE,
     checkThrows(`עדכון שורה ב-${table} נזרק`, () => driver.updateRow(table, 'id', 'X', { note: 'שונה' }));
   }
   checkThrows('טבלה שאינה מוכרת נזרקת', () => driver.readTable('secrets'));
-  check('אחרי הזריקות אין דבר בתור', driver.pending(), 0);
+  check('אחרי הזריקות אין דבר בתור', driver.queued(), 0);
 }
 
 // --- updateRow: מסנן שוויון על המפתח, ותיקון בזיכרון ---
@@ -157,16 +164,16 @@ checkThrows('בלי רשת: נזרק', () => createCloudDriver({ url: URL_VALUE,
   driver.appendRow('interactions', { interaction_id: 'int-2', session_id: 's', time: 't', type: 'pushed' });
   await settle();
   check('שתי השורות בזיכרון', driver.readTable('interactions').length, 2);
-  check('שתיהן ממתינות בתור', driver.pending(), 2);
+  check('שתיהן ממתינות בתור', driver.queued(), 2);
   check('כלום לא הגיע למסד', net.rows('interactions'), []);
   check('ניסיון חוזר נדרך, שנייה אחת', schedule.pending.map((p) => p.ms), [1000]);
   const flushed = await driver.flush();
-  check('flush מדווח מה נשאר', flushed, { pending: 2, failed: 0 });
+  check('flush מדווח מה נשאר', flushed, { queued: 2, failed: 0 });
 
   net.setNetworkDown(false);
   await schedule.fire();
   await settle();
-  check('אחרי שהרשת חזרה: התור ריק', driver.pending(), 0);
+  check('אחרי שהרשת חזרה: התור ריק', driver.queued(), 0);
   check('שתי השורות במסד, בסדר', net.rows('interactions').map((r) => r.interaction_id), ['int-1', 'int-2']);
   check('אין כשל קבוע', driver.failures(), []);
 }
@@ -200,7 +207,7 @@ checkThrows('בלי רשת: נזרק', () => createCloudDriver({ url: URL_VALUE,
   net.rejectWith(null);
   driver.appendRow('approvals', { approval_id: 'good' });
   await settle();
-  check('השורה שנדחתה יצאה מהתור ונרשמה ככשל', [driver.pending(), driver.failures().length], [0, 1]);
+  check('השורה שנדחתה יצאה מהתור ונרשמה ככשל', [driver.queued(), driver.failures().length], [0, 1]);
   check('הכשל נושא את הטבלה, המצב והשורה', [failures[0].table, failures[0].status, failures[0].body.approval_id], ['approvals', 400, 'bad']);
   check('השורה הבאה הגיעה למסד', net.rows('approvals').map((r) => r.approval_id), ['good']);
   check('בזיכרון שתיהן: המראה אינה נמחקת מעצמה', driver.readTable('approvals').length, 2);
@@ -214,7 +221,7 @@ checkThrows('בלי רשת: נזרק', () => createCloudDriver({ url: URL_VALUE,
   net.rejectWith(503);
   driver.appendRow('approvals', { approval_id: 'later' });
   await settle();
-  check('503 משאיר את השורה בתור', [driver.pending(), driver.failures().length], [1, 0]);
+  check('503 משאיר את השורה בתור', [driver.queued(), driver.failures().length], [1, 0]);
   net.rejectWith(null);
   await schedule.fire();
   await settle();
@@ -280,7 +287,7 @@ function memoryStorage() {
   check('אחרי אותה סדרה: השורות זהות בשני הדרייברים (audit_log)', cloud.listAudit(), browser.listAudit());
   check('הפריט עודכן זהה', cloud.getItem(demo.content_items[1].item_id), browser.getItem(demo.content_items[1].item_id));
   check('המפתח זהה', cloud.getRef('enforce_gate_b'), browser.getRef('enforce_gate_b'));
-  check('המסד קיבל את כל הכתיבות', [cloudDriver.pending(), net.rows('audit_log').length, net.rows('reference').find((r) => r.key === 'enforce_gate_b').value], [0, 2, true]);
+  check('המסד קיבל את כל הכתיבות', [cloudDriver.queued(), net.rows('audit_log').length, net.rows('reference').find((r) => r.key === 'enforce_gate_b').value], [0, 2, true]);
   check('המסלול נעול במסד', net.rows('sites')[0].status, 'locked');
 }
 

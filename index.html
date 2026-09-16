@@ -12,6 +12,7 @@
 <header class="app-bar">
   <h1 class="app-bar__title">מורה הדרך 2.0</h1>
   <p class="app-bar__note">מסלול רחוב יפו, ירושלים</p>
+  <p class="app-bar__note" id="sync-note"></p>
 </header>
 
 <main class="layout" id="app"></main>
@@ -40,6 +41,7 @@
 -->
 <script type="module">
   import { createBrowserDriver } from './repository/driver-browser.js';
+  import { createCloudDriver } from './repository/driver-cloud.js';
   import { createRepository } from './repository/index.js';
   import { createOrchestrator } from './core/orchestrator.js';
   import { createEndpoint } from './screens/endpoint.js';
@@ -71,6 +73,16 @@
     const response = await fetch(TABLE_SOURCES[name]);
     if (!response.ok) throw new Error(`הטבלה ${name} לא נטענה: ${response.status}`);
     return response.json();
+  }
+
+  // בלוק ההגדרות: סקריפט האריזה כותב אותו בגוף הקובץ ממשתני הסביבה
+  // (decision-05 סעיף 3, משימה 13.4 בתוכנית חלק ב). כשהוא קיים,
+  // הדרייבר הוא דרייבר הענן; כשאין, דרייבר הדפדפן, כמו בפיתוח
+  // ובקובץ הארוז בלי משתנים. הקוד כאן אינו יודע מה יש בבלוק: הוא
+  // מוסר אותו לדרייבר, ורק הדרייבר מכיר את השמות (חוק ברזל 3).
+  function loadConfig() {
+    const inline = document.querySelector('script[type="application/json"][data-config]');
+    return inline ? JSON.parse(inline.textContent) : null;
   }
 
   async function loadTables() {
@@ -181,8 +193,30 @@
 
   async function boot() {
     const seed = await loadTables();
-    const driver = createBrowserDriver({ seed });
+    const config = loadConfig();
+    const driver = config ? createCloudDriver({ env: config, seed }) : createBrowserDriver({ seed });
+    // דרייבר הענן מושך את הטבלאות פעם אחת לפני הקריאה הראשונה
+    // (הכרעה ב2). לדרייבר הדפדפן אין מה למשוך.
+    if (typeof driver.load === 'function') await driver.load();
     const repository = createRepository(driver);
+
+    // מה שממתין בתור הכתיבה של דרייבר הענן נראה בכותרת, ומרוקן
+    // אחרי כל תשובה ובסיום סשן (הכרעה ב2: השורה אינה אובדת, והמסך
+    // מראה שהיא עוד לא במסד). לדרייבר הדפדפן אין תור, והשורה ריקה.
+    const syncNote = document.getElementById('sync-note');
+    function showSync() {
+      if (!syncNote || typeof driver.queued !== 'function') return;
+      const waiting = driver.queued();
+      const failed = driver.failures().length;
+      syncNote.textContent = waiting > 0
+        ? `ממתין לשליחה למסד: ${waiting}`
+        : (failed > 0 ? `המסד דחה ${failed} שורות` : 'המסד מעודכן');
+    }
+    function syncSoon() {
+      if (typeof driver.flush !== 'function') return;
+      driver.flush().then(showSync);
+    }
+    showSync();
 
     // ערכי ה-reference שמסך או מתאם צריך, מוזרקים בזמן ההרכבה.
     //
@@ -242,9 +276,11 @@
     // ה-Orchestrator, וגם כשמודול הוא זה ששלח.
     let orchestrator = null;
     const send = createEndpoint({
-      handle: (envelope) => {
+      handle: async (envelope) => {
         if (!orchestrator) throw new Error('הבקשה נשלחה לפני שההרכבה הסתיימה');
-        return orchestrator.handle(envelope);
+        const response = await orchestrator.handle(envelope);
+        syncSoon();
+        return response;
       },
     });
 
@@ -381,7 +417,7 @@
     }
 
     traveler.on('session:start', startWalking);
-    traveler.on('session:end', ({ session_id: sessionId }) => stopWalking(sessionId));
+    traveler.on('session:end', ({ session_id: sessionId }) => { stopWalking(sessionId); syncSoon(); });
     traveler.on('battery:block', ({ session_id: sessionId }) => stopWalking(sessionId));
     traveler.on('battery:resume', startWalking);
 

@@ -128,8 +128,10 @@ function isPermanent(status) {
 
 /**
  * @param {object} options
- * @param {string} options.url כתובת הפרויקט, ערך SUPABASE_URL.
- * @param {string} options.key המפתח הציבורי, ערך SUPABASE_ANON_KEY.
+ * @param {object} [options.env] משתני הסביבה בשמם, כפי שהאריזה
+ *   מזריקה אותם: הדרייבר קורא מהם את שני הערכים לפי ENV_NAMES.
+ * @param {string} [options.url] כתובת הפרויקט, ערך SUPABASE_URL.
+ * @param {string} [options.key] המפתח הציבורי, ערך SUPABASE_ANON_KEY.
  * @param {Function} [options.fetch] הרשת. בדיקה מזריקה רשת מדומה.
  * @param {object} [options.seed] modules ו-allow_list. שאר המפתחות
  *   אינם נזרעים כאן: הזריעה למסד היא כלי נפרד שעובר בדרייבר.
@@ -137,8 +139,9 @@ function isPermanent(status) {
  * @param {Function} [options.onFailure] נקרא בכשל קבוע של שורה.
  */
 export function createCloudDriver({
-  url,
-  key,
+  env = null,
+  url = env?.[ENV_NAMES.url],
+  key = env?.[ENV_NAMES.key],
   fetch: network = globalThis.fetch,
   seed = {},
   schedule = { setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms) },
@@ -337,19 +340,19 @@ export function createCloudDriver({
       return tables[name][index];
     },
 
-    /** כמה שורות ממתינות לשליחה. */
-    pending: () => queue.length,
+    /** כמה שורות ממתינות בתור לשליחה. */
+    queued: () => queue.length,
 
     /** השורות שהמסד דחה. */
     failures: () => failures.map((f) => ({ ...f })),
 
     /**
-     * ניסיון אחד לשלוח את כל מה שממתין. מחזיר מה נשאר: pending
+     * ניסיון אחד לשלוח את כל מה שממתין. מחזיר מה נשאר: queued
      * שאינו אפס פירושו כשל זמני, והתור ינסה שוב מעצמו.
      */
     async flush() {
       await drain();
-      return { pending: queue.length, failed: failures.length };
+      return { queued: queue.length, failed: failures.length };
     },
   };
 }

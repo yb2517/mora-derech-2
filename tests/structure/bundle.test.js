@@ -61,7 +61,7 @@ const source = (path) => readFileSync(join(ROOT, path), 'utf8');
 const entry = source('index.html');
 const entryImports = [...entry.matchAll(/from\s+'\.\/([^']+)'/g)].map((m) => m[1]);
 
-check('נקודת הכניסה מייבאת אחד עשר מודולים: שמונה משלב 2 ושלושת המתאמים משלב 5', entryImports.length, 11);
+check('נקודת הכניסה מייבאת שנים עשר מודולים: שמונה משלב 2, שלושת המתאמים ודרייבר הענן משלב 5', entryImports.length, 12);
 
 const missing = entryImports.filter((path) => !bundle.includes(`__registry[${JSON.stringify(path)}]`));
 check('כל מודול שנקודת הכניסה מייבאת נמצא באריזה', missing, []);
@@ -161,6 +161,33 @@ check(
 // הוא היה מנסה למשוך קובץ מהדיסק ונופל בשקט לתוך ה-catch, ומודול
 // שירות אמיתי היה נעלם מהמסירה בלי שאיש ישים לב.
 check('הייבוא הדינמי תורגם', bundle.includes('await __import('), true);
+
+// --- בלוק ההגדרות: רק כשמשתני הסביבה קיימים, ובלי ערך במאגר ---
+//
+// decision-05 סעיף 3 ומשימה 13.4 בתוכנית חלק ב. השמות נקראים
+// מ-.env.example, ולכן הבדיקה מציבה ערכים לשמות שבו.
+const envNames = source('.env.example')
+  .split('\n').map((l) => l.trim()).filter((l) => l !== '' && !l.startsWith('#')).map((l) => l.split('=')[0]);
+check('שני שמות ב-.env.example, בלי ערכים', [envNames.length, source('.env.example').includes('supabase.co')], [2, false]);
+const CONFIG_TAG = '<script type="application/json" data-config>';
+check('אריזה בלי משתני סביבה: אין בלוק הגדרות', bundle.includes(CONFIG_TAG), false);
+
+const withEnv = Object.fromEntries(envNames.map((name, i) => [name, `value-for-test-${i}`]));
+const outWithEnv = join(mkdtempSync(join(tmpdir(), 'mora-bundle-env-')), 'bundle.html');
+const envRun = spawnSync(process.execPath, ['tools/bundle.js', outWithEnv], {
+  cwd: ROOT, encoding: 'utf8', env: { ...process.env, ...withEnv },
+});
+check('אריזה עם משתני סביבה מסתיימת בהצלחה', envRun.status, 0);
+const envBundle = existsSync(outWithEnv) ? readFileSync(outWithEnv, 'utf8') : '';
+const configMatch = envBundle.match(/<script type="application\/json" data-config>([\s\S]*?)<\/script>/);
+check('יש בלוק הגדרות', Boolean(configMatch), true);
+check('הבלוק נושא את השמות והערכים שבסביבה', configMatch ? JSON.parse(configMatch[1]) : null, withEnv);
+check('מלבד הבלוק, האריזה זהה', envBundle.replace(`${configMatch?.[0] ?? ''}\n`, ''), bundle);
+
+const partial = spawnSync(process.execPath, ['tools/bundle.js', outWithEnv], {
+  cwd: ROOT, encoding: 'utf8', env: { ...process.env, [envNames[0]]: 'only-one' },
+});
+check('חלק מהשמות בלבד: האריזה עוצרת בשגיאה', partial.status !== 0 && /חסרים/.test(`${partial.stderr}`), true);
 
 // --- אותו סקריפט, אותו קובץ ---
 
