@@ -28,7 +28,7 @@ const LEVELS = [
 // שמונת מבחני המבנה של 6.4, ומה מכסה כל אחד.
 const STRUCTURE_TESTS = [
   ['01', 'חיבור לנתונים בקובץ אחד', 'tests/structure/storage-access.test.js'],
-  ['02', 'קריאה לספק AI בקובץ אחד', null],
+  ['02', 'קריאה לספק AI בקובץ אחד', 'tests/structure/ai-provider.test.js'],
   ['03', 'כל מסך פונה לכתובת אחת ומצהיר מי הוא', 'tests/structure/screen-endpoint.test.js'],
   ['04', 'כל בקשה רשומה עם request_id', 'tests/structure/audit-writer.test.js'],
   ['05', 'ערכים משתנים מטבלת ה-reference', 'tests/structure/reference-values.test.js'],
@@ -37,10 +37,9 @@ const STRUCTURE_TESTS = [
   ['08', 'אף מודול אינו קורא למודול אחר ישירות', 'tests/structure/import-graph.test.js'],
 ];
 
-// GW-01 נבנה בשלב 6, ולכן מבחן 02 אינו ניתן להרצה עדיין.
-const NOT_YET = {
-  '02': 'GW-01 נבנה בשלב 6',
-};
+// מבחן שטרם ניתן להרצה מפני שהמודול שלו טרם נבנה. הרשימה התרוקנה
+// בשלב 6: מבחן 02 קיבל את GW-01, ושמונת המבחנים רצים.
+const NOT_YET = {};
 
 // שלוש הבדיקות האדומות של מפה 6.5. כל אחת שומרת על הגנה במודול
 // שירות, ולכן אף אחת מהן לא הייתה ניתנת לכתיבה לפני שהמודול קיים.
