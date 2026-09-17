@@ -70,8 +70,12 @@ const DECIDED_IN_MAP = {
 
 // מפתחות שאין להם ערך מוכרע במסמך מאושר. voice_id ו-voice_rate ירדו
 // מהרשימה בהכרעה 5 של תוכנית שלב 5 (15.09.2026): בורר השפה he
-// והקצב 0.95, מהחילוץ מאב הטיפוס.
-const EXPECTED_EMPTY = ['privacy_opening_text', 'model_tier'];
+// והקצב 0.95, מהחילוץ מאב הטיפוס. privacy_opening_text ירד ממנה
+// 17.09.2026: הנוסח, שנגזר מ-PRD סעיף 25, אושר בידי בעלת הפרויקט.
+const EXPECTED_EMPTY = ['model_tier'];
+
+check('משפט הפרטיות אושר ואינו ריק', typeof values.privacy_opening_text === 'string' && values.privacy_opening_text.length > 0, true);
+check('משפט הפרטיות מגלה את זיהוי הדיבור של הטלפון (PRD סעיף 25)', values.privacy_opening_text.includes('זיהוי הדיבור'), true);
 
 check('voice_id הוא בורר שפה, לפי הכרעה 5 של שלב 5', values.voice_id, 'he');
 check('voice_rate הוא הקצב מאב הטיפוס', values.voice_rate, 0.95);
