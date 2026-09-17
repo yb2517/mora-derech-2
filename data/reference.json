@@ -1,9 +1,8 @@
 {
-  "source": "doc-module-map-v3 סעיף 2.4 (גרסה 3.4: note_max_chars, פער 38); הנוסחים לבני אדם מ-doc-error-human-text; safety_opening_text מ-usecase-f-13 סעיף 3; battery_block_text מ-doc-f-13-amendment-01-battery סעיף 1; interaction_type_senders: הכרעת בעלת הפרויקט 14.09.2026, פער 14, והערכים מהסוגריים בשורת log במפה 4.2; abstained ו-E-MODULE-FAILED: הכרעת בעלת הפרויקט 14.09.2026; privacy_opening_text: פער 31, בהכרעת בעלת הפרויקט 14.09.2026; voice_id ו-voice_rate: הכרעה 5 בתוכנית שלב 5, בהכרעת בעלת הפרויקט 15.09.2026, מהחילוץ מאב הטיפוס (בורר שפה he, קצב 0.95)",
+  "source": "doc-module-map-v3 סעיף 2.4 (גרסה 3.4: note_max_chars, פער 38); הנוסחים לבני אדם מ-doc-error-human-text; safety_opening_text מ-usecase-f-13 סעיף 3; battery_block_text מ-doc-f-13-amendment-01-battery סעיף 1; interaction_type_senders: הכרעת בעלת הפרויקט 14.09.2026, פער 14, והערכים מהסוגריים בשורת log במפה 4.2; abstained ו-E-MODULE-FAILED: הכרעת בעלת הפרויקט 14.09.2026; privacy_opening_text: פער 31, המפתח בהכרעת בעלת הפרויקט 14.09.2026 והנוסח בהכרעתה 17.09.2026, נגזר מ-PRD סעיף 25; voice_id ו-voice_rate: הכרעה 5 בתוכנית שלב 5, בהכרעת בעלת הפרויקט 15.09.2026, מהחילוץ מאב הטיפוס (בורר שפה he, קצב 0.95)",
   "note": "ערך null הוא ערך שאין לו הכרעה מאושרת, והוא מוחזר כ-E-REF-EMPTY ואינו מומצא (BL-12, חוק ברזל 5). הרשימה המלאה ב-pending.",
   "pending": {
-    "model_tier": "ריק בכוונה: v1 בלי AI (מפה 2.4). קריאה ל-GW-01 עם ערך ריק מחזירה E-REF-EMPTY",
-    "privacy_opening_text": "פער 31, אושר 14.09.2026: המפתח נוסף למפה 2.4 בקורא FE-05. הנוסח עצמו נגזר מסעיף 25 ב-PRD וממתין למילת אישור, ולכן הערך ריק והמסך מחזיר E-REF-EMPTY"
+    "model_tier": "ריק בכוונה: v1 בלי AI (מפה 2.4). קריאה ל-GW-01 עם ערך ריק מחזירה E-REF-EMPTY"
   },
   "values": {
     "geofence_radius_m": 40,
@@ -93,7 +92,7 @@
     "battery_resume_percent": 20,
     "battery_block_text": "נקודת היציאה הקרובה מהמסלול נמצאת ב-[נקודת ציון], במרחק [מטרים], בכיוון [רוח השמיים]. המסלול יתחדש בטעינת המכשיר מעל 20%.",
     "safety_opening_text": "הליכה בטוחה קודמת לתוכן. באזורי חצייה וצמתים המערכת תשתוק. המערכת אינה מזהה סכנה ואינה מחליפה השגחה.",
-    "privacy_opening_text": null,
+    "privacy_opening_text": "המערכת שומרת את השאלות ואת נקודות הכניסה והיציאה, בלי שם ובלי פרטים מזהים, כדי לשפר את התוכן. הקול אינו נשמר, אך זיהוי הדיבור של הטלפון עשוי לשלוח אותו לתמלול אצל ספק המכשיר.",
     "model_tier": null
   }
 }
