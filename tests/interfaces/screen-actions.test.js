@@ -65,7 +65,7 @@ check('ארבעה מסכים', screenCallers.sort(), Object.keys(SCREEN_ACTIONS)
 
 // יקום הפעולות: כל פעולה שקיימת באיזשהו מודול בחוזה.
 const ACTION_UNIVERSE = [...new Set(
-  modulesFile.modules.flatMap((m) => (m.is_demo ? [] : m.actions)),
+  modulesFile.modules.flatMap((m) => m.actions),
 )].sort();
 
 check('יקום הפעולות אינו ריק', ACTION_UNIVERSE.length > 0, true);
@@ -74,7 +74,6 @@ check('יקום הפעולות אינו ריק', ACTION_UNIVERSE.length > 0, tru
 // הופכת את המטריצה לדו משמעית, ולכן גם זה נבדק.
 const ownerOf = {};
 for (const module of modulesFile.modules) {
-  if (module.is_demo) continue;
   for (const action of module.actions) {
     ownerOf[action] = ownerOf[action] ? [...ownerOf[action], module.id] : [module.id];
   }
@@ -113,7 +112,7 @@ check('כל פעולה שאינה בטבלה נדחית', wrongly.allowed.sort()
 // --- הכיוון ההפוך: רשימת המותר אינה מכילה שורת מסך שאינה ב-4.4 ---
 
 const screenRows = allowFile.rows
-  .filter((row) => row.from.startsWith('screen-') && !row.is_demo)
+  .filter((row) => row.from.startsWith('screen-'))
   .map((row) => `${row.from} ${row.action}`)
   .sort();
 

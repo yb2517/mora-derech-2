@@ -15,7 +15,7 @@ import { createEndpoint } from '../../screens/endpoint.js';
 import { RESPONSE_FIELDS } from '../../core/contract.js';
 import { ERROR_CODE_LIST } from '../../core/errors.js';
 import { createChecker } from '../helpers/assert.js';
-import { DEMO_SEED } from '../../tools/demo-modules.js';
+import { FIXTURE_SEED } from '../helpers/fixtures.js';
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
 import referenceFile from '../../data/reference.json' with { type: 'json' };
@@ -36,7 +36,7 @@ function memoryStorage() {
 
 const repository = createRepository(createBrowserDriver({
   storage: memoryStorage(),
-  seed: { modules: modulesFile, allow_list: allowFile, reference: referenceFile.values, ...DEMO_SEED },
+  seed: { modules: modulesFile, allow_list: allowFile, reference: referenceFile.values, ...FIXTURE_SEED },
 }));
 
 const callerOf = (id) => modulesFile.modules.find((row) => row.id === id).caller;
@@ -57,13 +57,12 @@ orchestrator = createOrchestrator({
   },
 });
 
-// שורות ההדגמה של tool-simulator ומודול הדמה יורדות בשלב 7, ואינן
-// חלק מ-4.2. הבדיקה מפרידה ביניהן כדי שלא תסמוך עליהן.
-const rows = allowFile.rows.filter((row) => row.is_demo !== true);
-const demoRows = allowFile.rows.filter((row) => row.is_demo === true);
+// משלב 7 רשימת המותר נושאת את שורות 4.2 בלבד: שורות tool-simulator
+// ומודול הדמה הוסרו (מסמך הבנייה סעיף 7).
+const rows = allowFile.rows;
 
 check('רשימת המותר נושאת את שורות 4.2', rows.length, 46);
-check('ושלוש שורות הדגמה שיורדות בשלב 7', demoRows.length, 3);
+check('ואף שורה אינה מסומנת is_demo', rows.filter((row) => 'is_demo' in row), []);
 
 // סשן פתוח, כדי ששורות ה-log לא ייפלו על E-SESSION-CLOSED לפני
 // שהגיעו למודול. זו הכנת תרחיש, ולא חלק מהטענה.

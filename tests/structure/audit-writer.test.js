@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { createOrchestrator } from '../../core/orchestrator.js';
 import { createRepository } from '../../repository/index.js';
 import { createBrowserDriver } from '../../repository/driver-browser.js';
-import { handle as echoHandler } from '../helpers/echo-module.js';
+import { handle as echoHandler, withTestModule } from '../helpers/echo-module.js';
 import { createChecker } from '../helpers/assert.js';
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
@@ -72,7 +72,7 @@ function memoryStorage() {
 
 const repository = createRepository(createBrowserDriver({
   storage: memoryStorage(),
-  seed: { modules: modulesFile, allow_list: allowFile, reference: referenceFile.values },
+  seed: { ...withTestModule({ modules: modulesFile, allow_list: allowFile }), reference: referenceFile.values },
 }));
 
 let counter = 0;

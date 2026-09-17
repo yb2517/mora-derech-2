@@ -1,33 +1,164 @@
-{
-  "source": "מסמך הבנייה גרסה 2.2 סעיף 7 (נתוני הדגמה ב-/data/demo/ מסומנים ב-is_demo); מפה 2.1 (שדות הישויות); היקף המערך: הכרעה ג בתוכנית שלב 2, בהכרעת בעלת הפרויקט 14.09.2026",
-  "note": "כל שורה כאן סינתטית ומסומנת is_demo. אלה אינם 19 פריטי הקורפוס, שעוברים לרשומות בשלב 7 (מפה סעיף 7), ואין כאן ציטוט ממקור אמיתי. המערך נבחר כדי לכסות תצוגה: ארבעת מצבי הפריט, תחנה בלי פריט מאושר, ופריט בלי עוגן מאומת. הסרה בשלב 7, ובדיקת הקבלה שם: שאילתה על is_demo מחזירה אפס. שדה bounds ברשומת המסלול נוסף במשימה 3 של שלב 4, לפי מפה 2.1 והכרעה 3 בתוכנית השלב: הגבולות הם שדה של SITES ולא מפתח בטבלת ה-reference. הערכים סינתטיים ומכילים את ארבעת עוגני ההדגמה. שורות ה-pushed וסשן ההדגמה הרביעי נוספו במשימה 11 של שלב 4: בלי הגעה אחת לפחות לכל סשן, כלל המדגם של usecase-f-09 צעד 9 גורע את כולם, ו-M-01 אינו ניתן להדגמה כפי ש-CLAUDE.md סעיף 7 מתאר. דגל partial_log הועבר לסשן הרביעי, כדי שיישאר לו מדגים בלי לגרוע סשן מהשלושה של 2, 3 ו-5.",
-  "institutes": [
+// הזריעה הסינתטית של הבדיקות. משימה 2 בתוכנית שלב 7.
+//
+// עד שלב 7 שבע בדיקות נזרעו מנתוני ההדגמה של /data/demo/, שהוסרו
+// מהמאגר לפי מסמך הבנייה סעיף 7 ("שאילתה על is_demo מחזירה אפס").
+// השורות כאן הן אותן שורות סינתטיות, בלי הסימון: הן עזר בדיקה
+// שיושב תחת tests/ (מסמך הבנייה סעיף 5: "עזרי בדיקה ומודול הדמה"),
+// אינן נתוני המערכת, אינן נטענות בהרכבה ואינן נארזות.
+//
+// המערך נבחר בשלב 2 (הכרעה ג) כדי לכסות תצוגה: ארבעת מצבי הפריט,
+// תחנה בלי פריט מאושר, ופריט בלי עוגן מאומת. אין כאן ציטוט ממקור
+// אמיתי, ואף שורה אינה מ-19 פריטי הקורפוס.
+
+export const FIXTURE_SEED = Object.freeze({
+  "content_items": [
     {
-      "institute_id": "inst-demo-1",
-      "name": "מכון הדגמה למחקר ירושלים",
-      "is_demo": true
-    }
-  ],
-  "sources": [
-    {
+      "item_id": "item-demo-1",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-a",
+      "name": "פתיחת המסלול",
+      "text": "טקסט הדגמה סינתטי לפתיחת המסלול. אינו ציטוט ממקור, ואינו נמסר למשפחה.",
       "source_id": "src-demo-1",
-      "name": "חוברת הדגמה: רחוב יפו",
-      "file": "demo-source.pdf",
-      "publisher": "הוצאת הדגמה",
-      "is_demo": true
+      "page": 7,
+      "word_count": 71,
+      "status": "approved",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-2",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-a",
+      "name": "הבניין שבפינה",
+      "text": "טקסט הדגמה סינתטי על הבניין שבפינת הרחוב. אינו ציטוט ממקור.",
+      "source_id": "src-demo-1",
+      "page": 9,
+      "word_count": 84,
+      "status": "approved",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-3",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-a",
+      "name": "פריט שהוגש להכרעה",
+      "text": "טקסט הדגמה סינתטי שממתין להכרעת החוקר.",
+      "source_id": "src-demo-1",
+      "page": 12,
+      "word_count": 52,
+      "status": "pending",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-4",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-b",
+      "name": "הכיכר",
+      "text": "טקסט הדגמה סינתטי על הכיכר. אינו ציטוט ממקור.",
+      "source_id": "src-demo-1",
+      "page": 18,
+      "word_count": 63,
+      "status": "approved",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-5",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-b",
+      "name": "פריט שנדחה",
+      "text": "טקסט הדגמה סינתטי שנדחה בהכרעת החוקר, עם הערה.",
+      "source_id": "src-demo-1",
+      "page": 23,
+      "word_count": 47,
+      "status": "rejected",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-6",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-b",
+      "name": "פריט בכתיבה",
+      "text": "טקסט הדגמה סינתטי בכתיבה, טרם הוגש.",
+      "source_id": "src-demo-1",
+      "page": 31,
+      "word_count": 38,
+      "status": "draft",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-7",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-c",
+      "name": "התחנה בלי פריט מאושר",
+      "text": "טקסט הדגמה סינתטי לתחנה שאין בה עדיין פריט מאושר. זו התחנה שמכשילה את תנאי הנעילה.",
+      "source_id": "src-demo-1",
+      "page": 44,
+      "word_count": 96,
+      "status": "pending",
+      "audience": "כולם"
+    },
+    {
+      "item_id": "item-demo-8",
+      "site_id": "site-demo-jaffa",
+      "stop_id": "stop-demo-b",
+      "name": "פריט למבוגרים בלבד",
+      "text": "טקסט הדגמה סינתטי שסומן למבוגרים בלבד, כדי שמסנן ה-audience ייראה על המסך.",
+      "source_id": "src-demo-1",
+      "page": 57,
+      "word_count": 112,
+      "status": "approved",
+      "audience": "מבוגרים בלבד"
     }
   ],
-  "rights_mou": [
+  "approvals": [
     {
-      "mou_id": "mou-demo-1",
-      "institute_id": "inst-demo-1",
-      "scope": [
-        "src-demo-1"
-      ],
-      "signed_at": "2026-09-01T09:00:00.000Z",
-      "valid_until": "2027-09-01T09:00:00.000Z",
-      "covers_content_contribution": true,
-      "is_demo": true
+      "approval_id": "appr-demo-1",
+      "time": "2026-09-03T08:12:00.000Z",
+      "who": "user-demo-researcher",
+      "target": "item-demo-1",
+      "action": "approve",
+      "from_status": "pending",
+      "to_status": "approved",
+      "note": ""
+    },
+    {
+      "approval_id": "appr-demo-2",
+      "time": "2026-09-03T08:17:00.000Z",
+      "who": "user-demo-researcher",
+      "target": "item-demo-2",
+      "action": "approve",
+      "from_status": "pending",
+      "to_status": "approved",
+      "note": ""
+    },
+    {
+      "approval_id": "appr-demo-3",
+      "time": "2026-09-03T08:23:00.000Z",
+      "who": "user-demo-researcher",
+      "target": "item-demo-5",
+      "action": "reject",
+      "from_status": "pending",
+      "to_status": "rejected",
+      "note": "הערת הדגמה: העמוד אינו תואם את הטקסט."
+    },
+    {
+      "approval_id": "appr-demo-4",
+      "time": "2026-09-03T08:29:00.000Z",
+      "who": "user-demo-researcher",
+      "target": "item-demo-4",
+      "action": "approve",
+      "from_status": "pending",
+      "to_status": "approved",
+      "note": ""
+    },
+    {
+      "approval_id": "appr-demo-5",
+      "time": "2026-09-03T08:36:00.000Z",
+      "who": "user-demo-researcher",
+      "target": "item-demo-8",
+      "action": "approve",
+      "from_status": "pending",
+      "to_status": "approved",
+      "note": "הערת הדגמה: מתאים למבוגרים."
     }
   ],
   "sites": [
@@ -47,114 +178,33 @@
       },
       "status": "open",
       "locked_at": null,
-      "corpus_version": null,
-      "is_demo": true
+      "corpus_version": null
     }
   ],
-  "content_items": [
+  "sources": [
     {
-      "item_id": "item-demo-1",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-a",
-      "name": "פתיחת המסלול",
-      "text": "טקסט הדגמה סינתטי לפתיחת המסלול. אינו ציטוט ממקור, ואינו נמסר למשפחה.",
       "source_id": "src-demo-1",
-      "page": 7,
-      "word_count": 71,
-      "status": "approved",
-      "audience": "כולם",
-      "is_demo": true
-    },
+      "name": "חוברת הדגמה: רחוב יפו",
+      "file": "demo-source.pdf",
+      "publisher": "הוצאת הדגמה"
+    }
+  ],
+  "institutes": [
     {
-      "item_id": "item-demo-2",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-a",
-      "name": "הבניין שבפינה",
-      "text": "טקסט הדגמה סינתטי על הבניין שבפינת הרחוב. אינו ציטוט ממקור.",
-      "source_id": "src-demo-1",
-      "page": 9,
-      "word_count": 84,
-      "status": "approved",
-      "audience": "כולם",
-      "is_demo": true
-    },
+      "institute_id": "inst-demo-1",
+      "name": "מכון הדגמה למחקר ירושלים"
+    }
+  ],
+  "rights_mou": [
     {
-      "item_id": "item-demo-3",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-a",
-      "name": "פריט שהוגש להכרעה",
-      "text": "טקסט הדגמה סינתטי שממתין להכרעת החוקר.",
-      "source_id": "src-demo-1",
-      "page": 12,
-      "word_count": 52,
-      "status": "pending",
-      "audience": "כולם",
-      "is_demo": true
-    },
-    {
-      "item_id": "item-demo-4",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-b",
-      "name": "הכיכר",
-      "text": "טקסט הדגמה סינתטי על הכיכר. אינו ציטוט ממקור.",
-      "source_id": "src-demo-1",
-      "page": 18,
-      "word_count": 63,
-      "status": "approved",
-      "audience": "כולם",
-      "is_demo": true
-    },
-    {
-      "item_id": "item-demo-5",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-b",
-      "name": "פריט שנדחה",
-      "text": "טקסט הדגמה סינתטי שנדחה בהכרעת החוקר, עם הערה.",
-      "source_id": "src-demo-1",
-      "page": 23,
-      "word_count": 47,
-      "status": "rejected",
-      "audience": "כולם",
-      "is_demo": true
-    },
-    {
-      "item_id": "item-demo-6",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-b",
-      "name": "פריט בכתיבה",
-      "text": "טקסט הדגמה סינתטי בכתיבה, טרם הוגש.",
-      "source_id": "src-demo-1",
-      "page": 31,
-      "word_count": 38,
-      "status": "draft",
-      "audience": "כולם",
-      "is_demo": true
-    },
-    {
-      "item_id": "item-demo-7",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-c",
-      "name": "התחנה בלי פריט מאושר",
-      "text": "טקסט הדגמה סינתטי לתחנה שאין בה עדיין פריט מאושר. זו התחנה שמכשילה את תנאי הנעילה.",
-      "source_id": "src-demo-1",
-      "page": 44,
-      "word_count": 96,
-      "status": "pending",
-      "audience": "כולם",
-      "is_demo": true
-    },
-    {
-      "item_id": "item-demo-8",
-      "site_id": "site-demo-jaffa",
-      "stop_id": "stop-demo-b",
-      "name": "פריט למבוגרים בלבד",
-      "text": "טקסט הדגמה סינתטי שסומן למבוגרים בלבד, כדי שמסנן ה-audience ייראה על המסך.",
-      "source_id": "src-demo-1",
-      "page": 57,
-      "word_count": 112,
-      "status": "approved",
-      "audience": "מבוגרים בלבד",
-      "is_demo": true
+      "mou_id": "mou-demo-1",
+      "institute_id": "inst-demo-1",
+      "scope": [
+        "src-demo-1"
+      ],
+      "signed_at": "2026-09-01T09:00:00.000Z",
+      "valid_until": "2027-09-01T09:00:00.000Z",
+      "covers_content_contribution": true
     }
   ],
   "geo_anchors": [
@@ -165,8 +215,7 @@
       "lng": 35.2192,
       "verified": true,
       "verified_at": "2026-09-02T07:30:00.000Z",
-      "is_crossing": false,
-      "is_demo": true
+      "is_crossing": false
     },
     {
       "anchor_id": "anchor-demo-2",
@@ -175,8 +224,7 @@
       "lng": 35.2186,
       "verified": true,
       "verified_at": "2026-09-02T07:34:00.000Z",
-      "is_crossing": false,
-      "is_demo": true
+      "is_crossing": false
     },
     {
       "anchor_id": "anchor-demo-4",
@@ -185,8 +233,7 @@
       "lng": 35.2174,
       "verified": true,
       "verified_at": "2026-09-02T07:41:00.000Z",
-      "is_crossing": true,
-      "is_demo": true
+      "is_crossing": true
     },
     {
       "anchor_id": "anchor-demo-8",
@@ -195,8 +242,7 @@
       "lng": 35.2168,
       "verified": false,
       "verified_at": null,
-      "is_crossing": false,
-      "is_demo": true
+      "is_crossing": false
     }
   ],
   "exit_points": [
@@ -206,85 +252,7 @@
       "lat": 31.7818,
       "lng": 35.2179,
       "name": "תחנת הרכבת הקלה, הדגמה",
-      "type": "תחבורה ציבורית",
-      "is_demo": true
-    }
-  ],
-  "approvals": [
-    {
-      "approval_id": "appr-demo-1",
-      "time": "2026-09-03T08:12:00.000Z",
-      "who": "user-demo-researcher",
-      "target": "item-demo-1",
-      "action": "approve",
-      "from_status": "pending",
-      "to_status": "approved",
-      "note": "",
-      "is_demo": true
-    },
-    {
-      "approval_id": "appr-demo-2",
-      "time": "2026-09-03T08:17:00.000Z",
-      "who": "user-demo-researcher",
-      "target": "item-demo-2",
-      "action": "approve",
-      "from_status": "pending",
-      "to_status": "approved",
-      "note": "",
-      "is_demo": true
-    },
-    {
-      "approval_id": "appr-demo-3",
-      "time": "2026-09-03T08:23:00.000Z",
-      "who": "user-demo-researcher",
-      "target": "item-demo-5",
-      "action": "reject",
-      "from_status": "pending",
-      "to_status": "rejected",
-      "note": "הערת הדגמה: העמוד אינו תואם את הטקסט.",
-      "is_demo": true
-    },
-    {
-      "approval_id": "appr-demo-4",
-      "time": "2026-09-03T08:29:00.000Z",
-      "who": "user-demo-researcher",
-      "target": "item-demo-4",
-      "action": "approve",
-      "from_status": "pending",
-      "to_status": "approved",
-      "note": "",
-      "is_demo": true
-    },
-    {
-      "approval_id": "appr-demo-5",
-      "time": "2026-09-03T08:36:00.000Z",
-      "who": "user-demo-researcher",
-      "target": "item-demo-8",
-      "action": "approve",
-      "from_status": "pending",
-      "to_status": "approved",
-      "note": "הערת הדגמה: מתאים למבוגרים.",
-      "is_demo": true
-    }
-  ],
-  "admin_users": [
-    {
-      "user_id": "user-demo-researcher",
-      "role": "researcher",
-      "institute_id": "inst-demo-1",
-      "is_demo": true
-    },
-    {
-      "user_id": "user-demo-owner",
-      "role": "owner",
-      "institute_id": null,
-      "is_demo": true
-    },
-    {
-      "user_id": "user-demo-content",
-      "role": "content",
-      "institute_id": null,
-      "is_demo": true
+      "type": "תחבורה ציבורית"
     }
   ],
   "sessions": [
@@ -296,8 +264,7 @@
       "completed": true,
       "last_stop_id": "stop-demo-c",
       "flags": [],
-      "previous_session_id": null,
-      "is_demo": true
+      "previous_session_id": null
     },
     {
       "session_id": "sess-demo-2",
@@ -307,8 +274,7 @@
       "completed": true,
       "last_stop_id": "stop-demo-c",
       "flags": [],
-      "previous_session_id": null,
-      "is_demo": true
+      "previous_session_id": null
     },
     {
       "session_id": "sess-demo-3",
@@ -318,8 +284,7 @@
       "completed": false,
       "last_stop_id": "stop-demo-b",
       "flags": [],
-      "previous_session_id": null,
-      "is_demo": true
+      "previous_session_id": null
     },
     {
       "session_id": "sess-demo-4",
@@ -331,8 +296,7 @@
       "flags": [
         "partial_log"
       ],
-      "previous_session_id": null,
-      "is_demo": true
+      "previous_session_id": null
     }
   ],
   "interactions": [
@@ -345,8 +309,7 @@
       "item_id": "item-demo-1",
       "question": "שאלת הדגמה ראשונה",
       "source_item": "item-demo-1",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-2",
@@ -357,8 +320,7 @@
       "item_id": "item-demo-4",
       "question": "שאלת הדגמה שנייה",
       "source_item": "item-demo-4",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-3",
@@ -369,8 +331,7 @@
       "item_id": "item-demo-1",
       "question": "שאלת הדגמה שלישית",
       "source_item": "item-demo-1",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-4",
@@ -381,8 +342,7 @@
       "item_id": "item-demo-4",
       "question": "שאלת הדגמה רביעית",
       "source_item": "item-demo-4",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-5",
@@ -393,8 +353,7 @@
       "item_id": null,
       "question": "שאלת הדגמה חמישית",
       "source_item": null,
-      "is_fallback": true,
-      "is_demo": true
+      "is_fallback": true
     },
     {
       "interaction_id": "int-demo-6",
@@ -405,8 +364,7 @@
       "item_id": "item-demo-1",
       "question": "שאלת הדגמה שישית",
       "source_item": "item-demo-1",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-7",
@@ -417,8 +375,7 @@
       "item_id": "item-demo-4",
       "question": "שאלת הדגמה שביעית",
       "source_item": "item-demo-4",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-8",
@@ -429,8 +386,7 @@
       "item_id": null,
       "question": "שאלת הדגמה שמינית",
       "source_item": null,
-      "is_fallback": true,
-      "is_demo": true
+      "is_fallback": true
     },
     {
       "interaction_id": "int-demo-9",
@@ -441,8 +397,7 @@
       "item_id": "item-demo-4",
       "question": "שאלת הדגמה תשיעית",
       "source_item": "item-demo-4",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-11",
@@ -453,8 +408,7 @@
       "item_id": "item-demo-4",
       "question": "שאלת הדגמה עשירית",
       "source_item": "item-demo-4",
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-push-1",
@@ -465,8 +419,7 @@
       "item_id": "item-demo-1",
       "question": null,
       "source_item": null,
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-push-2",
@@ -477,8 +430,7 @@
       "item_id": "item-demo-1",
       "question": null,
       "source_item": null,
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-push-3",
@@ -489,8 +441,7 @@
       "item_id": "item-demo-1",
       "question": null,
       "source_item": null,
-      "is_fallback": false,
-      "is_demo": true
+      "is_fallback": false
     },
     {
       "interaction_id": "int-demo-push-4",
@@ -501,72 +452,7 @@
       "item_id": "item-demo-1",
       "question": null,
       "source_item": null,
-      "is_fallback": false,
-      "is_demo": true
-    }
-  ],
-  "lock_readiness": [
-    {
-      "condition": "L1",
-      "name": "כל פריט הוכרע, ולכל מאושר יש רשומה",
-      "passes": false,
-      "failing": [
-        "item-demo-3",
-        "item-demo-6",
-        "item-demo-7"
-      ],
-      "is_demo": true
-    },
-    {
-      "condition": "L2",
-      "name": "לכל תחנה פריט מאושר אחד לפחות",
-      "passes": false,
-      "failing": [
-        "stop-demo-c"
-      ],
-      "is_demo": true
-    },
-    {
-      "condition": "L3",
-      "name": "לכל מאושר עמוד, מקור ועוגן מאומת",
-      "passes": false,
-      "failing": [
-        "item-demo-8"
-      ],
-      "is_demo": true
-    },
-    {
-      "condition": "L4",
-      "name": "כל מקור תחת הסכם בתוקף",
-      "passes": true,
-      "failing": [],
-      "is_demo": true
-    }
-  ],
-  "metrics": [
-    {
-      "metric": "M-01",
-      "name": "חציון שאלות יזומות",
-      "value": 3,
-      "sample": 18,
-      "passes": true,
-      "is_demo": true
-    },
-    {
-      "metric": "M-02",
-      "name": "שיעור השלמת מסלול",
-      "value": 0.82,
-      "sample": 18,
-      "passes": true,
-      "is_demo": true
-    },
-    {
-      "metric": "M-06",
-      "name": "הסכמים בתוקף",
-      "value": 1,
-      "sample": 1,
-      "passes": true,
-      "is_demo": true
+      "is_fallback": false
     }
   ]
-}
+});

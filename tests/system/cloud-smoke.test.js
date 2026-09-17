@@ -30,7 +30,6 @@ if (!url || !key) {
   const { create: createGate } = await import('../../services/gate.js');
   const modulesFile = (await import('../../registry/modules.json', { with: { type: 'json' } })).default;
   const allowFile = (await import('../../registry/allow-list.json', { with: { type: 'json' } })).default;
-  const demo = (await import('../../data/demo/demo-data.json', { with: { type: 'json' } })).default;
 
   const seed = { modules: modulesFile, allow_list: allowFile };
   const callerOf = (id) => modulesFile.modules.find((m) => m.id === id).caller;
@@ -45,17 +44,21 @@ if (!url || !key) {
   const send = createEndpoint({ handle: (envelope) => orchestrator.handle(envelope) });
 
   // 1. בקשה מותרת: שתי שורות audit_log עם אותו request_id, במסד.
-  const gate = await send({ from: callerOf('FE-06'), module: 'BE-06', action: 'get_gate', payload: { site_id: demo.sites[0].site_id }, lang: 'he' });
+  // המסלול והמקור נקראים מהמסד עצמו: משלב 7 אין נתוני הדגמה במאגר,
+  // והמסלול הוא מה שכלי הייבוא זרע (תוכנית שלב 7 משימות 4 ו-6).
+  const site = driver.readTable('sites')?.[0];
+  const source = driver.readTable('sources')?.[0];
+  check('יש מסלול ומקור במסד', [typeof site?.site_id, typeof source?.source_id], ['string', 'string']);
+  const gate = await send({ from: callerOf('FE-06'), module: 'BE-06', action: 'get_gate', payload: { site_id: site.site_id }, lang: 'he' });
   check('get_gate עובר', gate.ok, true);
   const requestId = repository.listAudit().at(-1)?.request_id;
   check('יש request_id', typeof requestId, 'string');
 
-  // 2. אישור פריט: פריט חדש למסלול ההדגמה, submit ואז approve.
-  const site = demo.sites[0];
+  // 2. אישור פריט: פריט חדש למסלול, submit ואז approve.
   const created = await send({
     from: callerOf('FE-07'), module: 'BE-05', action: 'create_item', lang: 'he',
     payload: {
-      site_id: site.site_id, stop_id: site.stops[0], source_id: demo.sources[0].source_id,
+      site_id: site.site_id, stop_id: site.stops[0], source_id: source.source_id,
       name: 'smoke-test', text: 'פריט בדיקת עשן. נכתב בידי מערך הבדיקות ואינו תוכן.', page: 1,
       lat: (site.bounds.min_lat + site.bounds.max_lat) / 2, lng: (site.bounds.min_lng + site.bounds.max_lng) / 2,
     },

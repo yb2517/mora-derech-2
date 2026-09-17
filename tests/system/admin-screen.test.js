@@ -26,7 +26,7 @@ const { createBrowserDriver } = await import('../../repository/driver-browser.js
 const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
-const { DEMO_SEED } = await import('../../tools/demo-modules.js');
+const { FIXTURE_SEED } = await import('../helpers/fixtures.js');
 const { create } = await import('../../screens/admin/index.js');
 const { create: createGovernance } = await import('../../services/governance.js');
 const { create: createGate } = await import('../../services/gate.js');
@@ -50,7 +50,7 @@ const repository = createRepository(createBrowserDriver({
     modules: modulesFile,
     allow_list: allowFile,
     reference: referenceFile.values,
-    ...DEMO_SEED,
+    ...FIXTURE_SEED,
   },
 }));
 

@@ -13,7 +13,7 @@ import { TABLE_NAMES as BROWSER_TABLE_NAMES } from '../../repository/driver-brow
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
 import referenceFile from '../../data/reference.json' with { type: 'json' };
-import demo from '../../data/demo/demo-data.json' with { type: 'json' };
+import { FIXTURE_SEED as demo } from '../helpers/fixtures.js';
 import { fakePostgrest, manualSchedule, settle } from '../helpers/cloud.js';
 import { createChecker } from '../helpers/assert.js';
 

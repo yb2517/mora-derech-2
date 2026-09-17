@@ -7,7 +7,7 @@
 import { createOrchestrator } from '../../core/orchestrator.js';
 import { createRepository } from '../../repository/index.js';
 import { createBrowserDriver } from '../../repository/driver-browser.js';
-import { handle as echoHandler } from '../helpers/echo-module.js';
+import { handle as echoHandler, withTestModule } from '../helpers/echo-module.js';
 import { ERROR_CODE_LIST, error } from '../../core/errors.js';
 import { validate } from '../../core/contract.js';
 import { createChecker } from '../helpers/assert.js';
@@ -25,8 +25,9 @@ function memoryStorage() {
   };
 }
 
+// מודול הדמה ושורתו אינם בנתונים משלב 7: הם מצורפים לזריעה כאן בלבד.
 const seed = {
-  modules: modulesFile, allow_list: allowFile, reference: referenceFile.values,
+  ...withTestModule({ modules: modulesFile, allow_list: allowFile }), reference: referenceFile.values,
 };
 
 function build({ failAudit = false } = {}) {

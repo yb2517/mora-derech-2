@@ -61,18 +61,18 @@ const source = (path) => readFileSync(join(ROOT, path), 'utf8');
 const entry = source('index.html');
 const entryImports = [...entry.matchAll(/from\s+'\.\/([^']+)'/g)].map((m) => m[1]);
 
-check('נקודת הכניסה מייבאת שנים עשר מודולים: שמונה משלב 2, שלושת המתאמים ודרייבר הענן משלב 5', entryImports.length, 12);
+check('נקודת הכניסה מייבאת אחד עשר מודולים: שבעה משלב 2 בלי מודול ההדגמה שהוסר בשלב 7, שלושת המתאמים ודרייבר הענן משלב 5', entryImports.length, 11);
 
 const missing = entryImports.filter((path) => !bundle.includes(`__registry[${JSON.stringify(path)}]`));
 check('כל מודול שנקודת הכניסה מייבאת נמצא באריזה', missing, []);
 
 // הסגור אינו עוצר בייבוא הישיר: מודול שמייבא מודול נמצא גם הוא.
-for (const nested of ['core/contract.js', 'core/errors.js', 'screens/view.js', 'data/demo/demo-data.json']) {
+for (const nested of ['core/contract.js', 'core/errors.js', 'screens/view.js']) {
   check(`${nested} נארז גם הוא`, bundle.includes(`__registry[${JSON.stringify(nested)}]`), true);
 }
 
-// עמודת ה-handler: מודול שירות שקובצו קיים חייב להיארז, אחרת
-// האריזה תיפול חזרה להדגמה בזמן שהפיתוח כבר מריץ את האמיתי.
+// עמודת ה-handler: מודול שירות שקובצו קיים חייב להיארז, אחרת הוא
+// ייעלם מהמסירה בשקט (עד שלב 7 האריזה הייתה נופלת חזרה להדגמה).
 const modulesTable = JSON.parse(source('registry/modules.json'));
 const handlers = modulesTable.modules
   .map((row) => row.handler)
@@ -204,7 +204,7 @@ check('וגם היא מסתיימת בהצלחה', second.status, 0);
 // ולא את מי שהן מצביעות עליו.
 const script = source('tools/bundle.js');
 const named = ['core/orchestrator.js', 'screens/veto/', 'screens/traveler/', 'screens/admin/',
-  'repository/driver-browser.js', 'tools/demo-modules.js', 'services/'];
+  'repository/driver-browser.js', 'services/'];
 
 check('הסקריפט אינו מונה מודולים בשמם', named.filter((path) => script.includes(path)), []);
 
