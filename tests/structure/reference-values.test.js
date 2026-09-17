@@ -86,10 +86,17 @@ function mentionsValue(text, value) {
   return new RegExp(`(^|[^0-9.])${literal}([^0-9]|$)`).test(text);
 }
 
+// הקורפוס כנתונים (תוכנית שלב 7 הכרעה 11): טקסט סיור, עמודים
+// וקואורדינטות. מספר בטקסט של פריט תוכן אינו ערך משתנה של המערכת,
+// והטקסט מועתק ממקורו מילה במילה ואינו ניתן לעריכה כדי לרצות סריקה.
+// הקובץ אינו נקרא בזמן ריצה ואינו נארז, ולכן אינו קובץ קוד.
+const CONTENT_DATA_DIR = 'data/corpus/';
+
 const offenders = [];
 for (const { key, value } of enforceable) {
   for (const file of files) {
     if (file.path === REFERENCE_FILE) continue;
+    if (file.path.startsWith(CONTENT_DATA_DIR)) continue;
     if (mentionsValue(file.text, value)) offenders.push(`${key}=${value} ב-${file.path}`);
   }
 }
@@ -99,6 +106,9 @@ check(
   [...new Set(offenders)].sort(),
   [],
 );
+
+check('קובצי הקורפוס נסרקו ודולגו במודע, ולא נעלמו מהסריקה',
+  files.some((f) => f.path.startsWith(CONTENT_DATA_DIR)), true);
 
 // הוודאות ההפוכה: הערכים באמת בקובץ הטבלה, כלומר הבדיקה אינה עוברת
 // רק מפני שהיא סורקת את המקום הלא נכון.
