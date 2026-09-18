@@ -51,7 +51,7 @@ const request = (from) => ({
 
 // --- הנתונים במאגר: אין שורה ל-GW-01 ---
 
-check('רשימת המותר במאגר: 49 שורות, כפי שהיו', allowFile.rows.length, 49);
+check('רשימת המותר במאגר: 46 שורות, אחרי הסרת שלוש שורות הפיתוח בשלב 7', allowFile.rows.length, 46);
 check('אף שורה ברשימת המותר אינה מכוונת ל-GW-01', allowFile.rows.filter((r) => r.module === 'GW-01'), []);
 check(
   'שורת GW-01 בטבלת המודולים נשארה ריקה (הכרעה 5)',
@@ -99,7 +99,7 @@ check('model_tier ריק בטבלת ה-reference', referenceFile.values[MODEL_TI
 
 // --- הניתוב, עם שורה שקיימת כאן בלבד ---
 
-const TEST_ONLY_ROW = { from: 'module-dialogue', module: 'GW-01', action: EXAMPLE_ACTION, allowed: true, is_demo: true };
+const TEST_ONLY_ROW = { from: 'module-dialogue', module: 'GW-01', action: EXAMPLE_ACTION, allowed: true };
 const withRow = { ...allowFile, rows: [...allowFile.rows, TEST_ONLY_ROW] };
 
 {

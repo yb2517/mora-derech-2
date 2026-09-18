@@ -26,9 +26,19 @@ function memoryStorage() {
   return { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, String(v)) };
 }
 
+// שתי שורות tool-simulator של 4.2 הן שורות פיתוח: מפה 4.3 קובעת שאין
+// להן שורה בייצור, ומשלב 7 הן אינן בקובץ. הבדיקה מצרפת אותן לזריעה
+// שלה בלבד, כדי שהניתוב של הסימולטור ייבדק כפי ש-4.2 מתאר אותו.
+const callerOf = (id) => modulesFile.modules.find((row) => row.id === id).caller;
+const SIMULATOR_TEST_ROWS = ['arrive', 'leave'].map((action) => ({ from: callerOf('TOOL-01'), module: 'FE-04', action, allowed: true }));
+
 const repository = createRepository(createBrowserDriver({
   storage: memoryStorage(),
-  seed: { modules: modulesFile, allow_list: allowFile, reference: referenceFile.values },
+  seed: {
+    modules: modulesFile,
+    allow_list: { ...allowFile, rows: [...allowFile.rows, ...SIMULATOR_TEST_ROWS] },
+    reference: referenceFile.values,
+  },
 }));
 
 // מודול דמה לכל נמען: מתעד מה הגיע אליו, ועונה בחיוב.
@@ -42,7 +52,6 @@ const orchestrator = createOrchestrator({
   handlers: { 'FE-04': echo('FE-04'), 'BE-07': echo('BE-07'), 'BE-05': echo('BE-05') },
 });
 
-const callerOf = (id) => modulesFile.modules.find((row) => row.id === id).caller;
 const envelope = (from, module, action, payload = {}) => ({ from, module, action, payload, lang: 'he' });
 const auditOf = (action, from) => repository.listAudit().filter((row) => row.action === action && row.from === from);
 
@@ -101,12 +110,12 @@ for (const [moduleId, target, action] of DENIED) {
   check('מעטפה בלי from: E-FROM-MISSING', response.error?.code, 'E-FROM-MISSING');
 }
 
-// --- הסימולטור פועל בפיתוח בלבד: שורותיו מסומנות, ובייצור אינן ---
+// --- הסימולטור פועל בפיתוח בלבד: משלב 7 אין לו שורה בנתונים (מפה 4.3) ---
 
 check(
-  'שורות tool-simulator מסומנות is_demo, ואין לו שורה אחרת',
-  allowFile.rows.filter((row) => row.from === callerOf('TOOL-01')).map((row) => [row.module, row.action, row.is_demo === true]),
-  [['FE-04', 'arrive', true], ['FE-04', 'leave', true], ['test-echo', 'echo', true]],
+  'ל-tool-simulator אין שורה ברשימת המותר שבמאגר',
+  allowFile.rows.filter((row) => row.from === callerOf('TOOL-01')).map((row) => [row.module, row.action]),
+  [],
 );
 
 // --- המתאמים אינם פונים ואינם נמענים (מפה 4.1 גרסה 3.8) ---

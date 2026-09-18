@@ -6,7 +6,7 @@
 import { createOrchestrator } from '../../core/orchestrator.js';
 import { createRepository } from '../../repository/index.js';
 import { createBrowserDriver } from '../../repository/driver-browser.js';
-import { handle as echoHandler } from '../helpers/echo-module.js';
+import { handle as echoHandler, withTestModule } from '../helpers/echo-module.js';
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
 import referenceFile from '../../data/reference.json' with { type: 'json' };
@@ -22,9 +22,9 @@ function memoryStorage() {
   };
 }
 
+// מודול הדמה ושורתו אינם בנתונים משלב 7: הם מצורפים לזריעה כאן בלבד.
 const seed = {
-  modules: modulesFile,
-  allow_list: allowFile,
+  ...withTestModule({ modules: modulesFile, allow_list: allowFile }),
   reference: referenceFile.values,
 };
 
@@ -238,12 +238,12 @@ const echoRequest = {
 
   check('ה-handler נקרא פעם אחת', calls.length, 1);
   check('הוא קיבל את מעטפת הבקשה עצמה', calls[0].action, 'echo');
-  check('מודול הדמה מסומן is_demo ב-modules.json',
-    modulesFile.modules.find((m) => m.id === 'test-echo').is_demo, true);
-  check('יש לו שורה אחת ברשימת המותר',
-    allowFile.rows.filter((r) => r.module === 'test-echo').length, 1);
-  check('השורה מסומנת is_demo',
-    allowFile.rows.find((r) => r.module === 'test-echo').is_demo, true);
+  check('מודול הדמה אינו ב-modules.json משלב 7',
+    modulesFile.modules.some((m) => m.id === 'test-echo'), false);
+  check('ואין לו שורה ברשימת המותר שבמאגר',
+    allowFile.rows.filter((r) => r.module === 'test-echo').length, 0);
+  check('השורה שלו קיימת בזריעת הבדיקה בלבד',
+    seed.allow_list.rows.filter((r) => r.module === 'test-echo').length, 1);
 
   // חוק ברזל 2: המודול אינו קורא למודול אחר. ה-handler מקבל מעטפה
   // ומחזיר מעטפה, ואינו מקבל את ה-Repository ולא את ה-Orchestrator.

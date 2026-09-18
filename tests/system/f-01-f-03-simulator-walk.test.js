@@ -71,9 +71,16 @@ for (let n = 1; n <= STOPS; n += 1) {
   });
 }
 
+// שתי שורות tool-simulator אינן בנתונים משלב 7 (מפה 4.3: אין שורה
+// בייצור). הבדיקה מצרפת אותן לזריעה שלה בלבד, כפי שבדיקת השער
+// מצרפת שורה שקיימת בבדיקה בלבד.
+const SIMULATOR_TEST_ROWS = ['arrive', 'leave'].map((action) => ({
+  from: modulesFile.modules.find((m) => m.id === 'TOOL-01').caller, module: 'FE-04', action, allowed: true,
+}));
+
 const seed = {
   modules: modulesFile,
-  allow_list: allowFile,
+  allow_list: { ...allowFile, rows: [...allowFile.rows, ...SIMULATOR_TEST_ROWS] },
   reference: referenceFile.values,
   sites: [{
     site_id: 'site-sim', name: 'מסלול מדומה', stops: Array.from({ length: STOPS }, (_, i) => stopId(i + 1)),

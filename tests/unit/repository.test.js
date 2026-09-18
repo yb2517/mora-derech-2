@@ -198,14 +198,10 @@ function liveDriver() {
 
 {
   const { repository } = freshRepository();
-  // 34 צירופי 4.2 (כולל שורת פער 11) ועוד שורת ההדגמה של משימה 7.
-  // שלוש מהן מסומנות להסרה בשלב 7, ואז נשארות 32 שורות ייצור.
-  check('listAllowed מחזיר את כל השורות', repository.listAllowed().length, 49);
-  check(
-    'מהן 46 שורות ייצור',
-    repository.listAllowed().filter((r) => !r.is_demo).length,
-    46,
-  );
+  // 46 צירופי 4.2. שלוש שורות הפיתוח של הסימולטור ומודול הדמה הוסרו
+  // בשלב 7, ומשלב 7 אין שורה מסומנת.
+  check('listAllowed מחזיר את כל השורות', repository.listAllowed().length, 46);
+  check('ואף אחת אינה מסומנת is_demo', repository.listAllowed().filter((r) => 'is_demo' in r), []);
   check('listCallers מחזיר את עשרת הפונים של 4.1', repository.listCallers().length, 10);
   check(
     'מודול הדמה אינו פונה ולכן אינו ברשימה',

@@ -1,6 +1,6 @@
 {
-  "source": "doc-module-map-v3 סעיף 4.2, 4.3, 4.4; שורת module-retrieval ל-BE-07 log וסימון שורות הסימולטור: הכרעת בעלת הפרויקט 14.09.2026, פערים 11 ו-13; שתים עשרה שורות הקריאה: פער 30, בהכרעת בעלת הפרויקט 14.09.2026, מפה גרסה 3.2",
-  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורה עם is_demo היא שורת פיתוח שמוסרת בשלב 7: שורות tool-simulator (מפה 4.3, allowed=false בייצור, כלומר אין שורה כלל) ומודול הדמה של משימה 7.",
+  "source": "doc-module-map-v3 סעיף 4.2, 4.3, 4.4; שורת module-retrieval ל-BE-07 log הכרעת בעלת הפרויקט 14.09.2026, פער 11; הסרת שורות הסימולטור ומודול הדמה: תוכנית שלב 7 משימה 2, 17.09.2026; שתים עשרה שורות הקריאה: פער 30, בהכרעת בעלת הפרויקט 14.09.2026, מפה גרסה 3.2",
+  "note": "שורה לכל צירוף from, module, action. צירוף שאינו כאן מוחזר ב-E-ALLOW-DENIED. שורות tool-simulator אינן כאן: מפה 4.3 קובעת allowed=false בייצור, כלומר אין שורה כלל, והן הוסרו בשלב 7 יחד עם שורת מודול הדמה של משימה 7 בשלב 1. הבדיקות שצריכות אותן מצרפות אותן לזריעה שלהן בלבד.",
   "rows": [
     {
       "from": "screen-veto",
@@ -135,20 +135,6 @@
       "allowed": true
     },
     {
-      "from": "tool-simulator",
-      "module": "FE-04",
-      "action": "arrive",
-      "allowed": true,
-      "is_demo": true
-    },
-    {
-      "from": "tool-simulator",
-      "module": "FE-04",
-      "action": "leave",
-      "allowed": true,
-      "is_demo": true
-    },
-    {
       "from": "system-timer",
       "module": "FE-04",
       "action": "release",
@@ -207,13 +193,6 @@
       "module": "BE-07",
       "action": "export",
       "allowed": true
-    },
-    {
-      "from": "tool-simulator",
-      "module": "test-echo",
-      "action": "echo",
-      "allowed": true,
-      "is_demo": true
     },
     {
       "from": "screen-veto",

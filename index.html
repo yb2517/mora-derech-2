@@ -45,7 +45,6 @@
   import { createRepository } from './repository/index.js';
   import { createOrchestrator } from './core/orchestrator.js';
   import { createEndpoint } from './screens/endpoint.js';
-  import demoHandler, { DEMO_MODULE_IDS, DEMO_SEED } from './tools/demo-modules.js';
   import { create as createVetoScreen } from './screens/veto/index.js';
   import { create as createTravelerScreen } from './screens/traveler/index.js';
   import { create as createAdminScreen } from './screens/admin/index.js';
@@ -95,7 +94,7 @@
     // הישויות העסקיות נזרעות מנתוני ההדגמה כל עוד הם קיימים. זריעה
     // אינה דריסה: טבלה שכבר יש בה נתונים נשארת כפי שהיא, ולכן מה
     // שנכתב בביקור הקודם שורד רענון. ההסרה בשלב 7 היא מחיקת השורה.
-    return { modules, allow_list: allowList, reference: reference.values, ...DEMO_SEED };
+    return { modules, allow_list: allowList, reference: reference.values };
   }
 
   // טעינת ה-handlers מתוך הנתונים. עזרי בדיקה אינם נטענים כאן:
@@ -262,6 +261,13 @@
       geolocation: globalThis.navigator?.geolocation ?? null,
       reference: referenceFor(['location_sample_interval_s']),
     });
+    // מופע שני של CONN-03 למסך הניהול, לאימות השטח (מפה 4.1, פער 66):
+    // אותו ציוד, זרם משלו, כדי שקריאת מיקום במסך לא תסגור את הזרם
+    // של AUTO-01.
+    const fieldLocation = createLocation({
+      geolocation: globalThis.navigator?.geolocation ?? null,
+      reference: referenceFor(['location_sample_interval_s']),
+    });
 
     // מפת ה-handlers של ה-Orchestrator: מזהה מודול לפונקציה.
     //
@@ -287,12 +293,14 @@
     // --- מודולי האוטומציה והסימולטור, מטבלת המודולים ---
     //
     // הסימולטור מוצע רק כל עוד שורותיו ברשימת המותר קיימות (הכרעה
-    // 19): הסרתן בשלב 7 מכבה אותו בלי שינוי קוד. מקור הדגימות של
+    // 19 של שלב 5). משלב 7 אין לו שורה בנתונים (מפה 4.3: אין שורה
+    // בייצור), ולכן הפאנל אינו מוצג; בדיקות המערך מצרפות את השורות
+    // לזריעה שלהן בלבד. מקור הדגימות של
     // AUTO-01 הוא בורר שההרכבה מחזיקה: המכשיר, או הסימולטור כשהוא
     // מסומן. AUTO-01 אינו יודע איזה מהשניים קיבל (מבחן ההחלפה).
     const loadedModules = await loadModules(seed.modules);
     const simulatorRows = loadedModules['TOOL-01']
-      ? seed.allow_list.rows.filter((row) => row.from === loadedModules['TOOL-01'].caller && row.is_demo === true)
+      ? seed.allow_list.rows.filter((row) => row.from === loadedModules['TOOL-01'].caller)
       : [];
     const simulator = simulatorRows.length > 0 ? loadedModules['TOOL-01'].create({}) : null;
     const devState = { simulator: false };
@@ -315,15 +323,6 @@
       : null;
 
     const handlers = await loadHandlers(seed.modules, repository, send, { voice, timer });
-
-    // החזרת שלב 2: כל עוד מודול שירות אינו קיים, ההדגמה עומדת
-    // במקומו כדי שיהיה מה להציג על המסך. משלב 3 שני מודולים אמיתיים
-    // נטענים מהשורה שבנתונים, וההדגמה כבר אינה מגיעה אליהם: התנאי
-    // כאן הוא "אין handler", ולא "העדף הדגמה". ההסרה בשלב 7 היא
-    // מחיקת שלוש השורות האלה ושל הקובץ.
-    for (const id of DEMO_MODULE_IDS) {
-      if (!handlers[id]) handlers[id] = demoHandler;
-    }
 
     // אותה כתובת אחת מוזרקת לכל מסך ולכל מודול שהוא פונה: זה מה
     // שהופך את "כל מסך פונה לכתובת אחת" למבנה ולא להסכמה.
@@ -389,6 +388,7 @@
         moduleIds: ['FE-07', 'FE-08'],
         refKeys: ['error_human_text'],
         create: createAdminScreen,
+        equipment: { location: fieldLocation },
       },
     ];
 
@@ -495,7 +495,10 @@
       row.append(button(`${index + 1}. ${point.name}`, () => simulator.arriveAt(index)));
     });
     row.append(button('המשך ללכת', () => simulator.walkOn()));
-    row.append(button('דגימה גרועה (80 מטר)', () => simulator.arriveAt(0, { accuracy_m: 80 })));
+    // דגימה שדיוקה גרוע מהסף: כפליים מ-accuracy_threshold_m שבטבלת
+    // ה-reference, ולא מספר בקוד (חוק ברזל 5; חוב 19 של דוח שלב 5).
+    const badAccuracy = repository.getRef('accuracy_threshold_m') * 2;
+    row.append(button(`דגימה גרועה (${badAccuracy} מטר)`, () => simulator.arriveAt(0, { accuracy_m: badAccuracy })));
     body.append(row);
 
     const batteryField = document.createElement('div');

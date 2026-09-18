@@ -42,11 +42,32 @@ const ITEM_FIELDS = [
   { name: 'audience', label: 'קהל' },
 ];
 
-export function create({ host, from, reference, send }) {
+/**
+ * מיקום המכשיר לתצוגה בלבד: המרחק בין העוגן הרשום לדגימה, במטרים,
+ * בקירוב שמספיק למסך. הכלל עצמו (רדיוס, שוליים, דיוק) יושב בליבה
+ * וב-AUTO-01, והמסך אינו מכריע דבר לפי המספר הזה.
+ */
+function metersBetween(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad * Math.cos(((a.lat + b.lat) / 2) * rad);
+  return Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 6371000);
+}
+
+/**
+ * location הוא CONN-03, ציוד שההרכבה מזריקה לאימות השטח (מפה 4.1,
+ * פער 66): המסך משווה את הקואורדינטות הרשומות למיקום המכשיר
+ * (usecase-f-08 צעד 7) ושולח verify_anchor במעטפה, כמו כל בקשה.
+ * בלי מתאם, או במכשיר בלי מיקום, הלחצן אינו מוצג.
+ */
+export function create({ host, from, reference, send, location = null }) {
   const view = {
     role: ROLES[0].role,
     ready: false,
     sample: null,
+    device: null,
+    deviceError: null,
+    crossing: false,
     site: null,
     items: [],
     sources: [],
@@ -200,7 +221,32 @@ export function create({ host, from, reference, send }) {
     if (!absorb(response)) return render();
     view.open = response.data ?? null;
     view.form = { ...(response.data?.item ?? {}) };
+    view.device = null;
+    view.deviceError = null;
+    view.crossing = response.data?.anchor?.is_crossing === true;
     render();
+  }
+
+  // דגימה אחת מהמכשיר, לאימות השטח. הזרם נסגר אחרי הדגימה הראשונה:
+  // המסך אינו עוקב אחרי המכשיר, הוא שואל היכן הוא עכשיו.
+  function readDevice() {
+    const started = location.start({
+      onSample: (sample) => {
+        location.stop();
+        view.device = sample;
+        view.deviceError = null;
+        render();
+      },
+      onError: (response) => {
+        location.stop();
+        view.deviceError = response?.error ?? null;
+        render();
+      },
+    });
+    if (started && started.ok === false) {
+      view.deviceError = started.error ?? null;
+      render();
+    }
   }
 
   // רישום ההסכם, usecase-f-07 צעדים 12 ו-13. המסך אוסף את השדות
@@ -296,6 +342,7 @@ export function create({ host, from, reference, send }) {
     verify.disabled = !view.open;
     verify.addEventListener('click', () => act('BE-05', 'verify_anchor', {
       item_id: view.open?.item?.item_id,
+      is_crossing: view.crossing,
     }));
 
     children.push(createElement('div', { class: 'btn-row' }, [save, verify]));
@@ -321,13 +368,48 @@ export function create({ host, from, reference, send }) {
     if (!view.open) return createElement('p', { class: 'empty' }, 'בחרו פריט כדי לראות את העוגן.');
     const anchor = view.open.anchor;
     if (!anchor) return createElement('p', { class: 'empty' }, 'לפריט אין עוגן רשום.');
-    return createElement('div', {}, [
+    // סימון החצייה לאימות הבא: usecase-f-13 סעיף 3, הדגל נקבע באימות
+    // השטח. לחצן ולא תיבה, כדי שהערך ייראה בשם הלחצן.
+    const crossing = createElement('button', { class: 'btn', type: 'button' },
+      view.crossing ? 'בטל סימון נקודת חצייה' : 'סמן כנקודת חצייה');
+    crossing.addEventListener('click', () => { view.crossing = !view.crossing; render(); });
+
+    const children = [
       createElement('p', { class: 'list__meta' }, `${anchor.lat}, ${anchor.lng}`),
       createElement('span', { class: anchor.verified ? 'status status--approved' : 'status status--pending' },
         anchor.verified ? 'אומת בשטח' : 'לא אומת'),
       createElement('p', { class: anchor.is_crossing ? 'message message--warn' : 'text-sm text-muted' },
         anchor.is_crossing ? 'נקודת חצייה: אין מסירה כאן.' : 'אינה נקודת חצייה.'),
-    ]);
+      createElement('p', { class: 'text-sm text-muted' },
+        view.crossing ? 'באימות הבא העוגן יסומן כנקודת חצייה.' : 'באימות הבא העוגן יסומן כבטוח.'),
+      crossing,
+    ];
+
+    // מיקום המכשיר (פער 66): רק כשההרכבה הזריקה מתאם ויש למכשיר מיקום.
+    if (location && location.available()) {
+      const read = createElement('button', { class: 'btn', type: 'button' }, 'מיקום המכשיר');
+      read.addEventListener('click', readDevice);
+      children.push(read);
+
+      if (view.deviceError) {
+        children.push(createElement('div', { class: 'message message--error' }, errorText(view.deviceError)));
+      }
+      if (view.device) {
+        const meters = metersBetween(anchor, view.device);
+        children.push(createElement('p', { class: 'text-sm' },
+          `מיקום המכשיר: ${view.device.lat}, ${view.device.lng} (דיוק ${Math.round(view.device.accuracy_m)} מטר), במרחק ${meters} מטר מהעוגן הרשום.`));
+        const verifyHere = createElement('button', { class: 'btn btn--primary', type: 'button' }, 'אומת בשטח במיקום המכשיר');
+        verifyHere.addEventListener('click', () => act('BE-05', 'verify_anchor', {
+          item_id: view.open?.item?.item_id,
+          lat: view.device.lat,
+          lng: view.device.lng,
+          is_crossing: view.crossing,
+        }));
+        children.push(verifyHere);
+      }
+    }
+
+    return createElement('div', {}, children);
   }
 
   function exitPointsPanel() {

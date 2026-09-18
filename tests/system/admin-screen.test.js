@@ -26,11 +26,13 @@ const { createBrowserDriver } = await import('../../repository/driver-browser.js
 const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
-const { DEMO_SEED } = await import('../../tools/demo-modules.js');
+const { FIXTURE_SEED } = await import('../helpers/fixtures.js');
 const { create } = await import('../../screens/admin/index.js');
 const { create: createGovernance } = await import('../../services/governance.js');
 const { create: createGate } = await import('../../services/gate.js');
 const { create: createLog } = await import('../../services/log.js');
+const { create: createLocation } = await import('../../connectors/location.js');
+const { fakeGeolocation } = await import('../helpers/device.js');
 
 const modulesFile = (await import('../../registry/modules.json', { with: { type: 'json' } })).default;
 const allowFile = (await import('../../registry/allow-list.json', { with: { type: 'json' } })).default;
@@ -50,7 +52,7 @@ const repository = createRepository(createBrowserDriver({
     modules: modulesFile,
     allow_list: allowFile,
     reference: referenceFile.values,
-    ...DEMO_SEED,
+    ...FIXTURE_SEED,
   },
 }));
 
@@ -71,6 +73,9 @@ const CONTENT = callerOf('FE-07');
 const OWNER = callerOf('FE-08');
 
 const sent = [];
+// CONN-03 כציוד מוזרק לאימות השטח (מפה 4.1 גרסה 3.11, פער 66).
+const geolocation = fakeGeolocation();
+const fieldLocation = createLocation({ geolocation, reference: { location_sample_interval_s: referenceFile.values.location_sample_interval_s } });
 const screen = create({
   host: dom.host,
   from: { 'FE-07': CONTENT, 'FE-08': OWNER },
@@ -79,6 +84,7 @@ const screen = create({
     sent.push(envelope);
     return send(envelope);
   },
+  location: fieldLocation,
 });
 
 const settle = async () => {
@@ -168,6 +174,59 @@ check('רשימת הפריטים נטענה', dom.host.querySelectorAll('.list__
   byLabel('אומת בשטח').click();
   await settle();
   check('אימות העוגן נשלח', sent[before].action, 'verify_anchor');
+  check('בלי סימון: העוגן בטוח', sent[before].payload.is_crossing, false);
+}
+
+// --- אימות השטח עם מיקום המכשיר (משימה 7 של שלב 7, פער 66) ---
+
+{
+  // הפריט "פתיחת המסלול" עדיין פתוח מהבלוק הקודם.
+  const anchor = repository.getAnchorByItem('item-demo-1');
+
+  check('הלחצן מוצג כשהמתאם מוזרק', Boolean(byLabel('מיקום המכשיר')), true);
+  check('לפני הלחיצה אין זרם פתוח', geolocation.watching(), 0);
+
+  byLabel('מיקום המכשיר').click();
+  await settle();
+  check('הלחיצה פותחת את הזרם של המתאם', geolocation.watching(), 1);
+  geolocation.emit({ lat: anchor.lat + 0.0003, lng: anchor.lng, accuracy: 7 });
+  await settle();
+  check('דגימה אחת, והזרם נסגר', geolocation.watching(), 0);
+  check('המסך מציג את מיקום המכשיר ואת המרחק מהעוגן הרשום',
+    [dom.host.textContent.includes('מיקום המכשיר:'), /במרחק 3[2-4] מטר/.test(dom.host.textContent)], [true, true]);
+
+  byLabel('סמן כנקודת חצייה').click();
+  await settle();
+  const before = sent.length;
+  byLabel('אומת בשטח במיקום המכשיר').click();
+  await settle();
+  check('verify_anchor יוצא עם קואורדינטות המכשיר והחצייה',
+    [sent[before].action, sent[before].payload.lat, sent[before].payload.lng, sent[before].payload.is_crossing],
+    ['verify_anchor', anchor.lat + 0.0003, anchor.lng, true]);
+  const updated = repository.getAnchorByItem('item-demo-1');
+  check('העוגן ברשומה זז למיקום המכשיר, אומת וסומן חצייה',
+    [updated.lat, updated.verified, updated.is_crossing], [anchor.lat + 0.0003, true, true]);
+  check('הפריט המאושר לא חזר לטיוטה (הכרעה 11 של שלב 4)', repository.getItem('item-demo-1').status, 'approved');
+}
+
+// --- בלי מתאם מוזרק: אין לחצן ---
+
+{
+  const bare = installDom();
+  create({
+    host: bare.host,
+    from: { 'FE-07': CONTENT, 'FE-08': OWNER },
+    reference: { error_human_text: referenceFile.values.error_human_text },
+    send,
+  });
+  await settle();
+  const row = bare.host.querySelectorAll('.list__head').find((r) => r.textContent.includes('פתיחת המסלול'));
+  row.click();
+  await settle();
+  check('בלי מתאם: אין לחצן מיקום המכשיר, ויש אימות רגיל',
+    [Boolean(bare.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'מיקום המכשיר')),
+      Boolean(bare.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'אומת בשטח'))],
+    [false, true]);
 }
 
 // --- מעבר ל-role של בעלת הפרויקט ---
