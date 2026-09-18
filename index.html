@@ -261,6 +261,13 @@
       geolocation: globalThis.navigator?.geolocation ?? null,
       reference: referenceFor(['location_sample_interval_s']),
     });
+    // מופע שני של CONN-03 למסך הניהול, לאימות השטח (מפה 4.1, פער 66):
+    // אותו ציוד, זרם משלו, כדי שקריאת מיקום במסך לא תסגור את הזרם
+    // של AUTO-01.
+    const fieldLocation = createLocation({
+      geolocation: globalThis.navigator?.geolocation ?? null,
+      reference: referenceFor(['location_sample_interval_s']),
+    });
 
     // מפת ה-handlers של ה-Orchestrator: מזהה מודול לפונקציה.
     //
@@ -381,6 +388,7 @@
         moduleIds: ['FE-07', 'FE-08'],
         refKeys: ['error_human_text'],
         create: createAdminScreen,
+        equipment: { location: fieldLocation },
       },
     ];
 
