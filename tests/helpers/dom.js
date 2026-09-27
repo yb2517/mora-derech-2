@@ -71,14 +71,21 @@ class Node {
     this.listeners.get(name).push(handler);
   }
 
-  dispatch(name) {
-    for (const handler of this.listeners.get(name) ?? []) handler({ target: this });
+  dispatch(name, detail = {}) {
+    for (const handler of this.listeners.get(name) ?? []) {
+      handler({ target: this, preventDefault() {}, ...detail });
+    }
   }
 
   /** לחיצה. כפתור מנוטרל אינו מגיב, בדיוק כמו בדפדפן. */
   click() {
     if (this.disabled) return;
     this.dispatch('click');
+  }
+
+  /** לחיצת מקש: משדרת keydown עם שם המקש, כמו בדפדפן. */
+  press(key) {
+    this.dispatch('keydown', { key, isComposing: false });
   }
 
   /** הקלדה: קובעת ערך ומשדרת input, כמו משתמש שמקליד. */

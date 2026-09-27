@@ -111,6 +111,9 @@ const TABLES = {
   modules: 'registry/modules.json',
   allow_list: 'registry/allow-list.json',
   reference: 'data/reference.json',
+  // שתי שורות הסימולטור של מצב הבדיקה (מפה 4.3, פער 82): בלוק כמו
+  // האחרות, ונקודת הכניסה קוראת אותו רק עם mode=test.
+  allow_list_test: 'registry/allow-list-test.json',
 };
 
 for (const [name, path] of Object.entries(TABLES)) {
@@ -124,6 +127,11 @@ for (const [name, path] of Object.entries(TABLES)) {
     JSON.parse(source(path)),
   );
 }
+
+// הבלוק של מצב הבדיקה נקרא רק תחת mode=test, גם בקובץ הארוז, מפני
+// שזה אותו קוד של נקודת הכניסה.
+check('בקובץ הארוז, בלוק הבדיקה נקרא רק במצב בדיקה',
+  /TEST_MODE\s*\?[^;]*loadTable\('allow_list_test'\)/.test(bundle), true);
 
 // העיצוב: הקובץ היחיד שמגדיר ערך עיצוב נכנס כמות שהוא, וגם כל קובצי
 // הרכיבים שנקודת הכניסה של הערכה מייבאת. מספרם אינו נעול: קובץ רכיב

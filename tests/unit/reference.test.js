@@ -22,6 +22,8 @@ const KEYS_IN_MAP_2_4 = [
   // מפתח, ו-BL-12 אוסר ערך משתנה בקוד.
   'note_max_chars',
   'fallback_text', 'unavailable_text', 'voice_id', 'voice_rate',
+  // מפה גרסה 3.12, פער 84: טבלת ההגייה של CONN-02.
+  'speech_substitutions',
   'stale_session_minutes', 'interaction_types',
   'm01_threshold', 'm02_threshold', 'sample_min', 'sample_max',
   'enforce_gate_b', 'error_human_text', 'crossing_clear_seconds',
@@ -72,19 +74,25 @@ const DECIDED_IN_MAP = {
 // מהרשימה בהכרעה 5 של תוכנית שלב 5 (15.09.2026): בורר השפה he
 // והקצב 0.95, מהחילוץ מאב הטיפוס. privacy_opening_text ירד ממנה
 // 17.09.2026: הנוסח, שנגזר מ-PRD סעיף 25, אושר בידי בעלת הפרויקט.
+// speech_substitutions ירד מהרשימה 27.09.2026: 19 הזוגות אושרו בידי
+// בעלת הפרויקט (מפה 2.4 בנוסח 3.12, פער 84; docs/doc-stage-08-speech-table.md).
 const EXPECTED_EMPTY = ['model_tier'];
 
 check('משפט הפרטיות אושר ואינו ריק', typeof values.privacy_opening_text === 'string' && values.privacy_opening_text.length > 0, true);
 check('משפט הפרטיות מגלה את זיהוי הדיבור של הטלפון (PRD סעיף 25)', values.privacy_opening_text.includes('זיהוי הדיבור'), true);
 
 check('voice_id הוא בורר שפה, לפי הכרעה 5 של שלב 5', values.voice_id, 'he');
+check('טבלת ההגייה אושרה: 19 זוגות', Array.isArray(values.speech_substitutions) && values.speech_substitutions.length, 19);
+check('כל זוג הוא כתוב ונהגה, שתי מחרוזות',
+  values.speech_substitutions.every((pair) => Array.isArray(pair) && pair.length === 2 && pair.every((x) => typeof x === 'string' && x !== '')),
+  true);
 check('voice_rate הוא הקצב מאב הטיפוס', values.voice_rate, 0.95);
 
 // --- המפתחות מול 2.4 ---
 
-check('2.4 מונה שלושים מפתחות', KEYS_IN_MAP_2_4.length, 30);
+check('2.4 מונה שלושים ואחד מפתחות', KEYS_IN_MAP_2_4.length, 31);
 check('מפתח אחד נוסף בהכרעה', KEYS_ADDED_BY_DECISION.length, 1);
-check('הטבלה מונה שלושים ואחד מפתחות', Object.keys(values).length, 31);
+check('הטבלה מונה שלושים ושניים מפתחות', Object.keys(values).length, 32);
 check('המפתחות והסדר כמצופה', Object.keys(values), EXPECTED_ORDER);
 
 check(

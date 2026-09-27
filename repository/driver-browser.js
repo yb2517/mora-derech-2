@@ -24,7 +24,8 @@
 // נכתבת ב-appendRow ולא ב-updateRow אלא ב-setRefKey בלבד. הפעולה
 // נוספה במשימה 5 של שלב 4, מפני שמפה 4.2 נותנת ל-BE-06 את
 // set_enforce, שהיא כתיבה של מפתח בטבלה הזאת, ולא הייתה לה דרך.
-const SEEDED_ONLY = Object.freeze(['modules', 'allow_list', 'reference']);
+const REGISTRY = Object.freeze(['modules', 'allow_list']);
+const SEEDED_ONLY = Object.freeze([...REGISTRY, 'reference']);
 
 const REFERENCE = 'reference';
 
@@ -88,6 +89,30 @@ export function createBrowserDriver({ storage = globalThis.localStorage, seed = 
   // זריעה: טבלה שאינה קיימת באחסון מקבלת את הנתונים ההתחלתיים.
   // טבלה שכבר קיימת אינה נדרסת, גם לא בזריעה חוזרת. זה מה שהופך את
   // רענון הדף למבחן אמיתי: מה שנכתב בפעם הקודמת נשאר.
+  //
+  // מלבד טבלאות CORE-03, שנכתבות מהזריעה בכל טעינה (פער 86, הכרעת
+  // בעלת הפרויקט 27.09.2026). הן ה-Registry של הקוד ולא נתונים שנצברו,
+  // ואין להן כותב בזמן ריצה; זריעה חד פעמית השאירה בדפדפן שכבר ביקר
+  // את רשימת המותר של הביקור הראשון, גם אחרי שהקובץ השתנה, וגם אחרי
+  // ביקור במצב בדיקה (מפה 4.3). כך עושה גם דרייבר הענן.
+  for (const name of REGISTRY) {
+    if (seed[name] !== undefined) write(name, seed[name]);
+  }
+
+  // טבלת ה-reference שכבר באחסון מקבלת מהזריעה את המפתחות שחסרים בה,
+  // ומפתח קיים אינו נדרס (פער 88, הכרעת בעלת הפרויקט 27.09.2026). היא
+  // אינה נזרעת מחדש כולה, מפני שהיא נכתבת בזמן ריצה (set_enforce של
+  // BE-06). זה הכלל של כלי הייבוא במסד החי: מפתח שנוסף בשלב מגיע גם
+  // לדפדפן שכבר ביקר, וערך שנכתב בזמן ריצה נשאר.
+  const storedReference = read(REFERENCE);
+  if (storedReference !== undefined && seed[REFERENCE] !== undefined) {
+    const missing = Object.keys(seed[REFERENCE])
+      .filter((key) => !Object.prototype.hasOwnProperty.call(storedReference, key));
+    if (missing.length > 0) {
+      for (const key of missing) storedReference[key] = seed[REFERENCE][key];
+      write(REFERENCE, storedReference);
+    }
+  }
   for (const name of TABLE_NAMES) {
     if (read(name) !== undefined) continue;
     if (seed[name] !== undefined) {

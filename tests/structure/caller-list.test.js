@@ -25,6 +25,9 @@ const SKIP_DIRS = new Set(['.git', 'docs', 'tests', 'node_modules', '.claude', '
 const DATA_FILES = new Set([
   'registry/modules.json',
   'registry/allow-list.json',
+  // שתי שורות הסימולטור של מצב הבדיקה: נתוני CORE-03 בקובץ נפרד
+  // (מפה 4.3 ומסמך הבנייה 2.11 סעיף 5, פער 82).
+  'registry/allow-list-test.json',
   // interaction_type_senders מחזיק שמות פונים, וזה בדיוק העיקרון:
   // הרשאה היא תא בטבלה ולא שורה בקוד (פער 14, BL-12).
   'data/reference.json',

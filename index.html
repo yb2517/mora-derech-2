@@ -52,12 +52,22 @@
   import { create as createStt } from './connectors/stt.js';
   import { create as createLocation } from './connectors/location.js';
 
-  // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4.
+  // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4. והרביעית, שתי
+  // שורות tool-simulator, נטענת רק במצב בדיקה (מפה 4.3, פער 82).
   const TABLE_SOURCES = {
     modules: './registry/modules.json',
     allow_list: './registry/allow-list.json',
     reference: './data/reference.json',
+    allow_list_test: './registry/allow-list-test.json',
   };
+
+  // --- מצב בדיקה בכתובת (מפה 4.3, פערים 82 ו-83; תוכנית שלב 8 משימה 7) ---
+  //
+  // mode=test לצד screen. במצב הזה: שתי שורות הסימולטור נטענות מקובץ
+  // נפרד ומתווספות לרשימה שבזיכרון, פאנל הסימולטור מוצג גם עם מסך
+  // המטייל לבדו, ושם הקול שנבחר מוצג. בלי הפרמטר אין שום שינוי:
+  // הקובץ אינו נקרא. רשימת המותר של הייצור אינה משתנה.
+  const TEST_MODE = new URL(globalThis.location.href).searchParams.get('mode') === 'test';
 
   // שני מצבי טעינה, ואותם נתונים בשניהם.
   //
@@ -85,9 +95,13 @@
   }
 
   async function loadTables() {
-    const [modules, allowList, reference] = await Promise.all(
+    const [modules, production, reference] = await Promise.all(
       ['modules', 'allow_list', 'reference'].map(loadTable),
     );
+    // במצב בדיקה בלבד, ובזיכרון בלבד: הקובץ עצמו אינו משתנה.
+    const allowList = TEST_MODE
+      ? { ...production, rows: [...production.rows, ...(await loadTable('allow_list_test')).rows] }
+      : production;
     // צורת הזריעה של הדרייבר: הטבלה היא מה שה-Repository קורא,
     // ולכן reference נזרעת בערכים עצמם ולא במעטפת הקובץ.
     //
@@ -252,7 +266,7 @@
     const voice = createTts({
       engine: globalThis.speechSynthesis ?? null,
       Utterance: globalThis.SpeechSynthesisUtterance ?? null,
-      reference: referenceFor(['voice_id', 'voice_rate']),
+      reference: referenceFor(['voice_id', 'voice_rate', 'speech_substitutions']),
     });
     const microphone = createStt({
       Recognition: globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition ?? null,
@@ -303,7 +317,10 @@
       ? seed.allow_list.rows.filter((row) => row.from === loadedModules['TOOL-01'].caller)
       : [];
     const simulator = simulatorRows.length > 0 ? loadedModules['TOOL-01'].create({}) : null;
-    const devState = { simulator: false };
+    // במצב בדיקה הסימולטור פעיל מההתחלה, כדי שלחיצה על תחנה תפיק
+    // הגעה, והסשן יסומן simulator ולא ייספר במדדים (BL-16). המתג
+    // בפאנל מחזיר ל-GPS.
+    const devState = { simulator: TEST_MODE };
     const simulatorOn = () => simulator !== null && devState.simulator;
 
     const sampleSource = {
@@ -382,7 +399,9 @@
           'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
         ],
         create: createTravelerScreen,
-        equipment: { voice, microphone, device },
+        // testMode: לחצן הדילוג על משפטי הפתיחה, במצב בדיקה בלבד (מפה
+        // 4.3, פער 83).
+        equipment: { voice, microphone, device, testMode: TEST_MODE },
       },
       {
         moduleIds: ['FE-07', 'FE-08'],
@@ -456,9 +475,12 @@
     const shell = document.createElement('div');
     shell.append(...mounted.map((entry) => entry.host));
     // פאנל הסימולטור הוא כלי פיתוח (מסמך הבנייה סעיף 5: TOOL-01, פיתוח
-    // בלבד), ולכן הוא מוצג בהרכבת הפיתוח בלבד, ורק כשמסך המטייל בה.
-    if (simulator && development && traveler) {
-      shell.append(simulatorPanel({ repository, simulator, devState, traveler }));
+    // בלבד), ולכן הוא מוצג בהרכבת הפיתוח, או במצב בדיקה (מפה 4.3),
+    // ורק כשמסך המטייל בה. במצב בדיקה הוא נושא גם את שם הקול שנבחר.
+    if (simulator && (development || TEST_MODE) && traveler) {
+      shell.append(simulatorPanel({
+        repository, simulator, devState, traveler, voice: TEST_MODE ? voice : null,
+      }));
     }
     render(shell);
   }
@@ -468,8 +490,26 @@
   // הפאנל קיים רק כל עוד שורות הסימולטור ברשימת המותר קיימות, והוא
   // נעלם בשלב 7 יחד איתן. שדה הסוללה כאן מדמה את המכשיר בשולחן
   // העבודה, כדי ש-BL-20 ייבדק בדפדפן בלי לרוקן טלפון.
-  function simulatorPanel({ repository, simulator, devState, traveler }) {
+  function simulatorPanel({ repository, simulator, devState, traveler, voice = null }) {
     const body = document.createElement('div');
+
+    // שם הקול שמתאם הקול בחר (מפה 3.3 שורת CONN-02, פער 82; תוספת
+    // 27.09.2026 לתוכנית שלב 8). מוצג במצב בדיקה בלבד, כדי לדעת אם
+    // קול משופר שהותקן בטלפון הוא הקול שנשמע. לקריאה בלבד.
+    if (voice) {
+      const voiceLine = document.createElement('p');
+      voiceLine.className = 'text-sm';
+      voiceLine.dataset.testVoice = '';
+      const showVoice = () => {
+        const chosen = voice.selectedVoice();
+        voiceLine.textContent = chosen
+          ? `הקול שנבחר: ${chosen.name} (${chosen.lang})`
+          : 'אין קול עברי במכשיר';
+      };
+      showVoice();
+      if (voice.available()) voice.voicesLoaded().then(showVoice);
+      body.append(voiceLine);
+    }
 
     const toggleField = document.createElement('div');
     toggleField.className = 'field';
@@ -477,6 +517,7 @@
     toggleLabel.className = 'field__label';
     const toggle = document.createElement('input');
     toggle.type = 'checkbox';
+    toggle.checked = devState.simulator;
     toggle.addEventListener('change', () => { devState.simulator = toggle.checked; });
     toggleLabel.append(toggle, document.createTextNode(' סימולטור במקום GPS'));
     toggleField.append(toggleLabel);

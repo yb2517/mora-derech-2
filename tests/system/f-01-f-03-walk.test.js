@@ -51,8 +51,14 @@ const seed = {
     site_id: 'site-walk', name: 'מסלול', stops: ['stop-a', 'stop-cross', 'stop-empty', 'stop-last'],
     status: 'locked', locked_at: '2026-09-10T00:00:00.000Z', corpus_version: 1,
     bounds: { min_lat: 31.77, max_lat: 31.79, min_lng: 35.20, max_lng: 35.23 },
+  }, {
+    site_id: 'site-nomou', name: 'מסלול בלי הסכם', stops: ['stop-x'],
+    status: 'locked', locked_at: '2026-09-10T00:00:00.000Z', corpus_version: 1,
+    bounds: { min_lat: 31.77, max_lat: 31.79, min_lng: 35.20, max_lng: 35.23 },
   }],
-  sources: [{ source_id: 'src-walk', name: 'מקור' }],
+  // מסלול שני, שהמקור שלו אינו תחת הסכם: BL-03 במסירה (ממצא 6,
+  // משימה 6 בתוכנית שלב 8). הוא נפרד כדי לא לגעת במדדים של site-walk.
+  sources: [{ source_id: 'src-walk', name: 'מקור' }, { source_id: 'src-nomou', name: 'מקור בלי הסכם' }],
   rights_mou: [{
     mou_id: 'mou-walk', institute_id: 'inst-walk', scope: ['src-walk'],
     signed_at: '2026-09-01T00:00:00.000Z', valid_until: '2099-01-01T00:00:00.000Z',
@@ -62,12 +68,14 @@ const seed = {
     item('i-cross', 'stop-cross', 'הנקודה שבצומת.'),
     item('i-last', 'stop-last', 'הנקודה האחרונה של המסלול.'),
     { ...item('i-hidden', 'stop-empty', 'פריט שטרם אושר.'), status: 'pending' },
+    { ...item('i-nomou', 'stop-x', 'פריט מאושר ממקור בלי הסכם.'), site_id: 'site-nomou', source_id: 'src-nomou' },
   ],
   geo_anchors: [
     { anchor_id: 'an-a', item_id: 'i-a', lat: 31.781, lng: 35.219, verified: true, verified_at: 'T', is_crossing: false },
     { anchor_id: 'an-cross', item_id: 'i-cross', lat: 31.782, lng: 35.218, verified: true, verified_at: 'T', is_crossing: true },
     { anchor_id: 'an-last', item_id: 'i-last', lat: 31.783, lng: 35.217, verified: true, verified_at: 'T', is_crossing: false },
     { anchor_id: 'an-hidden', item_id: 'i-hidden', lat: 31.784, lng: 35.216, verified: false, verified_at: null, is_crossing: false },
+    { anchor_id: 'an-nomou', item_id: 'i-nomou', lat: 31.785, lng: 35.215, verified: true, verified_at: 'T', is_crossing: false },
   ],
 };
 
@@ -215,6 +223,25 @@ check('הסשן נפתח', opened.ok, true);
   });
   check('הסשן המסומן אינו נספר', metrics.data.n, 1);
   check('והגריעה מדווחת', metrics.data.excluded.simulator, 1);
+}
+
+// --- BL-03 במסירה: פריט approved ממקור בלי הסכם בתוקף אינו נמסר ---
+// ממצא 6, משימה 6 בתוכנית שלב 8. אותו כלל כמו בשליפה (F-05 K1).
+
+{
+  const opened = await send({
+    from: 'screen-traveler', module: 'BE-07', action: 'session_start', payload: { site_id: 'site-nomou' },
+  });
+  const other = opened.data.session.session_id;
+  advance(60);
+  const arrive = await geofence('arrive', { session_id: other, site_id: 'site-nomou', stop_id: 'stop-x' });
+
+  check('BL-03: הפריט ממקור בלי הסכם אינו נמסר בהגעה', arrive.data.delivered, null);
+  check('BL-03: המערכת שותקת', arrive.data.silent, true);
+  check('BL-03: ונרשמה הגעה בלי תוכן',
+    repository.listInteractions({ session_id: other, type: 'arrived_no_content' }).length, 1);
+  check('BL-03: ואף שורת pushed',
+    repository.listInteractions({ session_id: other, type: 'pushed' }).length, 0);
 }
 
 // --- ולכל בקשה שתי שורות ביומן, עם אותו מזהה ---

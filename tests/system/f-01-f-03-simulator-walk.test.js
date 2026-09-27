@@ -55,13 +55,19 @@ const STEP_DEGREES = 0.0009;
 const stopId = (n) => `stop-${String(n).padStart(2, '0')}`;
 const at = (n) => ({ lat: BASE.lat + (n - 1) * STEP_DEGREES, lng: BASE.lng });
 
+// לכל בניין שם משלו (משימה 4 בתוכנית שלב 8). המנוע הדו שלבי מסנן
+// מילה בת תו אחד ודורש מונח ייחודי במאגר, ולכן שאלה על "בניין 3"
+// בטקסטים שנבדלים רק בספרה אינה יכולה להבחין בין התחנות, והימנעות
+// היא התשובה הנכונה לה. השמות הם נתוני בדיקה סינתטיים.
+const BUILDINGS = ['אלון', 'ברוש', 'גפן', 'דקל', 'הדס', 'ורד', 'זית', 'חצב', 'טופח', 'יסמין', 'כלנית', 'לוטם'];
+
 const items = [];
 const anchors = [];
 for (let n = 1; n <= STOPS; n += 1) {
   const id = `item-${n}`;
   items.push({
     item_id: id, site_id: 'site-sim', stop_id: stopId(n), name: `נקודה ${n}`,
-    text: `זו הנקודה מספר ${n} במסלול המדומה. כאן עומד בניין ${n} עם סיפור משלו.`,
+    text: `זו הנקודה מספר ${n} במסלול המדומה. כאן עומד בניין ${BUILDINGS[n - 1]} עם סיפור משלו.`,
     source_id: 'src-sim', page: n, word_count: 14, audience: 'כולם',
     status: n === PENDING_STOP ? 'pending' : 'approved',
   });
@@ -220,8 +226,8 @@ check('הפריט של תחנת החצייה נמסר אחרי היציאה, ל�
 // --- ארבע שאלות, ארבע יזימות (מפה 6.3) ---
 
 const questions = [
-  `מה יש בבניין ${3}`,
-  `ספר על הנקודה מספר ${7}`,
+  `מה יש בבניין ${BUILDINGS[3 - 1]}`,
+  `ספר על בניין ${BUILDINGS[7 - 1]}`,
   'מי היה כאן לפני מאה שנה',
   'איפה המסעדה הקרובה',
 ];
@@ -233,7 +239,8 @@ for (const question of questions) {
   check(`השאלה "${question}" נענתה`, asked.ok, true);
 }
 check('ארבע שורות initiated', rows('initiated').length, 4);
-check('שאלה על פריט מאושר נענתה ממנו', rows('initiated').slice(0, 2).every((row) => row.is_fallback === false && row.source_item !== null), true);
+check('שאלה על פריט מאושר נענתה ממנו', rows('initiated').slice(0, 2).map((row) => [row.is_fallback, row.source_item]),
+  [[false, 'item-3'], [false, 'item-7']]);
 
 // --- המדדים גורעים את הסשן: BL-16 ---
 

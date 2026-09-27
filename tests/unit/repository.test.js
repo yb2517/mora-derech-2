@@ -366,6 +366,49 @@ function liveDriver() {
   );
 }
 
+// --- טבלאות CORE-03 נכתבות מהזריעה בכל טעינה (פער 86) ---
+//
+// הכרעת בעלת הפרויקט 27.09.2026, דרך א. מפה 4.3: שורות הסימולטור
+// מתווספות רק במצב בדיקה, ובלעדיו אין שום שינוי. בדפדפן שכבר ביקר,
+// רשימת המותר היא של הטעינה הנוכחית ולא של הביקור הראשון, בשני
+// הכיוונים. שאר הטבלאות נשארות כפי שנכתבו.
+
+{
+  const storage = memoryStorage();
+  const extra = { from: 'tool-simulator', module: 'FE-04', action: 'arrive' };
+  const testSeed = { ...seed, allow_list: { ...seed.allow_list, rows: [...seed.allow_list.rows, extra] } };
+  const rows = (s) => createRepository(createBrowserDriver({ storage, seed: s })).listAllowed().length;
+
+  const normal = seed.allow_list.rows.length;
+  check('ביקור רגיל ראשון: רשימת הזריעה', rows(seed), normal);
+  check('ואחריו מצב בדיקה: השורה הנוספת מגיעה', rows(testSeed), normal + 1);
+  check('ואחריו ביקור רגיל: השורה הנוספת יורדת', rows(seed), normal);
+
+  const withAudit = createRepository(createBrowserDriver({ storage, seed }));
+  withAudit.appendAudit({ request_id: 'req-086', phase: 'request' });
+  const again = createRepository(createBrowserDriver({ storage, seed }));
+  check('הזריעה בכל טעינה אינה נוגעת ביומן', again.listAudit().map((r) => r.request_id), ['req-086']);
+}
+
+// --- מפתח reference חסר מגיע מהזריעה, ומפתח קיים אינו נדרס (פער 88) ---
+//
+// הכרעת בעלת הפרויקט 27.09.2026. דפדפן שביקר לפני שנוסף מפתח (כמו
+// speech_substitutions בשלב 8) מקבל אותו בטעינה הבאה; ערך שנכתב בזמן
+// ריצה, כמו enforce_gate_b ב-set_enforce, נשאר.
+
+{
+  const storage = memoryStorage();
+  const { speech_substitutions: added, ...older } = seed.reference;
+  const before = createBrowserDriver({ storage, seed: { ...seed, reference: older } });
+  check('ביקור לפני המפתח: אין speech_substitutions',
+    'speech_substitutions' in before.readTable('reference'), false);
+  before.setRefKey('enforce_gate_b', true);
+
+  const after = createRepository(createBrowserDriver({ storage, seed }));
+  check('בטעינה הבאה המפתח החסר מגיע', after.getRef('speech_substitutions'), added);
+  check('וערך שנכתב בזמן ריצה אינו נדרס', after.getRef('enforce_gate_b'), true);
+}
+
 // --- מבחן ההחלפה: דרייבר אחר, אותו ממשק, אפס שינוי ב-index.js ---
 
 {

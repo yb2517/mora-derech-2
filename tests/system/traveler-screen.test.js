@@ -18,6 +18,7 @@ const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
 const { FIXTURE_SEED } = await import('../helpers/fixtures.js');
+const { corpusItems, corpusSentence } = await import('../helpers/corpus-pool.js');
 const { create } = await import('../../screens/traveler/index.js');
 const { create: createGovernance } = await import('../../services/governance.js');
 const { create: createGate } = await import('../../services/gate.js');
@@ -45,6 +46,13 @@ const repository = createRepository(createBrowserDriver({
     reference: referenceFile.values,
     // נתוני ההדגמה, כדי שיהיה מסלול, פריטים מאושרים ונקודת יציאה.
     ...FIXTURE_SEED,
+    // 19 הטקסטים של הקורפוס, מאושרים, באותו מסלול ובאותו מקור (משימה 4
+    // בתוכנית שלב 8): המנוע הדו שלבי דורש מאגר שיש בו מונח ייחודי,
+    // ושלושת הפריטים המאושרים של הזריעה אינם מאגר כזה.
+    content_items: [
+      ...FIXTURE_SEED.content_items,
+      ...corpusItems({ site_id: 'site-demo-jaffa', source_id: 'src-demo-1', prefix: 'corpus-' }),
+    ],
     // הסשנים של ההדגמה אינם נזרעים כאן: הבדיקה פותחת סשן משלה,
     // ושלושת הסשנים הסינתטיים היו הופכים אותה לתלויה בהם.
     sessions: [],
@@ -160,15 +168,14 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
 // --- שאלה שיש עליה תשובה בקורפוס ---
 
 {
-  const item = repository.listItems({ status: 'approved' })[0];
-  const word = item.text.split(' ').find((w) => w.length > 4);
-
-  dom.host.querySelector('input').type(word);
+  // השאלה של בדיקת הקבלה של שלב 8 (CLAUDE.md סעיף 6).
+  dom.host.querySelector('input').type('מתי נבנה שער יפו?');
   byLabel('שאלה').click();
   await settle();
 
   const quoted = dom.host.querySelector('.quote').textContent;
   check('התשובה אינה הימנעות', quoted !== referenceFile.values.fallback_text, true);
+  check('והיא משפט 1538 מ-J-02', quoted, corpusSentence('J-02', 11));
 
   // BL-13: התשובה היא ציטוט או קיצוץ מפריט מאושר, בלי מילה שאינה
   // בו. איזה פריט ניצח הוא עניין של הדירוג, ולכן הטענה היא על
@@ -391,9 +398,10 @@ dom.restore();
   };
 
   let heard = { ok: true, data: { text: 'שאלה בקול' } };
+  let listens = 0;
   const microphone = {
     available: () => true,
-    listen: async () => heard,
+    listen: async () => { listens += 1; return heard; },
     stop: () => ({ ok: true, data: { stopped: false } }),
   };
 
@@ -456,6 +464,43 @@ dom.restore();
   await settle();
   check('ביטול בידי המשפחה: לא נרשם דבר', repository.listInteractions({ session_id: session5.session_id }).length, rows5.length);
 
+  // --- Enter בשדה ההקלדה (ממצא 1, משימה 5 בתוכנית שלב 8) ---
+  // usecase-f-04 צעד 2, החלופה של הקלדה, ואב הטיפוס: Enter שולח כמו
+  // הכפתור, ושאלה ריקה אינה נשלחת.
+
+  {
+    const input = stage5Dom.host.querySelector('input');
+    const asks = () => sent5.filter((e) => e.module === 'BE-03' && e.action === 'ask').length;
+    const asksBefore = asks();
+    const listensBefore = listens;
+
+    input.type('');
+    input.press('Enter');
+    await settle();
+    check('Enter בשדה ריק אינו שולח שאלה', asks(), asksBefore);
+    check('ואינו פותח את המיקרופון', listens, listensBefore);
+
+    input.type('   ');
+    input.press('Enter');
+    await settle();
+    check('Enter בשדה של רווחים בלבד אינו שולח', asks(), asksBefore);
+
+    input.type('מה יש בתחנה הזאת');
+    input.press('a');
+    await settle();
+    check('מקש אחר אינו שולח', asks(), asksBefore);
+
+    input.press('Enter');
+    await settle();
+    const typed = sent5.filter((e) => e.module === 'BE-03' && e.payload?.question === 'מה יש בתחנה הזאת');
+    check('Enter בשדה עם טקסט שולח ask אחד', asks(), asksBefore + 1);
+    check('את הטקסט שהוקלד, כמו הכפתור', typed.length, 1);
+    check('עם הקשר הסשן והתחנה, כמו הכפתור',
+      [typed[0]?.payload.session_id, typed[0]?.payload.stop_id], [session5.session_id, 'stop-demo-a']);
+    check('ובלי לפתוח את המיקרופון', listens, listensBefore);
+    check('והשדה מתרוקן אחרי התשובה', stage5Dom.host.querySelector('input').value, '');
+  }
+
   // --- הודעה מהמכשיר אחרי ההתחלה, דרך ההרכבה ---
 
   withDevice.notify({ ok: false, error: { code: 'E-LOCATION-NOT-ALLOWED', data: null } });
@@ -513,6 +558,79 @@ dom.restore();
     ['ended_on_battery', 'no_hebrew_voice', 'no_location', 'simulator']);
   check('אירוע session:end יצא', events.at(-1), ['session:end', resumed5]);
   check('מגע אחד אחרי הסיום', buttons5().map((b) => b.textContent.trim()), ['התחלת הטיול']);
+}
+
+// ---------------------------------------------------------------------
+// מצב בדיקה: הדילוג על משפטי הפתיחה (מפה 4.3, פער 83; משימה 8 בתוכנית
+// שלב 8). בכתובת הרגילה אין לחצן, ומשפט הבטיחות נשמע במלואו
+// (usecase-f-13 צעד 1).
+// ---------------------------------------------------------------------
+
+{
+  // קול שההשמעה שלו נמשכת עד stop, כדי שיהיה מה לדלג עליו.
+  function heldVoice() {
+    const calls = [];
+    const listeners = new Map();
+    let pending = null;
+    return {
+      calls,
+      speak: (text) => {
+        calls.push(['speak', text]);
+        for (const fn of listeners.get('start') ?? []) fn({ text });
+        return new Promise((resolve) => { pending = resolve; });
+      },
+      stop: () => {
+        calls.push(['stop']);
+        pending?.({ ok: true, data: { interrupted: true } });
+        pending = null;
+        return { ok: true, data: { stopped: true } };
+      },
+      on: (event, fn) => { if (!listeners.has(event)) listeners.set(event, new Set()); listeners.get(event).add(fn); },
+      hasVoice: () => true,
+      voicesLoaded: async () => [],
+    };
+  }
+
+  // משפט פרטיות סינתטי של הבדיקה, כדי שהטענה "המשפט השני אינו נאמר"
+  // לא תהיה תלויה בנוסח שבטבלה.
+  const PRIVACY = 'משפט פרטיות סינתטי של הבדיקה.';
+  const SAFETY = referenceFile.values.safety_opening_text;
+  const withPrivacy = { ...reference, privacy_opening_text: PRIVACY };
+
+  const mount = (testMode) => {
+    const skipDom = installDom();
+    const voice = heldVoice();
+    const screen = create({ host: skipDom.host, from: caller, reference: withPrivacy, send: realSend, voice, testMode });
+    const labels = () => skipDom.host.querySelectorAll('button').map((b) => b.textContent.trim());
+    const press = (label) => skipDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === label)?.click();
+    return { skipDom, voice, screen, labels, press };
+  };
+
+  const regular = mount(false);
+  regular.press('התחלת הטיול');
+  await settle();
+  check('בכתובת הרגילה: משפט הבטיחות נאמר', regular.voice.calls[0], ['speak', SAFETY]);
+  check('ואין לחצן דילוג בזמן שהוא נשמע', regular.labels().includes('דילוג על משפטי הפתיחה'), false);
+  regular.press('סיום הטיול');
+  await settle();
+
+  const test = mount(true);
+  test.press('התחלת הטיול');
+  await settle();
+  const sessionId = test.screen.state().session_id;
+  check('במצב בדיקה: משפט הבטיחות מתחיל להישמע', test.voice.calls[0], ['speak', SAFETY]);
+  check('ולחצן הדילוג מוצג בזמן שהוא נשמע', test.labels().includes('דילוג על משפטי הפתיחה'), true);
+
+  test.press('דילוג על משפטי הפתיחה');
+  await settle();
+  check('לחיצה עוצרת את הקול', test.voice.calls.some((c) => c[0] === 'stop'), true);
+  check('ומשפט הפרטיות אינו נאמר', test.voice.calls.some((c) => c[1] === PRIVACY), false);
+  check('הסשן ממשיך', test.screen.state().session_id, sessionId);
+  check('משפט הבטיחות נשאר כתוב על המסך', test.skipDom.host.textContent.includes(SAFETY), true);
+  check('וגם משפט הפרטיות כתוב', test.skipDom.host.textContent.includes(PRIVACY), true);
+  check('והלחצן נעלם אחרי הדילוג', test.labels().includes('דילוג על משפטי הפתיחה'), false);
+  test.press('סיום הטיול');
+  await settle();
 }
 
 report(` (${sent.length} מעטפות)`);
