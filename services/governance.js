@@ -293,6 +293,42 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
 
   // מפה 2.1: word_count הוא שדה של הפריט. הוא נגזר מהטקסט ואינו
   // מתקבל מהמסך, כדי ששני מקורות לא יחלקו על אורך אותו טקסט.
+  // סדר הסיור של רשימת הפריטים, לפאנל הווטו ולמסך הניהול: סדר
+  // התחנות במסלול (site.stops), ובתוך תחנה העמוד במקור, שהוא סדר
+  // הקריאה בחוברת. שני פריטים באותה תחנה ובאותו עמוד: העוגן הקרוב
+  // יותר לעוגן הראשון במסלול קודם, מפני שהסיור מתרחק מנקודת
+  // ההתחלה. בלי זה הרשימה יוצאת בסדר המזהים, ובמסד הענן הם אקראיים.
+  // לפריט אין שדה סדר במפה 2.1, והכלל הזה אינו מוסיף אחד. אותו כלל
+  // כמו routeOrder של TOOL-01, שמסדר את לחצני מצב הבדיקה.
+  function tourOrder(items) {
+    const stopsOf = new Map();
+    const stopIndex = (item) => {
+      if (!stopsOf.has(item.site_id)) {
+        stopsOf.set(item.site_id, repository.getSite(item.site_id)?.stops ?? []);
+      }
+      const index = stopsOf.get(item.site_id).indexOf(item.stop_id);
+      return index === -1 ? Number.POSITIVE_INFINITY : index;
+    };
+    const page = (item) => (Number.isFinite(item.page) ? item.page : Number.POSITIVE_INFINITY);
+    const siteIds = [...new Set(items.map((item) => item.site_id))];
+    const byStopAndPage = (a, b) => (siteIds.indexOf(a.site_id) - siteIds.indexOf(b.site_id))
+      || (stopIndex(a) - stopIndex(b)) || (page(a) - page(b));
+    const anchorOf = (item) => repository.getAnchorByItem(item.item_id);
+    const firstBySite = new Map();
+    for (const item of [...items].sort(byStopAndPage)) {
+      if (!firstBySite.has(item.site_id) && anchorOf(item)) firstBySite.set(item.site_id, anchorOf(item));
+    }
+    const spread = (item) => {
+      const start = firstBySite.get(item.site_id);
+      const anchor = anchorOf(item);
+      if (!start || !anchor) return Number.POSITIVE_INFINITY;
+      const dLat = anchor.lat - start.lat;
+      const dLng = (anchor.lng - start.lng) * Math.cos((start.lat * Math.PI) / 180);
+      return dLat * dLat + dLng * dLng;
+    };
+    return [...items].sort((a, b) => byStopAndPage(a, b) || (spread(a) - spread(b)));
+  }
+
   function wordCount(text) {
     return String(text ?? '').trim().split(/\s+/).filter(Boolean).length;
   }
@@ -301,7 +337,7 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
     // --- הקריאות שהמסכים מציגים (מפה 4.2, פער 30) ---
 
     listItems: ({ payload = {} }) => ok({
-      items: repository.listItems(payload).map(({ text, ...rest }) => rest),
+      items: tourOrder(repository.listItems(payload)).map(({ text, ...rest }) => rest),
     }),
 
     getItem: ({ payload = {} }) => {

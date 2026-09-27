@@ -70,7 +70,8 @@ const UNKNOWN = 'לא ידוע';
  * @param {object} [options.microphone] CONN-01: listen, stop, available.
  * @param {object} [options.device] מה שההרכבה יודעת על המכשיר:
  *   flags() לדגלי הסשן שאינם של המסך (simulator), position() לדגימה
- *   האחרונה של AUTO-01, direction(from, to) לרוח השמיים.
+ *   האחרונה של AUTO-01, direction(from, to) לרוח השמיים, ו-stops(site_id)
+ *   לרשימת תחנות המסלול, למחוון ההתקדמות (מפה 4.1, פער 93).
  * @param {boolean} [options.testMode] מצב בדיקה בכתובת (מפה 4.3, פער 83):
  *   לחצן שעוצר את השמעת משפטי הפתיחה. בלי מצב בדיקה אין לחצן, ומשפט
  *   הבטיחות נשמע במלואו (usecase-f-13 צעד 1).
@@ -97,6 +98,11 @@ export function create({
     notices: new Set(),
     sessionFlags: new Set(),
     error: null,
+    // מחוון ההתקדמות (מפה 3.3 שורת FE-05, פער 93): התחנות הייחודיות
+    // שהושגו בסשן, והאחרונה שבהן. מתאפס בתחילת טיול, ולא בחידוש אחרי
+    // חסימת סוללה, שממשיך את אותה הליכה (BL-20).
+    reached: new Set(),
+    lastReached: null,
   };
 
   const listeners = new Map();
@@ -193,6 +199,8 @@ export function create({
     view.session = response.data?.session ?? null;
     view.resumed = response.data?.resumed === true;
     view.error = null;
+    view.reached = new Set();
+    view.lastReached = null;
     render();
 
     emit('session:start', { session: view.session, site_id: view.session?.site_id ?? view.site?.site_id });
@@ -527,8 +535,58 @@ export function create({
     return [`${view.exit.name}, `, num(view.exit.distance), ` מטר, ${view.exit.direction}`];
   }
 
+  // --- מחוון ההתקדמות (מפה 3.3 שורת FE-05 ו-4.1, פער 93) ---
+  //
+  // רשימת התחנות מגיעה מההרכבה (device.stops), וההגעה לתחנה מגיעה
+  // ממנה ב-reachStop. המסך אינו שולח בשבילם מעטפה. תחנה שאינה במסלול
+  // אינה נספרת, והגעה חוזרת לאותה תחנה אינה מקדמת.
+  function routeStops() {
+    if (typeof device?.stops !== 'function') return [];
+    const stops = device.stops(view.session?.site_id ?? view.site?.site_id);
+    return Array.isArray(stops) ? stops : [];
+  }
+
+  function reachStop(stopId) {
+    if (!view.session || !routeStops().includes(stopId)) return false;
+    const before = view.reached.size;
+    view.reached.add(stopId);
+    view.lastReached = stopId;
+    render();
+    return view.reached.size > before;
+  }
+
+  // נקודות לאורך המסלול, מימין לשמאל כמו הכתב, ומתחתן אותו מצב במילים,
+  // כדי שיישאר קריא גם בראיית לילה (RouteProgress בערכת העיצוב). המספרים
+  // עטופים ב-.num, כדי שייקראו משמאל לימין בתוך העברית.
+  function routeProgress() {
+    const stops = routeStops();
+    if (stops.length === 0) return null;
+    const dots = stops.map((stopId) => {
+      const state = stopId === view.lastReached ? 'current' : (view.reached.has(stopId) ? 'done' : 'ahead');
+      return createElement('span', { class: `route-progress__dot route-progress__dot--${state}` });
+    });
+    const track = createElement('div', {
+      class: 'route-progress__track',
+      role: 'progressbar',
+      'aria-label': 'התקדמות במסלול',
+      'aria-valuemin': '0',
+      'aria-valuemax': String(stops.length),
+      'aria-valuenow': String(view.reached.size),
+    }, dots);
+    const label = createElement('p', { class: 'route-progress__label' }, [
+      'נקודה ',
+      createElement('span', { class: 'num' }, String(view.reached.size)),
+      ' מתוך ',
+      createElement('span', { class: 'num' }, String(stops.length)),
+    ]);
+    return createElement('div', { class: 'route-progress', 'data-route-progress': '' }, [track, label]);
+  }
+
   function walking() {
     const children = [];
+
+    const progress = routeProgress();
+    if (progress) children.push(progress);
 
     if (view.battery === BATTERY.WARNED) {
       children.push(createElement('div', { class: 'message message--warn' },
@@ -630,6 +688,8 @@ export function create({
   return {
     setBatteryLevel,
     notify,
+    /** ההרכבה מוסרת כאן את התחנה ש-AUTO-01 זיהה (מפה 4.1, פער 93). */
+    reachStop,
     /** אירועי מחזור החיים למי שמרכיב: session:start, session:end, battery:block, battery:resume. */
     on(event, fn) {
       if (!listeners.has(event)) listeners.set(event, new Set());
@@ -643,6 +703,7 @@ export function create({
       flags: currentFlags(),
       exit: view.exit ? { ...view.exit } : null,
       now_speaking: view.nowSpeaking,
+      progress: { reached: view.reached.size, total: routeStops().length, last: view.lastReached },
     }),
   };
 }

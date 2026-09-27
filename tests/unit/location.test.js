@@ -8,7 +8,8 @@
 //   node tests/unit/location.test.js
 
 import { create as createLocation } from '../../connectors/location.js';
-import { create as createSimulator } from '../../tools/simulator.js';
+import { create as createSimulator, routeOrder } from '../../tools/simulator.js';
+import corpus from '../../data/corpus/jaffa-01.json' with { type: 'json' };
 import { fakeGeolocation, flush } from '../helpers/device.js';
 import { createChecker } from '../helpers/assert.js';
 
@@ -129,6 +130,40 @@ function fakeClock(start = 1_000_000) {
   simulator.stop();
   simulator.arriveAt('st-1');
   check('אחרי stop הדגימה נרשמת אך אינה נמסרת', [samples.length, simulator.emitted().length], [3, 4]);
+}
+
+// ---------------------------------------------------------------------
+// TOOL-01: סדר הסיור. הלחצנים בפאנל מצב הבדיקה ממוספרים לפי סדר
+// המסלול, ולא לפי סדר המזהים (במסד הענן המזהים אקראיים, ולחצן 5
+// היה "רחבת שער יפו"). המקור: סדר התחנות של המסלול, והעמודים של
+// החוברת (source-maslulimisrael-reference), כפי שהם בקורפוס.
+// ---------------------------------------------------------------------
+
+{
+  const points = corpus.items.map((row) => ({
+    item_id: row.item_id, stop_id: row.stop_id, page: row.page, lat: row.lat, lng: row.lng, name: row.name,
+  }));
+  const expected = points.map((point) => point.item_id);
+
+  // ערבוב קבוע, כדי שהבדיקה לא תעבור במקרה: הפוך, ואז זוגיים לפני אי זוגיים.
+  const reversed = [...points].reverse();
+  const shuffled = [...reversed.filter((_, i) => i % 2 === 0), ...reversed.filter((_, i) => i % 2 === 1)];
+  check('הקלט אכן מעורבב', shuffled.map((p) => p.item_id).join() === expected.join(), false);
+
+  const ordered = routeOrder(shuffled, corpus.site.stops).map((point) => point.item_id);
+  check('19 הנקודות בסדר הסיור של החוברת, J-01 עד J-19', ordered, expected);
+  check('הנקודה הראשונה היא חניון ממילא, והשנייה תחילת הסיור בשער יפו', ordered.slice(0, 2), ['J-01', 'J-02']);
+  check('שתי נקודות באותה תחנה ובאותו עמוד (J-17, J-18): הקרובה לתחילת המסלול קודמת',
+    ordered.indexOf('J-17') < ordered.indexOf('J-18'), true);
+
+  const simulator = createSimulator({ clock: fakeClock() });
+  simulator.load(shuffled, { stops: corpus.site.stops });
+  check('load עם stops טוען בסדר הסיור', simulator.route().map((point) => point.item_id), expected);
+  simulator.load(shuffled);
+  check('load בלי stops שומר את הסדר שנמסר', simulator.route().map((point) => point.item_id), shuffled.map((p) => p.item_id));
+  check('תחנה שאינה במסלול: בסוף, ולא נזרקת',
+    routeOrder([{ stop_id: 'x', page: 1, lat: 0, lng: 0 }, points[0]], corpus.site.stops).map((p) => p.item_id ?? p.stop_id),
+    ['J-01', 'x']);
 }
 
 report();
