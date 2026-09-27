@@ -560,4 +560,77 @@ dom.restore();
   check('מגע אחד אחרי הסיום', buttons5().map((b) => b.textContent.trim()), ['התחלת הטיול']);
 }
 
+// ---------------------------------------------------------------------
+// מצב בדיקה: הדילוג על משפטי הפתיחה (מפה 4.3, פער 72; משימה 8 בתוכנית
+// שלב 8). בכתובת הרגילה אין לחצן, ומשפט הבטיחות נשמע במלואו
+// (usecase-f-13 צעד 1).
+// ---------------------------------------------------------------------
+
+{
+  // קול שההשמעה שלו נמשכת עד stop, כדי שיהיה מה לדלג עליו.
+  function heldVoice() {
+    const calls = [];
+    const listeners = new Map();
+    let pending = null;
+    return {
+      calls,
+      speak: (text) => {
+        calls.push(['speak', text]);
+        for (const fn of listeners.get('start') ?? []) fn({ text });
+        return new Promise((resolve) => { pending = resolve; });
+      },
+      stop: () => {
+        calls.push(['stop']);
+        pending?.({ ok: true, data: { interrupted: true } });
+        pending = null;
+        return { ok: true, data: { stopped: true } };
+      },
+      on: (event, fn) => { if (!listeners.has(event)) listeners.set(event, new Set()); listeners.get(event).add(fn); },
+      hasVoice: () => true,
+      voicesLoaded: async () => [],
+    };
+  }
+
+  // משפט פרטיות סינתטי של הבדיקה: הטבלה עדיין ממתינה לנוסח (פער 31),
+  // והבדיקה צריכה משפט שני כדי להראות שהוא אינו נאמר אחרי הדילוג.
+  const PRIVACY = 'משפט פרטיות סינתטי של הבדיקה.';
+  const SAFETY = referenceFile.values.safety_opening_text;
+  const withPrivacy = { ...reference, privacy_opening_text: PRIVACY };
+
+  const mount = (testMode) => {
+    const skipDom = installDom();
+    const voice = heldVoice();
+    const screen = create({ host: skipDom.host, from: caller, reference: withPrivacy, send: realSend, voice, testMode });
+    const labels = () => skipDom.host.querySelectorAll('button').map((b) => b.textContent.trim());
+    const press = (label) => skipDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === label)?.click();
+    return { skipDom, voice, screen, labels, press };
+  };
+
+  const regular = mount(false);
+  regular.press('התחלת הטיול');
+  await settle();
+  check('בכתובת הרגילה: משפט הבטיחות נאמר', regular.voice.calls[0], ['speak', SAFETY]);
+  check('ואין לחצן דילוג בזמן שהוא נשמע', regular.labels().includes('דילוג על משפטי הפתיחה'), false);
+  regular.press('סיום הטיול');
+  await settle();
+
+  const test = mount(true);
+  test.press('התחלת הטיול');
+  await settle();
+  const sessionId = test.screen.state().session_id;
+  check('במצב בדיקה: משפט הבטיחות מתחיל להישמע', test.voice.calls[0], ['speak', SAFETY]);
+  check('ולחצן הדילוג מוצג בזמן שהוא נשמע', test.labels().includes('דילוג על משפטי הפתיחה'), true);
+
+  test.press('דילוג על משפטי הפתיחה');
+  await settle();
+  check('לחיצה עוצרת את הקול', test.voice.calls.some((c) => c[0] === 'stop'), true);
+  check('ומשפט הפרטיות אינו נאמר', test.voice.calls.some((c) => c[1] === PRIVACY), false);
+  check('הסשן ממשיך', test.screen.state().session_id, sessionId);
+  check('משפט הבטיחות נשאר כתוב על המסך', test.skipDom.host.textContent.includes(SAFETY), true);
+  check('וגם משפט הפרטיות כתוב', test.skipDom.host.textContent.includes(PRIVACY), true);
+  check('והלחצן נעלם אחרי הדילוג', test.labels().includes('דילוג על משפטי הפתיחה'), false);
+  test.press('סיום הטיול');
+  await settle();
+}
+
 report(` (${sent.length} מעטפות)`);

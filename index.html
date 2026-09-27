@@ -399,7 +399,9 @@
           'battery_warn_percent', 'battery_block_percent', 'battery_resume_percent',
         ],
         create: createTravelerScreen,
-        equipment: { voice, microphone, device },
+        // testMode: לחצן הדילוג על משפטי הפתיחה, במצב בדיקה בלבד (מפה
+        // 4.3, פער 72).
+        equipment: { voice, microphone, device, testMode: TEST_MODE },
       },
       {
         moduleIds: ['FE-07', 'FE-08'],

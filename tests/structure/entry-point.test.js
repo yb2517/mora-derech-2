@@ -118,6 +118,7 @@ check('בלי מצב בדיקה רשימת המותר היא קובץ הייצו
 check('פאנל הסימולטור: בהרכבת הפיתוח, או במצב בדיקה',
   /simulator && \(development \|\| TEST_MODE\) && traveler/.test(code), true);
 check('שם הקול מגיע לפאנל רק במצב בדיקה', /voice:\s*TEST_MODE \? voice : null/.test(code), true);
+check('ומסך המטייל מקבל את מצב הבדיקה, ללחצן הדילוג (פער 72)', /equipment:\s*\{[^}]*testMode:\s*TEST_MODE/.test(code), true);
 
 // --- 3א. בוחרת מסך לפי הפרמטר screen, ומשווה אותו לנתונים (מפה 4.3, פער 63) ---
 
