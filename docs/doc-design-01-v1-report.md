@@ -38,7 +38,7 @@ Tests that bear on this change directly:
 | `reference-values.test.js` (structure test 05) | 6 passed, 0 failed |
 | `bundle.test.js` | 33 passed, 0 failed |
 
-The suite went red once during the work: `bundle.test.js` failed "seven component files: expected 7, got 8" when `type.css` was added. The classes moved into `base.css` and the suite returned to green without any test change (G-10).
+The suite went red once during the work: `bundle.test.js` failed "seven component files: expected 7, got 8" when `type.css` was added. The classes moved into `base.css` and the suite returned to green without any test change (G-10). After the owner's G-10 decision the assertion changed, `type.css` was added, and the suite is green on `fc56909` and on main (`ab95ccb`); the isolation test now counts 10 design files.
 
 ## 3. The structure tests that bear on this change
 
