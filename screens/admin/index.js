@@ -16,7 +16,7 @@
 // מה שאינו כאן: אימות זהות. הוכרע 12.09 שאין ב-v1, ושתידרש סיסמה
 // לפני שהפאנל יוצא למכון. מחליף ה-role הוא נוחות פיתוח ואינו הרשאה.
 
-import { createElement, panel, humanError } from '../view.js';
+import { createElement, panel, humanError, num } from '../view.js';
 
 // שני התפקידים של מסך הניהול, לפי ADMIN_USERS.role במפה 2.1.
 // לכל אחד המודול שממנו נגזר שם הפונה שלו.
@@ -357,7 +357,7 @@ export function create({ host, from, reference, send, location = null }) {
       const head = createElement('button', { class: 'list__head', type: 'button' }, [
         createElement('span', {}, [
           createElement('span', { class: 'list__title' }, item.name),
-          createElement('span', { class: 'list__meta' }, `${item.stop_id}, עמוד ${item.page}`),
+          createElement('span', { class: 'list__meta' }, [`${item.stop_id}, עמוד `, num(item.page)]),
         ]),
         createElement('span', { class: `status status--${item.status}` }, STATE_LABEL[item.status]),
       ]);
@@ -377,7 +377,7 @@ export function create({ host, from, reference, send, location = null }) {
     crossing.addEventListener('click', () => { view.crossing = !view.crossing; render(); });
 
     const children = [
-      createElement('p', { class: 'list__meta' }, `${anchor.lat}, ${anchor.lng}`),
+      createElement('p', { class: 'list__meta' }, num(`${anchor.lat}, ${anchor.lng}`)),
       createElement('span', { class: anchor.verified ? 'status status--approved' : 'status status--pending' },
         anchor.verified ? 'אומת בשטח' : 'לא אומת'),
       createElement('p', { class: anchor.is_crossing ? 'message message--warn' : 'text-sm text-muted' },
@@ -399,7 +399,8 @@ export function create({ host, from, reference, send, location = null }) {
       if (view.device) {
         const meters = metersBetween(anchor, view.device);
         children.push(createElement('p', { class: 'text-sm' },
-          `מיקום המכשיר: ${view.device.lat}, ${view.device.lng} (דיוק ${Math.round(view.device.accuracy_m)} מטר), במרחק ${meters} מטר מהעוגן הרשום.`));
+          ['מיקום המכשיר: ', num(`${view.device.lat}, ${view.device.lng}`),
+            ' (דיוק ', num(Math.round(view.device.accuracy_m)), ' מטר), במרחק ', num(meters), ' מטר מהעוגן הרשום.']));
         const verifyHere = createElement('button', { class: 'btn btn--primary', type: 'button' }, 'אומת בשטח במיקום המכשיר');
         verifyHere.addEventListener('click', () => act('BE-05', 'verify_anchor', {
           item_id: view.open?.item?.item_id,
@@ -516,7 +517,7 @@ export function create({ host, from, reference, send, location = null }) {
 
     return createElement('div', {}, [
       formField('institute_id', 'המכון', institute),
-      formField('scope', `היקף ההסכם: ${view.mouForm.scope.length} מתוך ${view.sources.length} מקורות`, scope),
+      formField('scope', ['היקף ההסכם: ', num(view.mouForm.scope.length), ' מתוך ', num(view.sources.length), ' מקורות'], scope),
       dateField('signed_at', 'תאריך חתימה'),
       dateField('valid_until', 'תאריך תוקף'),
       createElement('div', { class: 'btn-row' }, [covers]),
@@ -531,7 +532,7 @@ export function create({ host, from, reference, send, location = null }) {
       const institute = view.institutes.find((i) => i.institute_id === mou.institute_id);
       return createElement('tr', {}, [
         createElement('td', {}, institute?.name ?? mou.institute_id),
-        createElement('td', {}, `${mou.scope.length} מקורות`),
+        createElement('td', {}, [num(mou.scope.length), ' מקורות']),
         createElement('td', {}, mou.valid_until ?? ''),
       ]);
     });
@@ -594,7 +595,7 @@ export function create({ host, from, reference, send, location = null }) {
       createElement('td', {}, [
         createElement('span', { class: metric.passes ? 'status status--approved' : 'status status--rejected' },
           metric.passes ? 'עובר' : 'לא עובר'),
-        createElement('span', { class: 'list__meta' }, `סף ${metric.threshold}`),
+        createElement('span', { class: 'list__meta' }, ['סף ', num(metric.threshold)]),
       ]),
     ]));
 
@@ -608,8 +609,8 @@ export function create({ host, from, reference, send, location = null }) {
       view.sample
         ? createElement('p', { class: view.sample.small ? 'message message--warn' : 'text-sm text-muted' },
           view.sample.small
-            ? `המדגם קטן מהסף: ${view.sample.n} סשנים`
-            : `מדגם: ${view.sample.n} סשנים`)
+            ? ['המדגם קטן מהסף: ', num(view.sample.n), ' סשנים']
+            : ['מדגם: ', num(view.sample.n), ' סשנים'])
         : null,
       createElement('table', { class: 'table' }, rows),
       // 2.4: ההכרעה Go או No-Go אינה במערכת. המסך מציג ואינו נועל.
