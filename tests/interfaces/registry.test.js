@@ -7,6 +7,7 @@
 
 import modulesFile from '../../registry/modules.json' with { type: 'json' };
 import allowFile from '../../registry/allow-list.json' with { type: 'json' };
+import testAllowFile from '../../registry/allow-list-test.json' with { type: 'json' };
 import { createChecker } from '../helpers/assert.js';
 
 const { check, checkThrows, checkThrowsAsync, report } = createChecker('CORE-03 registry');
@@ -330,6 +331,25 @@ check(
   productionRows.filter((r) => r.from === 'tool-simulator'),
   [],
 );
+
+// מצב בדיקה בכתובת (מפה 4.3, פערים 71 ו-72; משימה 7 בתוכנית שלב 8):
+// שתי שורות הפיתוח של 4.2 יושבות בקובץ נפרד, שנטען רק עם mode=test.
+check(
+  'קובץ הבדיקה נושא בדיוק את שתי שורות הפיתוח של 4.2',
+  testAllowFile.rows.map(keyOf).sort(),
+  DEVELOPMENT_ROWS_IN_MAP.map(([from, module, action]) => keyOf({ from, module, action })).sort(),
+);
+check('ושתיהן allowed=true, בארבעה שדות',
+  testAllowFile.rows.every((r) => r.allowed === true
+    && JSON.stringify(Object.keys(r)) === JSON.stringify(['from', 'module', 'action', 'allowed'])),
+  true);
+check('ואף אחת מהן אינה ברשימת הייצור',
+  testAllowFile.rows.filter((r) => productionRows.some((p) => keyOf(p) === keyOf(r))).map(keyOf),
+  []);
+check('רשימת הייצור נשארה 46 שורות', productionRows.length, 46);
+check('הפונה בקובץ הבדיקה הוא שם הפונה של TOOL-01 בטבלת המודולים',
+  [...new Set(testAllowFile.rows.map((r) => r.from))],
+  [modulesFile.modules.find((m) => m.id === 'TOOL-01').caller]);
 
 check(
   'כל שורה בקובץ עם allowed=true',

@@ -1,0 +1,18 @@
+{
+  "source": "doc-module-map-v3 סעיף 4.2 (FE-04 arrive, leave: tool-simulator, פיתוח) ו-4.3, פסקת מצב בדיקה בכתובת: פערים 71 ו-72, מפה 3.12, 27.09.2026; תוכנית שלב 8 משימה 7",
+  "note": "שתי שורות tool-simulator, ואלה בלבד. נקודת הכניסה טוענת את הקובץ רק כשהכתובת נושאת mode=test, ומוסיפה את השורות לרשימה שבזיכרון; בלי הפרמטר הקובץ אינו נקרא. רשימת המותר של הייצור, allow-list.json, אינה משתנה. לשורות האלה אין פעולה אחרת מלבד הגעה ויציאה בסשן שמסומן simulator, ולכן אין בהן דרך לשנות תוכן, מצב או הסכם.",
+  "rows": [
+    {
+      "from": "tool-simulator",
+      "module": "FE-04",
+      "action": "arrive",
+      "allowed": true
+    },
+    {
+      "from": "tool-simulator",
+      "module": "FE-04",
+      "action": "leave",
+      "allowed": true
+    }
+  ]
+}

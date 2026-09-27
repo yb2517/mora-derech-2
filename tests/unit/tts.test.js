@@ -205,4 +205,27 @@ check('משפט ארוך בלי סימן פיסוק נשאר קטע אחד', sen
   check('שגיאה שאינה ביטול אינה עוצרת את הרצף', [response.ok, device.spoken.map((u) => u.text)], [true, ['ראשון.', 'שני.']]);
 }
 
+// ---------------------------------------------------------------------
+// שם הקול שנבחר, לקריאה בלבד (מפה 3.3 שורת CONN-02, פער 71; משימה 7
+// בתוכנית שלב 8, תוספת 27.09.2026)
+// ---------------------------------------------------------------------
+
+{
+  const ENHANCED = { name: 'Carmit (Enhanced)', lang: 'he-IL' };
+  const { tts, device } = build({ voices: [ENGLISH, HEBREW, ENHANCED] });
+  check('שם הקול שנבחר: העברי הראשון ברשימת המכשיר', tts.selectedVoice(), { name: 'Carmit', lang: 'he-IL' });
+  await tts.speak('שלום.');
+  check('והוא הקול שנשמע בפועל', device.spoken[0].voice, tts.selectedVoice().name);
+  check('הקריאה אינה משנה את הבחירה', tts.selectedVoice(), { name: 'Carmit', lang: 'he-IL' });
+  check('והערך לקריאה בלבד', Object.isFrozen(tts.selectedVoice()), true);
+}
+
+{
+  const { tts } = build({ voices: [ENGLISH] });
+  check('בלי קול עברי: אין שם', tts.selectedVoice(), null);
+  check('בלי מנוע: אין שם', create({ reference: REFERENCE }).selectedVoice(), null);
+  const { tts: noRef } = build({ reference: { voice_rate: 0.95 } });
+  check('בלי voice_id בטבלה: אין שם, ואין בחירה מומצאת', noRef.selectedVoice(), null);
+}
+
 report();

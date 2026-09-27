@@ -257,11 +257,29 @@ export function create({
     return voiceFor(voiceId.value, voices()) !== null;
   }
 
+  /**
+   * שם הקול שהמתאם בוחר, לקריאה בלבד (מפה 3.3 שורת CONN-02, פער 71,
+   * משימה 7 בתוכנית שלב 8). הבחירה היא אותה voiceFor ש-speak משתמש
+   * בה, ולכן השם שמוצג הוא הקול שנשמע: הקול העברי הראשון ברשימת
+   * המכשיר. הפונקציה אינה משנה את הבחירה. כתובת הבדיקה מציגה אותה,
+   * כדי לדעת אם קול משופר שהותקן בטלפון הוא הקול שנבחר.
+   *
+   * @returns {{name: string, lang: string} | null} null כשאין מנוע או
+   *   אין קול עברי.
+   */
+  function selectedVoice() {
+    const voiceId = ref('voice_id');
+    if (voiceId.missing || !available()) return null;
+    const voice = voiceFor(voiceId.value, voices());
+    return voice ? Object.freeze({ name: String(voice.name ?? ''), lang: String(voice.lang ?? '') }) : null;
+  }
+
   return {
     speak,
     stop,
     on,
     hasVoice,
+    selectedVoice,
     available,
     voicesLoaded,
     speaking: () => (job === null ? null : { text: job.text }),
