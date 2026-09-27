@@ -19,7 +19,7 @@
 //   אין בו פעולת "אפס למצב ההתחלה". מסמך הבנייה סעיף 2: הוכרע
 //   10.09 שהיא יוצאת מהמערכת, ולכן היא אינה נבנית כאן מלכתחילה.
 
-import { createElement, panel, statusTag, statusDot, humanError } from '../view.js';
+import { createElement, panel, statusTag, statusDot, humanError, num } from '../view.js';
 
 // ארבעת שמות המצב באנגלית הם הקנוניים (מפה 2.2), והעברית ביאור
 // במסך בלבד. זו הסיבה שהמיפוי הזה יושב כאן ולא בנתונים.
@@ -177,7 +177,7 @@ export function create({ host, from, reference, send }) {
       createElement('strong', {}, 'שער B'),
       createElement('span', { class: open ? 'gate__lock gate__lock--open' : 'gate__lock' },
         open ? 'הסכם חתום, השער פתוח' : 'השער חסום'),
-      createElement('span', { class: 'text-sm' }, `M-06: ${gate?.m06 ?? 0}`),
+      createElement('span', { class: 'text-sm' }, num(`M-06: ${gate?.m06 ?? 0}`)),
     ];
 
     for (const reason of gate?.reasons ?? []) {
@@ -203,7 +203,7 @@ export function create({ host, from, reference, send }) {
       n: view.items.filter((item) => item.status === state).length,
     }));
     return createElement('div', { class: 'panel__counts' },
-      byState.map(({ state, n }) => statusTag(state, `${STATE_LABEL[state]}: ${n}`)));
+      byState.map(({ state, n }) => statusTag(state, [`${STATE_LABEL[state]}: `, num(n)])));
   }
 
   function itemRow(item) {
@@ -212,7 +212,7 @@ export function create({ host, from, reference, send }) {
       createElement('span', {}, [
         createElement('span', { class: 'list__title' }, item.name),
         createElement('span', { class: 'list__meta' },
-          `${item.stop_id}, עמוד ${item.page}, ${item.word_count} מילים`),
+          [`${item.stop_id}, עמוד `, num(item.page), ', ', num(item.word_count), ' מילים']),
       ]),
       statusTag(item.status, STATE_LABEL[item.status]),
     ]);
@@ -227,7 +227,7 @@ export function create({ host, from, reference, send }) {
     const item = view.open.item;
     const children = [
       createElement('p', { class: 'list__meta' },
-        `מקור: ${view.open.source?.name ?? 'אין'}, עמוד ${item.page}`),
+        [`מקור: ${view.open.source?.name ?? 'אין'}, עמוד `, num(item.page)]),
       createElement('blockquote', { class: 'quote' }, item.text),
     ];
 
@@ -270,7 +270,7 @@ export function create({ host, from, reference, send }) {
     }
     return createElement('ol', { class: 'log' }, view.approvals.map((row) => createElement(
       'li', { class: 'log__entry' }, [
-        createElement('time', { class: 'log__time' }, row.time),
+        createElement('time', { class: 'log__time num' }, row.time),
         createElement('span', {}, `${row.action}: ${row.target}, מ-${STATE_LABEL[row.from_status] ?? row.from_status} ל-${STATE_LABEL[row.to_status] ?? row.to_status}`),
         row.note ? createElement('span', { class: 'list__meta' }, row.note) : null,
       ],

@@ -35,7 +35,7 @@
 // נרשם בלי מגע, גם כשהמכשיר כבה במסך החסימה, ונשירה מסוללה אינה
 // נספרת כנשירה מחוסר עניין.
 
-import { createElement, panel, humanError } from '../view.js';
+import { createElement, panel, humanError, num } from '../view.js';
 
 // שני מצבי הסוללה, לפי F-13 תיקון 1. הנוהל דו שלבי: התראה, ואז
 // חסימה. החידוש מותנה בחצייה חזרה של סף החידוש.
@@ -531,8 +531,8 @@ export function create({
   }
 
   function exitSummary() {
-    if (!view.exit) return 'לא נטענה';
-    return `${view.exit.name}, ${view.exit.distance} מטר, ${view.exit.direction}`;
+    if (!view.exit) return ['לא נטענה'];
+    return [`${view.exit.name}, `, num(view.exit.distance), ` מטר, ${view.exit.direction}`];
   }
 
   // --- מחוון ההתקדמות (מפה 3.3 שורת FE-05 ו-4.1, פער 93) ---
@@ -590,7 +590,7 @@ export function create({
 
     if (view.battery === BATTERY.WARNED) {
       children.push(createElement('div', { class: 'message message--warn' },
-        `הסוללה נמוכה. נקודת היציאה הקרובה: ${exitSummary()}`));
+        ['הסוללה נמוכה. נקודת היציאה הקרובה: ', ...exitSummary()]));
     }
 
     for (const code of view.notices) {
@@ -634,7 +634,7 @@ export function create({
       if (view.answer.is_fallback === true) {
         children.push(createElement('div', { class: 'message' }, 'אין מידע מאומת על השאלה הזאת במסלול.'));
       } else if (view.answer.source_page !== null && view.answer.source_page !== undefined) {
-        children.push(createElement('span', { class: 'list__meta' }, `מקור: עמוד ${view.answer.source_page}`));
+        children.push(createElement('span', { class: 'list__meta' }, ['מקור: עמוד ', num(view.answer.source_page)]));
       }
     }
 
@@ -665,7 +665,8 @@ export function create({
     });
     children.push(field);
 
-    const askButton = createElement('button', { class: 'btn btn--primary btn--touch', type: 'button' }, 'שאלה');
+    // דיסקה של question-disc, ולא כפתור הליכה רחב (פער 73, מפה 3.15 שורת DESIGN-01).
+    const askButton = createElement('button', { class: 'btn btn--primary btn--disc', type: 'button' }, 'שאלה');
     askButton.addEventListener('click', onQuestion);
 
     const endButton = createElement('button', { class: 'btn btn--touch', type: 'button' }, 'סיום הטיול');
