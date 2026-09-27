@@ -73,7 +73,9 @@ No core, service, connector, automation, registry, test or tool file changed.
 
 A report with a gap runs prompt 4 before more code. Gap 89 is the only one.
 
-## 7. What I need from you
+## 7. Decisions, 27.09.2026
 
-1. Approval of this report, and of merging the branch to main. A push to main deploys to GitHub Pages.
-2. A decision on gap 89: one primary action per role view (then which one), or one per panel on the admin screen.
+1. The report and the merge are approved. The merge is **on hold**: the stage-8 branch, now carrying stage 9, used map 3.15, build document 2.14 and gap 89 for other approved content, and neither line is in main yet.
+2. Numbering: by the owner's decision, **stage 9 keeps those numbers**. After stage 9 is merged to main, this branch merges main, its map and build document become the next versions after stage 9's, its gap 89 takes the next free registry number, the overlaps in `design/components/button.css`, `design/tokens.css` and the traveler screen are resolved, the suite and the screenshots are re-run, and the branch is merged.
+3. Gap 89: **one clay element per panel**. The owner view keeps both "רישום הסכם" and "נעילת המסלול" on clay, since they sit in separate panels. No code change; the rule goes into the documents with the renumbering.
+4. The map "3.15", build document "2.14" and gap decisions copies were taken out of `prd-update-inbox` and moved to the archive, so the PRD process does not receive two different 3.15 maps. They are uploaded again after the renumbering.
