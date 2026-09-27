@@ -523,12 +523,17 @@
     toggleField.append(toggleLabel);
     body.append(toggleField);
 
-    // המסלול להליכה: עוגני המסלול הטעון, בסדר התחנות, עם שם הפריט.
-    const points = repository.listAnchors().map((anchor) => {
+    // המסלול להליכה: עוגני המסלול הטעון, עם שם הפריט, בסדר הסיור:
+    // סדר התחנות של המסלול ואז העמוד במקור (routeOrder ב-TOOL-01).
+    // סדר המזהים אינו סדר הסיור: במסד הענן המזהים אקראיים.
+    let stops = [];
+    const loaded = repository.listAnchors().map((anchor) => {
       const item = repository.getItem(anchor.item_id);
-      return { stop_id: item?.stop_id ?? null, lat: anchor.lat, lng: anchor.lng, name: item?.name ?? anchor.anchor_id };
+      if (item && stops.length === 0) stops = repository.getSite(item.site_id)?.stops ?? [];
+      return { stop_id: item?.stop_id ?? null, page: item?.page ?? null, lat: anchor.lat, lng: anchor.lng, name: item?.name ?? anchor.anchor_id };
     });
-    simulator.load(points);
+    simulator.load(loaded, { stops });
+    const points = simulator.route();
 
     const row = document.createElement('div');
     row.className = 'btn-row';
