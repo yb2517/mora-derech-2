@@ -1,0 +1,15 @@
+/* DESIGN-01: סגנונות הטקסט. שבעת הסגנונות של ערכת האור, מהנספח של
+ * doc-design-01-v1-apply-light.
+ *
+ * אין כאן אף ערך: כל מידה ומשקל נקראים מ-tokens.css (פער 71), והרכיבים
+ * קוראים את אותם מאפיינים ישירות. display פעם אחת במסך, לשם התחנה;
+ * body-large לכל מה שנקרא בהליכה; caption הוא הגודל הקטן ביותר שמותר.
+ */
+
+.display { font-family: var(--font-sans); font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
+.title { font-family: var(--font-sans); font-size: var(--type-title-size); line-height: var(--type-title-line); font-weight: var(--type-title-weight); }
+.heading { font-family: var(--font-sans); font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
+.body-large { font-family: var(--font-sans); font-size: var(--type-body-large-size); line-height: var(--type-body-large-line); font-weight: var(--type-body-large-weight); }
+.body { font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
+.label { font-family: var(--font-sans); font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
+.caption { font-family: var(--font-sans); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); }

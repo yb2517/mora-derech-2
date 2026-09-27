@@ -1,55 +1,86 @@
-/* DESIGN-01: הכפתור. שלוש דרגות בלבד, כדי שהמסך לא ימציא רביעית. */
+/* DESIGN-01: הכפתור. שלוש דרגות בלבד, כדי שהמסך לא ימציא רביעית.
+ *
+ * כל כפתור מגיע לפחות ל-touch-min. הכפתורים של ההליכה (התחלה,
+ * שאלה, סיום) מגיעים ל-touch-walk.
+ */
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2xs);
-  padding: var(--space-xs) var(--space-md);
-  border: var(--border-width) solid var(--color-line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-weight: var(--weight-medium);
-  transition: background var(--motion-fast) var(--motion-ease);
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-5);
+  border: var(--border-control) solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
 }
 
-.btn:hover:not(:disabled) { background: var(--color-surface-sunken); }
+.btn:hover:not(:disabled) { background: var(--surface-sunk); }
 
-/* הפעולה הראשית של המסך. אחת לכל מסך */
+/* הפעולה הראשית של המסך, בחימר. אחת לכל מסך */
 .btn--primary {
-  background: var(--color-ink);
-  border-color: var(--color-ink);
-  color: var(--color-text-inverse);
+  background: var(--clay);
+  border-color: var(--clay-edge);
+  color: var(--on-clay);
 }
 
-.btn--primary:hover:not(:disabled) { background: var(--color-ink-soft); }
+.btn--primary:hover:not(:disabled),
+.btn--primary:active:not(:disabled) { background: var(--clay-pressed); }
 
-/* אישור ודחייה, בצבע המצב שאליו הם מעבירים (מפה 2.2) */
+/* אישור ודחייה, בצבע המצב שאליו הם מעבירים (מפה 2.2). הצבע אינו
+ * הסימון היחיד: הנוסח על הכפתור אומר מה יקרה */
 .btn--approve {
-  background: var(--color-approved);
-  border-color: var(--color-approved);
-  color: var(--color-text-inverse);
+  background: var(--signal-ok-bg);
+  border-color: var(--signal-ok);
+  color: var(--signal-ok);
 }
 
 .btn--reject {
-  background: var(--color-surface);
-  border-color: var(--color-rejected);
-  color: var(--color-rejected);
+  background: var(--signal-danger-bg);
+  border-color: var(--signal-danger);
+  color: var(--signal-danger);
 }
 
-/* כפתור המצב הנוכחי מנוטרל, לפי doc-build-03-interfaces 2.1 */
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn--approve:hover:not(:disabled),
+.btn--reject:hover:not(:disabled) { background: var(--surface); }
 
-/* כפתור השאלה במסך המטייל. גדול, כי הוא נלחץ בהליכה */
+/* כפתור המצב הנוכחי מנוטרל, לפי doc-build-03-interfaces 2.1 */
+.btn:disabled {
+  background: var(--surface-sunk);
+  border-color: var(--surface-sunk);
+  color: var(--ink-disabled);
+  cursor: not-allowed;
+}
+
+/* כפתורי ההליכה במסך המטייל. גדולים, כי הם נלחצים בהליכה */
 .btn--touch {
-  padding: var(--space-md) var(--space-xl);
-  font-size: var(--font-lg);
-  border-radius: var(--radius-md);
+  min-height: var(--touch-walk);
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-lg);
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line);
+  font-weight: var(--weight-bold);
+}
+
+/* כפתור השאלה כדיסקה. מוגדר כאן ואינו בשימוש עדיין: המסך יעבור אליו
+ * בשינוי נפרד (פער 73) */
+.btn--disc {
+  width: var(--question-disc);
+  height: var(--question-disc);
+  padding: 0;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-raised);
 }
 
 .btn-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-2);
 }
