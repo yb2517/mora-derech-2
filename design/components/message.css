@@ -7,9 +7,10 @@
  * שגיאה ואישור ברציף, אזהרה מקווקו.
  */
 
+/* בלוק ולא flex: הודעה היא משפט אחד, ומספר עטוף ב-num בתוכה (פער 75)
+ * היה הופך ב-flex לטור נפרד ומפרק את המשפט */
 .message {
-  display: flex;
-  gap: var(--space-3);
+  display: block;
   padding: var(--space-3) var(--space-4);
   border: var(--border-control) solid transparent;
   border-radius: var(--radius-md);
