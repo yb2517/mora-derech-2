@@ -18,6 +18,7 @@ const { createRepository } = await import('../../repository/index.js');
 const { createOrchestrator } = await import('../../core/orchestrator.js');
 const { createEndpoint } = await import('../../screens/endpoint.js');
 const { FIXTURE_SEED } = await import('../helpers/fixtures.js');
+const { corpusItems, corpusSentence } = await import('../helpers/corpus-pool.js');
 const { create } = await import('../../screens/traveler/index.js');
 const { create: createGovernance } = await import('../../services/governance.js');
 const { create: createGate } = await import('../../services/gate.js');
@@ -45,6 +46,13 @@ const repository = createRepository(createBrowserDriver({
     reference: referenceFile.values,
     // נתוני ההדגמה, כדי שיהיה מסלול, פריטים מאושרים ונקודת יציאה.
     ...FIXTURE_SEED,
+    // 19 הטקסטים של הקורפוס, מאושרים, באותו מסלול ובאותו מקור (משימה 4
+    // בתוכנית שלב 8): המנוע הדו שלבי דורש מאגר שיש בו מונח ייחודי,
+    // ושלושת הפריטים המאושרים של הזריעה אינם מאגר כזה.
+    content_items: [
+      ...FIXTURE_SEED.content_items,
+      ...corpusItems({ site_id: 'site-demo-jaffa', source_id: 'src-demo-1', prefix: 'corpus-' }),
+    ],
     // הסשנים של ההדגמה אינם נזרעים כאן: הבדיקה פותחת סשן משלה,
     // ושלושת הסשנים הסינתטיים היו הופכים אותה לתלויה בהם.
     sessions: [],
@@ -160,15 +168,14 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
 // --- שאלה שיש עליה תשובה בקורפוס ---
 
 {
-  const item = repository.listItems({ status: 'approved' })[0];
-  const word = item.text.split(' ').find((w) => w.length > 4);
-
-  dom.host.querySelector('input').type(word);
+  // השאלה של בדיקת הקבלה של שלב 8 (CLAUDE.md סעיף 6).
+  dom.host.querySelector('input').type('מתי נבנה שער יפו?');
   byLabel('שאלה').click();
   await settle();
 
   const quoted = dom.host.querySelector('.quote').textContent;
   check('התשובה אינה הימנעות', quoted !== referenceFile.values.fallback_text, true);
+  check('והיא משפט 1538 מ-J-02', quoted, corpusSentence('J-02', 11));
 
   // BL-13: התשובה היא ציטוט או קיצוץ מפריט מאושר, בלי מילה שאינה
   // בו. איזה פריט ניצח הוא עניין של הדירוג, ולכן הטענה היא על

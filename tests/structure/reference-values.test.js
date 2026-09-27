@@ -92,11 +92,24 @@ function mentionsValue(text, value) {
 // הקובץ אינו נקרא בזמן ריצה ואינו נארז, ולכן אינו קובץ קוד.
 const CONTENT_DATA_DIR = 'data/corpus/';
 
+// צירופים של קובץ ומפתח שבהם המספר זהה במקרה, ואינו הערך. כל שורה
+// נושאת את הנימוק, והפטור הוא לאותו מפתח באותו קובץ בלבד: שאר
+// המפתחות נאכפים גם שם, ובהם relevance_threshold ו-answer_max_words.
+const COINCIDENCES = [
+  {
+    path: 'services/retrieval-ranker.js',
+    key: 'm02_threshold',
+    reason: 'משקל מילה נרדפת במנוע, 0.7, מאב הטיפוס; קבוע לשוני של המנוע (הכרעה 1 בתוכנית שלב 8), ולא סף M-02',
+  },
+];
+const isCoincidence = (path, key) => COINCIDENCES.some((row) => row.path === path && row.key === key);
+
 const offenders = [];
 for (const { key, value } of enforceable) {
   for (const file of files) {
     if (file.path === REFERENCE_FILE) continue;
     if (file.path.startsWith(CONTENT_DATA_DIR)) continue;
+    if (isCoincidence(file.path, key)) continue;
     if (mentionsValue(file.text, value)) offenders.push(`${key}=${value} ב-${file.path}`);
   }
 }
@@ -106,6 +119,15 @@ check(
   [...new Set(offenders)].sort(),
   [],
 );
+
+// פטור שאינו נחוץ עוד יוצא מהרשימה, כדי שלא יסתיר ערך אמיתי בעתיד.
+check('כל פטור ברשימת המקריות עדיין נחוץ',
+  COINCIDENCES.filter(({ path, key }) => {
+    const file = files.find((f) => f.path === path);
+    const entry = enforceable.find((n) => n.key === key);
+    return !file || !entry || !mentionsValue(file.text, entry.value);
+  }).map(({ path, key }) => `${key} ב-${path}`),
+  []);
 
 check('קובצי הקורפוס נסרקו ודולגו במודע, ולא נעלמו מהסריקה',
   files.some((f) => f.path.startsWith(CONTENT_DATA_DIR)), true);

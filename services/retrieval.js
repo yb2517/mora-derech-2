@@ -19,7 +19,7 @@
 
 import { error } from '../core/errors.js';
 import { mouInEffect } from '../core/business-logic.js';
-import { rank } from './retrieval-ranker.js';
+import { rank, sentencesOf } from './retrieval-ranker.js';
 
 const EVERYONE = 'כולם';
 
@@ -87,39 +87,38 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
   }
 
   /**
-   * BL-13: התשובה היא ציטוט או קיצוץ מהפריט, עד answer_max_words,
-   * בגבול משפט. אין ניסוח מחדש.
+   * BL-13 בנוסח מפה 3.12 (פער 70): התשובה היא ציטוט מהפריט, בלי
+   * ניסוח מחדש. המשפט שהמנוע בחר בתוך הפריט נמסר, ואחריו המשפט הבא
+   * בפריט אם שניהם יחד נכנסים ב-answer_max_words. החיתוך בגבול משפט
+   * בלבד.
    *
-   * **הכרעה 5 בתוכנית שלב 4, בהכרעת בעלת הפרויקט**: כשאף משפט אינו
-   * נכנס במכסה, נמסר המשפט הראשון במלואו ולא חציו. קיצוץ באמצע
-   * משפט הוא שינוי משמעות, ו-BL-13 אוסר שינוי. החריגה מדווחת
-   * בתשובה כדי שתגיע ליומן ולצוות התוכן.
+   * **הכרעה 5 בתוכנית שלב 4, בהכרעת בעלת הפרויקט**: משפט ארוך מהמכסה
+   * נמסר במלואו ולא חציו. קיצוץ באמצע משפט הוא שינוי משמעות, ו-BL-13
+   * אוסר שינוי. החריגה מדווחת בתשובה כדי שתגיע ליומן ולצוות התוכן.
+   * זו גם הסטייה המכוונת (א) מאב הטיפוס, שקיצץ ל-60 מילים (הכרעה 1
+   * בתוכנית שלב 8).
+   *
+   * המשפט מזוהה במיקומו ברשימת המשפטים של הפריט, באותה חלוקה שהמנוע
+   * משתמש בה. מנוע שלא בחר משפט (אין לו) מוביל למשפט הראשון.
    */
-  function compose(text, maxWords) {
-    const sentences = String(text ?? '')
-      .split(/(?<=[.!?])\s+/)
-      .map((sentence) => sentence.trim())
-      .filter(Boolean);
+  function compose(text, sentenceIndex, maxWords) {
+    const sentences = sentencesOf(text);
+    const countWords = (value) => value.split(/\s+/).filter(Boolean).length;
+    const at = Number.isInteger(sentenceIndex) && sentences[sentenceIndex] !== undefined
+      ? sentenceIndex
+      : 0;
+    const chosen = sentences[at] ?? String(text ?? '').trim();
+    const next = sentences[at + 1];
 
-    const taken = [];
-    let words = 0;
+    const withNext = next !== undefined ? `${chosen} ${next}` : null;
+    const answer = withNext !== null && countWords(withNext) <= maxWords ? withNext : chosen;
+    const words = countWords(answer);
 
-    for (const sentence of sentences) {
-      const count = sentence.split(/\s+/).filter(Boolean).length;
-      if (words + count > maxWords) break;
-      taken.push(sentence);
-      words += count;
-    }
-
-    if (taken.length > 0) {
-      return { answer: taken.join(' '), words, over_limit: false };
-    }
-
-    const first = sentences[0] ?? String(text ?? '').trim();
     return {
-      answer: first,
-      words: first.split(/\s+/).filter(Boolean).length,
-      over_limit: first !== '',
+      answer,
+      sentence_index: at,
+      words,
+      over_limit: words > maxWords,
     };
   }
 
@@ -130,9 +129,9 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
    * הוא כאן ולא במנוע הדירוג מפני שהוא כלל עסקי ולא חישוב דמיון:
    * מנוע סמנטי שיחליף את הדירוג לא יידע עליו דבר, וטוב שכך.
    */
-  function pickLeader(scored, stopId) {
-    const top = scored[0].score;
-    const tied = scored.filter((row) => row.score === top);
+  function pickLeader(eligible, stopId) {
+    const top = eligible[0].score;
+    const tied = eligible.filter((row) => row.score === top);
     if (tied.length === 1) return tied[0];
 
     const here = tied.filter((row) => stopId !== undefined && row.item.stop_id === stopId);
@@ -206,7 +205,9 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
       }
 
       const scored = rank({ question, candidates });
-      const considered = scored.map((row) => ({ item_id: row.item.item_id, score: row.score }));
+      const considered = scored.map((row) => ({
+        item_id: row.item.item_id, score: row.score, unique: row.unique === true,
+      }));
 
       const abstain = async () => {
         await logAbstention({
@@ -222,10 +223,13 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
         });
       };
 
-      if (scored.length === 0 || scored[0].score < threshold.value) return abstain();
+      // K3 ו-BL-05 בנוסח מפה 3.12: מועמד נחשב רק אם הוא מעל הסף וגם
+      // עבר את רצפת הייחודיות שהמנוע מסמן. הסדר של המנוע נשמר.
+      const eligible = scored.filter((row) => row.score >= threshold.value && row.unique === true);
+      if (eligible.length === 0) return abstain();
 
-      const leader = pickLeader(scored, payload.stop_id);
-      const composed = compose(leader.item.text, maxWords.value);
+      const leader = pickLeader(eligible, payload.stop_id);
+      const composed = compose(leader.item.text, leader.sentence?.index, maxWords.value);
 
       return ok({
         answer: composed.answer,
@@ -234,6 +238,7 @@ export function create({ repository, send, caller, now = defaultNow } = {}) {
         source_stop: leader.item.stop_id ?? null,
         is_fallback: false,
         score: leader.score,
+        sentence_index: composed.sentence_index,
         words: composed.words,
         // הכרעה 5: משפט שחרג מהמכסה נמסר במלואו, והחריגה מדווחת.
         over_limit: composed.over_limit,
