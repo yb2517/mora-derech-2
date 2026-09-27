@@ -1,6 +1,6 @@
 # DESIGN-01 v1: the report on the code tasks of gaps 73, 75 and 77
 
-Status: **draft, awaiting approval**. Date: 2026-09-27.
+Status: **approved by the owner on 27.09.2026; the merge is on hold until stage 9 is merged** (section 7). Date: 2026-09-27.
 Type: build mechanism prompt 3, closing section 5 of `doc-design-01-v1-gap-decisions.md`.
 Branch: `claude/light-theme-design-module-iswaxn`, on top of main with stage 8 (`d0ea6fe`). Not merged to main.
 Verified against the repository, not the conversation: every result below comes from a command or a browser run on the branch.
