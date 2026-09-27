@@ -141,6 +141,15 @@ check('וחוזר בסיום הסשן ובחסימת הסוללה, שסוגרת 
   /on\('session:end', \(\) => \{ themeControl\.hidden = false; \}\)/.test(code)
     && /on\('battery:block', \(\) => \{ themeControl\.hidden = false; \}\)/.test(code), true);
 
+// --- 3ד. מחוון ההתקדמות: ההרכבה מוסרת את התחנות ואת ההגעה (מפה 4.1, פער 93) ---
+
+check('ההרכבה מוסרת למסך המטייל את רשימת תחנות המסלול',
+  /stops:\s*\(siteId\)\s*=>\s*repository\.getSite\(siteId\)\?\.stops/.test(code), true);
+check('ואת התחנה ש-AUTO-01 קבע, אחרי כל דגימה',
+  /onSample:[\s\S]*?geofence\?\.current\(\)\.stop_id[\s\S]*?traveler\?\.reachStop\(stopId\)/.test(code), true);
+check('גם בדגימות המכשיר וגם בדגימות הסימולטור',
+  /\(simulatorOn\(\) \? simulator : location\)\.start\(withProgress\(args\)\)/.test(code), true);
+
 // --- 3א. בוחרת מסך לפי הפרמטר screen, ומשווה אותו לנתונים (מפה 4.3, פער 63) ---
 
 check('קוראת את הפרמטר screen מהכתובת', code.includes("searchParams.get('screen')"), true);

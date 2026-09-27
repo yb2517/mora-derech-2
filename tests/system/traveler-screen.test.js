@@ -633,4 +633,67 @@ dom.restore();
   await settle();
 }
 
+// ---------------------------------------------------------------------
+// מחוון ההתקדמות (מפה 3.3 שורת FE-05 ו-4.1, פער 93; משימה 3 בתוכנית
+// שלב 9). הרשימה והתחנה שהושגה מגיעות מההרכבה: device.stops ו-reachStop.
+// הרשימה כאן היא 14 התחנות של הקורפוס, ואת ההגעה מוסרת הבדיקה במקום
+// AUTO-01, בסדר של שחרור הסימולטור: נקודה 1 ואז ארבעת פריטי שער יפו.
+// ---------------------------------------------------------------------
+
+{
+  const corpus = (await import('../../data/corpus/jaffa-01.json', { with: { type: 'json' } })).default;
+  const STOPS = corpus.site.stops;
+  const progressDom = installDom();
+  const envelopes = [];
+  const counted = async (envelope) => { envelopes.push(envelope); return realSend(envelope); };
+  const device = { stops: () => STOPS, stop: () => null, position: () => null, flags: () => [] };
+  const screen = create({ host: progressDom.host, from: caller, reference, send: counted, device });
+  const press = (label) => progressDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === label)?.click();
+  const label = () => progressDom.host.querySelector('.route-progress__label')?.textContent ?? null;
+  const dots = (state) => progressDom.host.querySelectorAll(`.route-progress__dot--${state}`).length;
+
+  check('לפני תחילת הטיול אין מחוון', label(), null);
+  check('והגעה לפני הסשן אינה נספרת', screen.reachStop(STOPS[0]), false);
+
+  press('התחלת הטיול');
+  await settle();
+  check('בתחילת הטיול: נקודה 0 מתוך 14', label(), 'נקודה 0 מתוך 14');
+  check('14 נקודות, כולן לפנינו', dots('ahead'), 14);
+
+  const before = envelopes.length;
+  screen.reachStop('stop-01');
+  check('הגעה לנקודה 1: נקודה 1 מתוך 14', label(), 'נקודה 1 מתוך 14');
+  check('והיא התחנה הנוכחית', [dots('current'), dots('done'), dots('ahead')], [1, 0, 13]);
+  // נקודות 2 עד 5 בפאנל הן ארבעת פריטי שער יפו, תחנה אחת (stop-02).
+  for (let i = 0; i < 4; i += 1) screen.reachStop('stop-02');
+  check('ארבעת פריטי שער יפו הם תחנה אחת: נקודה 2 מתוך 14', label(), 'נקודה 2 מתוך 14');
+  check('תחנה 1 הושלמה, ו-2 נוכחית', [dots('done'), dots('current')], [1, 1]);
+  screen.reachStop('stop-01');
+  check('הגעה חוזרת לתחנה שכבר הושגה אינה מקדמת', label(), 'נקודה 2 מתוך 14');
+  check('תחנה שאינה במסלול אינה נספרת', [screen.reachStop('stop-99'), label()], [false, 'נקודה 2 מתוך 14']);
+  check('המחוון אינו שולח מעטפה', envelopes.length, before);
+  check('המצב נחשף לבדיקה', screen.state().progress, { reached: 2, total: 14, last: 'stop-01' });
+  const track = progressDom.host.querySelector('.route-progress__track');
+  check('המחוון מוכרז כ-progressbar עם הערך', [track?.getAttribute?.('role') ?? track?.attributes?.role, track?.getAttribute?.('aria-valuenow') ?? track?.attributes?.['aria-valuenow']], ['progressbar', '2']);
+
+  press('סיום הטיול');
+  await settle();
+  check('אחרי הסיום אין מחוון', label(), null);
+  press('התחלת הטיול');
+  await settle();
+  check('טיול חדש מתחיל מאפס', label(), 'נקודה 0 מתוך 14');
+  press('סיום הטיול');
+  await settle();
+
+  // בלי רשימה מההרכבה אין מחוון, והמסך אינו ממציא אחת.
+  const bareDom = installDom();
+  const bare = create({ host: bareDom.host, from: caller, reference, send: realSend });
+  bareDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'התחלת הטיול')?.click();
+  await settle();
+  check('בלי רשימת תחנות מההרכבה: אין מחוון', bareDom.host.querySelector('.route-progress'), null);
+  check('ו-reachStop אינו נספר', bare.reachStop('stop-01'), false);
+  bareDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'סיום הטיול')?.click();
+  await settle();
+}
+
 report(` (${sent.length} מעטפות)`);
