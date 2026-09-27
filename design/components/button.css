@@ -84,3 +84,37 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* בחירה בין אפשרויות: מתג התפקיד, היקף ההסכם, מתג בודד. המסילה
+ * שקועה, והאפשרות הנבחרת עולה ממנה על משטח עם מסגרת ומשקל מודגש, כמו
+ * RoleSwitch במערכת העיצוב. הבחירה מסומנת ב-aria-pressed ולא בחימר:
+ * החימר שמור לפעולה הראשית (פער 77), וקורא המסך מכריז על המצב */
+.btn-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunk);
+}
+
+/* מסילה בלי אפשרויות, למשל מסלול בלי מקורות רשומים, אינה מוצגת */
+.btn-group:empty { display: none; }
+
+.btn-group > .btn {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-group > .btn:hover:not(:disabled) { background: var(--surface); }
+
+.btn[aria-pressed="true"],
+.btn[aria-pressed="true"]:disabled {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.btn[aria-pressed="true"]:disabled { cursor: default; }

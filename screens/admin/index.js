@@ -287,10 +287,12 @@ export function create({ host, from, reference, send, location = null }) {
   // --- תצוגה ---
 
   function roleSwitch() {
-    return createElement('div', { class: 'btn-row' }, ROLES.map((r) => {
+    // הבחירה מסומנת ב-aria-pressed ולא ב-btn--primary: החימר שמור
+    // לפעולה הראשית (פער 77, מפה 3.15 שורת DESIGN-01).
+    return createElement('div', { class: 'btn-group' }, ROLES.map((r) => {
       const button = createElement(
         'button',
-        { class: r.role === view.role ? 'btn btn--primary' : 'btn', type: 'button' },
+        { class: 'btn', type: 'button', 'aria-pressed': String(r.role === view.role) },
         r.label,
       );
       button.disabled = r.role === view.role;
@@ -468,11 +470,11 @@ export function create({ host, from, reference, send, location = null }) {
     // ההיקף הוא רשימת המקורות שההסכם מכסה (מפה 2.1). התצוגה מראה
     // את כל מקורות המסלול, כדי שההשוואה בין ההיקף לבין מה שהמסלול
     // צריך תהיה גלויה (usecase-f-07 סעיף 6).
-    const scope = createElement('div', { class: 'btn-row' }, view.sources.map((source) => {
+    const scope = createElement('div', { class: 'btn-group' }, view.sources.map((source) => {
       const chosen = view.mouForm.scope.includes(source.source_id);
       const button = createElement(
         'button',
-        { class: chosen ? 'btn btn--primary' : 'btn', type: 'button' },
+        { class: 'btn', type: 'button', 'aria-pressed': String(chosen) },
         source.name,
       );
       button.addEventListener('click', () => {
@@ -495,7 +497,7 @@ export function create({ host, from, reference, send, location = null }) {
     // המחדל היא כן, ובעלת הפרויקט יכולה לכבות אותה להסכם שאינו כזה.
     const covers = createElement(
       'button',
-      { class: view.mouForm.covers_content_contribution ? 'btn btn--primary' : 'btn', type: 'button' },
+      { class: 'btn', type: 'button', 'aria-pressed': String(view.mouForm.covers_content_contribution) },
       view.mouForm.covers_content_contribution ? 'מכסה גם תרומת תוכן' : 'אישור בלבד',
     );
     covers.addEventListener('click', () => {
