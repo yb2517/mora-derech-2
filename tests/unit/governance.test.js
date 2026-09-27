@@ -6,6 +6,7 @@
 
 import { create } from '../../services/governance.js';
 import { createChecker } from '../helpers/assert.js';
+import corpus from '../../data/corpus/jaffa-01.json' with { type: 'json' };
 
 const { check, checkThrows, report } = createChecker('BE-05 governance');
 
@@ -877,6 +878,36 @@ const lockEnvelope = (payload = {}) => envelope('lock_site', payload, 'screen-ow
   });
   check('כל עשרים ושתיים הפעולות של 4.2 מיושמות', notBuilt, []);
   checkThrows('ופעולה שאינה במפה נזרקת', () => handle(envelope('לא קיימת', {})));
+}
+
+// --- listItems בסדר הסיור (פאנל הווטו ומסך הניהול) ---
+// במסד הענן סדר המזהים אקראי, והרשימה יצאה מעורבבת. המקור לסדר:
+// סדר התחנות של המסלול והעמודים של החוברת, כפי שהם בקורפוס.
+
+{
+  const order = corpus.items.map((row) => row.item_id);
+  const reversed = [...corpus.items].reverse();
+  const shuffled = [...reversed.filter((_, i) => i % 2 === 0), ...reversed.filter((_, i) => i % 2 === 1)];
+  const items = shuffled.map((row) => ({
+    item_id: row.item_id, site_id: 'jaffa-01', stop_id: row.stop_id, name: row.name,
+    text: row.text, page: row.page, status: 'approved',
+  }));
+  const anchors = shuffled.map((row) => ({ anchor_id: `a-${row.item_id}`, item_id: row.item_id, lat: row.lat, lng: row.lng }));
+  const repository = {
+    listItems: ({ site_id: siteId } = {}) => items
+      .filter((row) => siteId === undefined || row.site_id === siteId).map((row) => ({ ...row })),
+    getSite: () => ({ site_id: 'jaffa-01', stops: [...corpus.site.stops] }),
+    getAnchorByItem: (id) => anchors.find((row) => row.item_id === id) ?? null,
+  };
+  const handle = create({ repository });
+  check('הקלט אכן מעורבב', items.map((row) => row.item_id).join() === order.join(), false);
+  const listed = handle(envelope('listItems', { site_id: 'jaffa-01' })).data.items.map((row) => row.item_id);
+  check('listItems מחזיר את 19 הפריטים בסדר הסיור, J-01 עד J-19', listed, order);
+  check('גם ל-screen-content', handle(envelope('listItems', { site_id: 'jaffa-01' }, 'screen-content')).data.items[0].item_id, 'J-01');
+  check('פריט בלי עוגן, באותה תחנה ובאותו עמוד, אינו מפיל את הרשימה', (() => {
+    anchors.splice(anchors.findIndex((row) => row.item_id === 'J-18'), 1);
+    return handle(envelope('listItems', {})).data.items.length;
+  })(), 19);
 }
 
 // --- המודול זקוק ל-Repository בהזרקה, ואינו יודע להשיג אותו לבד ---
