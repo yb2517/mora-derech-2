@@ -2,53 +2,99 @@
  *
  * שם המחלקה הוא שם המצב הקנוני באנגלית, כדי שהמסך יוכל להרכיב את
  * שם המחלקה מהמצב שחזר במעטפה בלי טבלת תרגום משלו.
+ *
+ * כל מצב נבדל גם בצורת המסגרת ולא בצבע בלבד, כמו StatusChip במערכת
+ * העיצוב: טיוטה מקווקו, הוגש רציף, אושר בלי מסגרת נראית, נדחה כפול.
+ * הוגש (pending) בזוג המידע ולא בזוג האזהרה (פער 76).
  */
 
 .status {
-  display: inline-block;
-  padding: var(--space-3xs) var(--space-xs);
-  border-radius: var(--radius-pill);
-  font-size: var(--font-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: 0;
+  padding-inline: var(--space-2);
+  border: var(--border-control) solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
   font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 
-.status--approved { background: var(--color-approved-bg); color: var(--color-approved); }
-.status--rejected { background: var(--color-rejected-bg); color: var(--color-rejected); }
-.status--pending { background: var(--color-pending-bg); color: var(--color-pending); }
-.status--draft { background: var(--color-draft-bg); color: var(--color-draft); }
+.status--draft {
+  background: var(--surface-sunk);
+  color: var(--ink);
+  border-style: dashed;
+  border-color: var(--line-strong);
+}
+
+.status--pending {
+  background: var(--signal-info-bg);
+  color: var(--signal-info);
+  border-color: var(--signal-info);
+}
+
+.status--approved {
+  background: var(--signal-ok-bg);
+  color: var(--signal-ok);
+  border-color: var(--signal-ok-bg);
+}
+
+.status--rejected {
+  background: var(--signal-danger-bg);
+  color: var(--signal-danger);
+  border-style: double;
+  border-width: calc(var(--border-control) + var(--border-hair));
+  border-color: var(--signal-danger);
+}
 
 /* נקודת מצב לצד שורה ברשימה. משלימה את התגית ואינה מחליפה אותה */
 .status-dot {
   display: inline-block;
-  width: var(--space-xs);
-  height: var(--space-xs);
-  border-radius: 50%;
+  flex: none;
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-full);
+  border: var(--border-control) solid transparent;
 }
 
-.status-dot--approved { background: var(--color-approved); }
-.status-dot--rejected { background: var(--color-rejected); }
-.status-dot--pending { background: var(--color-pending); }
-.status-dot--draft { background: var(--color-draft); }
+.status-dot--draft { background: var(--surface-sunk); border-color: var(--line-strong); }
+.status-dot--pending { background: var(--signal-info); border-color: var(--signal-info); }
+.status-dot--approved { background: var(--signal-ok); border-color: var(--signal-ok); }
+.status-dot--rejected { background: var(--signal-danger); border-color: var(--signal-danger); }
 
-/* פס השערים: שער B ואז שער A */
+/* פס השערים: שער B ואז שער A. הפס עצמו ניטרלי, מפני שהמסך מסמן את
+ * מצב השער על המנעול בלבד; המנעול מסמן סגור מקווקו ופתוח רציף, כמו
+ * GateStrip במערכת העיצוב. הרקע משטח ולא שקוע, מפני שבפס יש טקסט
+ * משני, וטקסט משני אינו יושב על surface-sunk */
 .gate {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-hair) solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--color-ink-soft);
-  color: var(--color-text-inverse);
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .gate__lock {
-  padding: var(--space-3xs) var(--space-xs);
+  padding-block: 0;
+  padding-inline: var(--space-2);
+  border: var(--border-control) dashed var(--signal-danger);
   border-radius: var(--radius-sm);
-  background: var(--color-rejected-bg);
-  color: var(--color-rejected);
-  font-size: var(--font-sm);
+  background: var(--signal-danger-bg);
+  color: var(--signal-danger);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--weight-medium);
 }
 
-.gate__lock--open { background: var(--color-approved-bg); color: var(--color-approved); }
+.gate__lock--open {
+  border-style: solid;
+  border-color: var(--signal-ok);
+  background: var(--signal-ok-bg);
+  color: var(--signal-ok);
+}

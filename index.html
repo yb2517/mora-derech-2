@@ -53,7 +53,7 @@
   import { create as createLocation } from './connectors/location.js';
 
   // שלוש הטבלאות, ומאיפה הן נטענות. מפה 2.1 ו-2.4. והרביעית, שתי
-  // שורות tool-simulator, נטענת רק במצב בדיקה (מפה 4.3, פער 71).
+  // שורות tool-simulator, נטענת רק במצב בדיקה (מפה 4.3, פער 82).
   const TABLE_SOURCES = {
     modules: './registry/modules.json',
     allow_list: './registry/allow-list.json',
@@ -61,7 +61,7 @@
     allow_list_test: './registry/allow-list-test.json',
   };
 
-  // --- מצב בדיקה בכתובת (מפה 4.3, פערים 71 ו-72; תוכנית שלב 8 משימה 7) ---
+  // --- מצב בדיקה בכתובת (מפה 4.3, פערים 82 ו-83; תוכנית שלב 8 משימה 7) ---
   //
   // mode=test לצד screen. במצב הזה: שתי שורות הסימולטור נטענות מקובץ
   // נפרד ומתווספות לרשימה שבזיכרון, פאנל הסימולטור מוצג גם עם מסך
@@ -400,7 +400,7 @@
         ],
         create: createTravelerScreen,
         // testMode: לחצן הדילוג על משפטי הפתיחה, במצב בדיקה בלבד (מפה
-        // 4.3, פער 72).
+        // 4.3, פער 83).
         equipment: { voice, microphone, device, testMode: TEST_MODE },
       },
       {
@@ -493,7 +493,7 @@
   function simulatorPanel({ repository, simulator, devState, traveler, voice = null }) {
     const body = document.createElement('div');
 
-    // שם הקול שמתאם הקול בחר (מפה 3.3 שורת CONN-02, פער 71; תוספת
+    // שם הקול שמתאם הקול בחר (מפה 3.3 שורת CONN-02, פער 82; תוספת
     // 27.09.2026 לתוכנית שלב 8). מוצג במצב בדיקה בלבד, כדי לדעת אם
     // קול משופר שהותקן בטלפון הוא הקול שנשמע. לקריאה בלבד.
     if (voice) {

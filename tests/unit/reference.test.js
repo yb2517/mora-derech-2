@@ -22,7 +22,7 @@ const KEYS_IN_MAP_2_4 = [
   // מפתח, ו-BL-12 אוסר ערך משתנה בקוד.
   'note_max_chars',
   'fallback_text', 'unavailable_text', 'voice_id', 'voice_rate',
-  // מפה גרסה 3.12, פער 73: טבלת ההגייה של CONN-02.
+  // מפה גרסה 3.12, פער 84: טבלת ההגייה של CONN-02.
   'speech_substitutions',
   'stale_session_minutes', 'interaction_types',
   'm01_threshold', 'm02_threshold', 'sample_min', 'sample_max',
@@ -75,7 +75,7 @@ const DECIDED_IN_MAP = {
 // והקצב 0.95, מהחילוץ מאב הטיפוס. privacy_opening_text ירד ממנה
 // 17.09.2026: הנוסח, שנגזר מ-PRD סעיף 25, אושר בידי בעלת הפרויקט.
 // speech_substitutions ירד מהרשימה 27.09.2026: 19 הזוגות אושרו בידי
-// בעלת הפרויקט (מפה 2.4 בנוסח 3.12, פער 73; docs/doc-stage-08-speech-table.md).
+// בעלת הפרויקט (מפה 2.4 בנוסח 3.12, פער 84; docs/doc-stage-08-speech-table.md).
 const EXPECTED_EMPTY = ['model_tier'];
 
 check('משפט הפרטיות אושר ואינו ריק', typeof values.privacy_opening_text === 'string' && values.privacy_opening_text.length > 0, true);

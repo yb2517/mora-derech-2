@@ -1,23 +1,39 @@
 /* DESIGN-01: שדות הקלט. טופס הפריט, שדה ההערה, שדה השאלה. */
 
-.field { display: grid; gap: var(--space-2xs); margin-bottom: var(--space-md); }
+.field { display: grid; gap: var(--space-1); margin-block-end: var(--space-4); }
 
-.field__label { font-size: var(--font-sm); font-weight: var(--weight-medium); }
+.field__label {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+}
 
 .field__control {
   width: 100%;
-  padding: var(--space-xs) var(--space-sm);
-  border: var(--border-width) solid var(--color-line-strong);
+  min-height: var(--touch-min);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border: var(--border-control) solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--surface);
+  color: var(--ink);
 }
 
-textarea.field__control { line-height: var(--line-body); resize: vertical; }
+textarea.field__control { line-height: var(--type-body-line); resize: vertical; }
 
 /* השדה שחסר, לפי E-ITEM-INCOMPLETE. הצבע אינו הסימון היחיד:
  * field__error נושא את הנוסח, ולכן אין תלות בראיית צבע */
-.field--invalid .field__control { border-color: var(--color-rejected); }
+.field--invalid .field__control { border-color: var(--signal-danger); }
 
-.field__error { font-size: var(--font-sm); color: var(--color-rejected); }
+.field__error {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--weight-medium);
+  color: var(--signal-danger);
+}
 
-.field__hint { font-size: var(--font-sm); color: var(--color-text-muted); }
+.field__hint {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--ink-muted);
+}

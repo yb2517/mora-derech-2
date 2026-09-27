@@ -71,7 +71,7 @@ const UNKNOWN = 'לא ידוע';
  * @param {object} [options.device] מה שההרכבה יודעת על המכשיר:
  *   flags() לדגלי הסשן שאינם של המסך (simulator), position() לדגימה
  *   האחרונה של AUTO-01, direction(from, to) לרוח השמיים.
- * @param {boolean} [options.testMode] מצב בדיקה בכתובת (מפה 4.3, פער 72):
+ * @param {boolean} [options.testMode] מצב בדיקה בכתובת (מפה 4.3, פער 83):
  *   לחצן שעוצר את השמעת משפטי הפתיחה. בלי מצב בדיקה אין לחצן, ומשפט
  *   הבטיחות נשמע במלואו (usecase-f-13 צעד 1).
  */
@@ -215,7 +215,7 @@ export function create({
   }
 
   /**
-   * הדילוג על משפטי הפתיחה, במצב בדיקה בלבד (מפה 4.3, פער 72; משימה 8
+   * הדילוג על משפטי הפתיחה, במצב בדיקה בלבד (מפה 4.3, פער 83; משימה 8
    * בתוכנית שלב 8). ההשמעה נעצרת, והמשפט הבא אינו נאמר. הטקסט נשאר
    * מוצג, והסשן ממשיך.
    */
@@ -549,7 +549,7 @@ export function create({
       children.push(createElement('p', { class: 'text-sm text-muted' }, view.nowSpeaking));
     }
 
-    // מצב בדיקה בלבד (מפה 4.3, פער 72): לחצן הדילוג, כל עוד משפטי
+    // מצב בדיקה בלבד (מפה 4.3, פער 83): לחצן הדילוג, כל עוד משפטי
     // הפתיחה נשמעים. אחרי דילוג שני המשפטים נשארים כתובים על המסך.
     if (testMode && view.opening) {
       const skip = createElement('button', { class: 'btn btn--touch', type: 'button' }, 'דילוג על משפטי הפתיחה');
