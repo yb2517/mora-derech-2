@@ -173,6 +173,56 @@
     app.replaceChildren(node);
   }
 
+  // --- מתג הערכה (מפה 4.3 ו-3.3 שורת DESIGN-01, פער 92) ---
+  //
+  // שלוש ערכות צבע, והמתג משנה רק את data-theme בשורש הדף: אף מסך
+  // ואף רכיב אינם יודעים איזו ערכה פעילה. הערכה הראשונה לפי הגדרת
+  // המכשיר, בהירה או כהה; ראיית לילה רק בבחירה. הבחירה אינה נשמרת בין
+  // ביקורים (הכרעה D3 בתוכנית שלב 9): שמירה הייתה דורשת אחסון דפדפן,
+  // וחוק ברזל 3 מתיר אחסון לדרייבר בלבד. המתג אינו שולח מעטפה.
+  // האפשרויות נושאות data-theme-option ולא data-theme: בלוקי הערכה
+  // ב-tokens.css נבחרים לפי data-theme, ואלמנט אחר שנושא אותו היה
+  // מקבל ערכה משלו.
+  const THEMES = [['light', 'בהירה'], ['dark', 'כהה'], ['night', 'ראיית לילה']];
+
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+  }
+
+  function deviceTheme() {
+    const prefersDark = typeof globalThis.matchMedia === 'function'
+      && globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefersDark ? 'dark' : 'light';
+  }
+
+  function themeSwitch() {
+    const group = document.createElement('div');
+    group.className = 'segmented';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'ערכת תצוגה');
+    group.dataset.themeSwitch = '';
+    const options = THEMES.map(([theme, label]) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'segmented__option';
+      option.textContent = label;
+      option.dataset.themeOption = theme;
+      option.addEventListener('click', () => { setTheme(theme); mark(); });
+      return option;
+    });
+    function mark() {
+      const current = document.documentElement.dataset.theme;
+      for (const option of options) option.setAttribute('aria-pressed', String(option.dataset.themeOption === current));
+    }
+    group.append(...options);
+    mark();
+    return group;
+  }
+
+  setTheme(deviceTheme());
+  const themeControl = themeSwitch();
+  document.querySelector('.app-bar')?.append(themeControl);
+
   function panel(title, body) {
     const element = document.createElement('section');
     element.className = 'panel';
@@ -452,6 +502,16 @@
     function stopWalking(sessionId) {
       geofence?.stop();
       if (sessionId) timer?.cancel(sessionId);
+    }
+
+    // מתג הערכה במסך המטייל: לפני תחילת הסשן ואחרי סיומו, ולא בזמנו,
+    // מפני שההליכה עצמה היא אפס מגע (מפה 4.3, UX-01). חסימת הסוללה
+    // סוגרת את הסשן (BL-20), והחידוש פותח סשן חדש.
+    if (traveler) {
+      traveler.on('session:start', () => { themeControl.hidden = true; });
+      traveler.on('battery:resume', () => { themeControl.hidden = true; });
+      traveler.on('session:end', () => { themeControl.hidden = false; });
+      traveler.on('battery:block', () => { themeControl.hidden = false; });
     }
 
     if (traveler) {

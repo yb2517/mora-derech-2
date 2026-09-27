@@ -120,6 +120,27 @@ check('פאנל הסימולטור: בהרכבת הפיתוח, או במצב ב�
 check('שם הקול מגיע לפאנל רק במצב בדיקה', /voice:\s*TEST_MODE \? voice : null/.test(code), true);
 check('ומסך המטייל מקבל את מצב הבדיקה, ללחצן הדילוג (פער 83)', /equipment:\s*\{[^}]*testMode:\s*TEST_MODE/.test(code), true);
 
+// --- 3ג. מתג הערכה (מפה 4.3 ו-3.3 שורת DESIGN-01, פער 92; תוכנית שלב 9 משימה 2) ---
+
+check('שלוש הערכות: בהירה, כהה וראיית לילה',
+  /THEMES = \[\['light', [^\]]+\], \['dark', [^\]]+\], \['night', [^\]]+\]\]/.test(code), true);
+check('המתג משנה רק את data-theme בשורש הדף',
+  (code.match(/document\.documentElement\.dataset\.theme\s*=/g) ?? []).length, 1);
+check('הערכה הראשונה לפי הגדרת המכשיר, בהירה או כהה',
+  /prefers-color-scheme: dark[\s\S]*?\?\s*'dark'\s*:\s*'light'/.test(code), true);
+check('רק שורש הדף נושא data-theme: האפשרויות נושאות data-theme-option',
+  /option\.dataset\.theme\s*=/.test(code) || /setAttribute\('data-theme'/.test(code), false);
+check('הבחירה אינה נשמרת: אין אחסון בנקודת הכניסה (חוק ברזל 3)',
+  /localStorage|sessionStorage|indexedDB|document\.cookie/.test(code), false);
+check('המתג אינו שולח מעטפה',
+  /function themeSwitch\(\)[\s\S]*?return group;/.exec(code)?.[0].includes('send(') ?? null, false);
+check('במסך המטייל המתג נעלם בתחילת הסשן ובחידוש אחרי חסימה',
+  /on\('session:start', \(\) => \{ themeControl\.hidden = true; \}\)/.test(code)
+    && /on\('battery:resume', \(\) => \{ themeControl\.hidden = true; \}\)/.test(code), true);
+check('וחוזר בסיום הסשן ובחסימת הסוללה, שסוגרת אותו',
+  /on\('session:end', \(\) => \{ themeControl\.hidden = false; \}\)/.test(code)
+    && /on\('battery:block', \(\) => \{ themeControl\.hidden = false; \}\)/.test(code), true);
+
 // --- 3א. בוחרת מסך לפי הפרמטר screen, ומשווה אותו לנתונים (מפה 4.3, פער 63) ---
 
 check('קוראת את הפרמטר screen מהכתובת', code.includes("searchParams.get('screen')"), true);
