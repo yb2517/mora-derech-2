@@ -49,7 +49,7 @@
 }
 
 /* פריסת המסך: עמודה ראשית ועמודת צד שנערמת במסך צר. הרוחב הוא
- * --layout-max; שורת הקריאה שבתוכו מוגבלת ב-measure (G-6) */
+ * --layout-max; שורת הקריאה שבתוכו מוגבלת ב-measure (פער 74) */
 .layout {
   max-width: var(--layout-max);
   margin-inline: auto;

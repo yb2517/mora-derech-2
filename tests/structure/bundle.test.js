@@ -125,8 +125,10 @@ for (const [name, path] of Object.entries(TABLES)) {
   );
 }
 
-// העיצוב: הקובץ היחיד שמגדיר ערך עיצוב נכנס כמות שהוא, וגם שבעת
-// קובצי הרכיבים שהוא מייבא.
+// העיצוב: הקובץ היחיד שמגדיר ערך עיצוב נכנס כמות שהוא, וגם כל קובצי
+// הרכיבים שנקודת הכניסה של הערכה מייבאת. מספרם אינו נעול: קובץ רכיב
+// חדש נכנס מפני שהוא ב-index.css (פער 78, בהכרעת בעלת הפרויקט
+// 27.09.2026), והבדיקה שאחרי זו היא ששומרת שאף אחד מהם לא נשמט.
 check('אין תגית עיצוב חיצונית', /<link\b/.test(bundle), false);
 check('ערכת העיצוב בפנים', bundle.includes('/* design/tokens.css */'), true);
 
@@ -134,7 +136,7 @@ const components = source('design/components/index.css')
   .match(/@import\s+"\.\/([^"]+)"/g)
   .map((line) => line.match(/\.\/([^"]+)/)[1]);
 
-check('שבעה קובצי רכיבים', components.length, 7);
+check('קובצי הרכיבים נקראו מנקודת הכניסה של הערכה', components.length > 0, true);
 check(
   'כל קובץ רכיב נכנס לאריזה',
   components.filter((name) => !bundle.includes(`/* design/components/${name} */`)),

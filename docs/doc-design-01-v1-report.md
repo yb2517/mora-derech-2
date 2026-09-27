@@ -1,6 +1,6 @@
 # DESIGN-01 v1: the report on applying the light theme
 
-Status: **draft, awaiting approval**. Date: 2026-09-27.
+Status: **approved by the owner on 27.09.2026**, with G-10 decided the same day (the test may change). Date: 2026-09-27.
 Type: build mechanism prompt 3, closing `doc-design-01-v1-plan.md`.
 Branch: `claude/light-theme-design-module-iswaxn`. Code commit: `14bcd2d`.
 Approval: gaps G-1 to G-8 of the plan, approved by the owner on 27.09.2026 as proposed.
@@ -76,6 +76,8 @@ No file outside `/design/` and `docs/` changed. No screen, `index.html`, `tools/
 
 ## 6. The gaps
 
+The G labels below were minted in the plan, outside the gap registry. The registry numbers are binding: G-n is gap 68+n, so G-1 to G-10 are gaps 69 to 78. Gap 79 opened in prompt 4 (`doc-design-01-v1-gap-decisions.md`).
+
 | # | Gap | Reference | State |
 |---|---|---|---|
 | G-1 | Three appendix values collide with structure test 05 | `tests/structure/reference-values.test.js`; appendix | Closed: written in rem, approved |
@@ -87,7 +89,7 @@ No file outside `/design/` and `docs/` changed. No screen, `index.html`, `tools/
 | G-7 | Numbers LTR inside Hebrew need screen markup | the three screens | **Open.** `.num` is ready; the screens do not use it yet |
 | G-8 | Pending moves from amber to the info pair | `status.css`, `message.css` | Closed: approved |
 | G-9 | More than one clay element per view on the admin screen | `screens/admin/index.js:293`, `:475`, `:498` | **Open.** Needs the RoleSwitch pattern in the admin screen |
-| G-10 | **New.** `bundle.test.js` pins the number of component files at seven, so a new component file breaks the suite. The plan's `type.css` could not be added | `tests/structure/bundle.test.js:137`; plan section 5 task 2 | Worked around inside `/design/`: the type classes sit in `base.css`. **Decision needed:** keep them there, or allow a one line change to the test so that a component file can be added |
+| G-10 | **New.** `bundle.test.js` pins the number of component files at seven, so a new component file breaks the suite. The plan's `type.css` could not be added | `tests/structure/bundle.test.js:137`; plan section 5 task 2 | **Closed 27.09.2026** by the owner's decision: the assertion no longer pins a count, the check that every component file enters the bundle stays, and the type classes moved to `design/components/type.css` |
 
 Open gaps: G-2, G-5, G-7, G-9 and G-10. By prompt 3, a report with gaps runs prompt 4 before more code. None of the open gaps blocks the light theme itself: each is a follow up that touches a screen, a tool or a test, which this task did not.
 

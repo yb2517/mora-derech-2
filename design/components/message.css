@@ -31,7 +31,7 @@
 }
 
 /* אזהרת הסוללה, השקט בחצייה, מדגם קטן מהסף. בזוג האזהרה ולא בצבע
- * מצב הפריט (G-8) */
+ * מצב הפריט (פער 76) */
 .message--warn {
   background: var(--signal-warn-bg);
   border-color: var(--signal-warn);

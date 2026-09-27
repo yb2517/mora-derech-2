@@ -3,7 +3,7 @@
  * אין כאן אף ערך עיצוב: הכול var() מתוך tokens.css.
  *
  * גודל הגופן של שורש הדף אינו נקבע כאן בכוונה: שלושה ערכים בערכה
- * כתובים ב-rem (G-1), והם שווים לערכי ה-px המאושרים רק בגודל ברירת
+ * כתובים ב-rem (פער 69), והם שווים לערכי ה-px המאושרים רק בגודל ברירת
  * המחדל של הדפדפן. גוף הדף מקבל את סגנון body.
  */
 
@@ -52,19 +52,6 @@ button { cursor: pointer; }
   outline-offset: var(--focus-offset);
 }
 
-/* שבעת סגנונות הטקסט של ערכת האור, מהנספח של doc-design-01-v1-apply-light.
- * כל מידה ומשקל נקראים מ-tokens.css (G-3), והרכיבים קוראים את אותם
- * מאפיינים ישירות. display פעם אחת במסך, לשם התחנה; body-large לכל מה
- * שנקרא בהליכה; caption הוא הגודל הקטן ביותר שמותר. יושבים כאן ולא
- * בקובץ משלהם, מפני שבדיקת האריזה מונה שבעה קובצי רכיבים */
-.display { font-family: var(--font-sans); font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
-.title { font-family: var(--font-sans); font-size: var(--type-title-size); line-height: var(--type-title-line); font-weight: var(--type-title-weight); }
-.heading { font-family: var(--font-sans); font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
-.body-large { font-family: var(--font-sans); font-size: var(--type-body-large-size); line-height: var(--type-body-large-line); font-weight: var(--type-body-large-weight); }
-.body { font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
-.label { font-family: var(--font-sans); font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
-.caption { font-family: var(--font-sans); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); }
-
 /* טקסט שנקרא בלבד: כותרת מסך, הסבר, נוסח שגיאה */
 .text-muted { color: var(--ink-muted); }
 
@@ -75,7 +62,7 @@ button { cursor: pointer; }
 }
 
 /* מספר, שעה או אחוז בתוך טקסט עברי: נקרא משמאל לימין ומבודד מהטקסט
- * שסביבו. המסכים עוד אינם עוטפים בו מספרים (G-7) */
+ * שסביבו. המסכים עוד אינם עוטפים בו מספרים (פער 75) */
 .num {
   direction: ltr;
   unicode-bidi: isolate;
