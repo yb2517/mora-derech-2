@@ -11,7 +11,7 @@ Verified against the repository, not the conversation: every result below comes 
 | # | Task | Acceptance check | Result |
 |---|---|---|---|
 | 1 | The appendix values in `tokens.css`, one `:root` block | Isolation test and structure test 05 green; the values match the appendix | **Pass.** A line diff of the appendix block against the new `:root` block shows only the approved differences: `--radius-lg` as `1.25rem` (G-1), the 21 `--type-*` tokens (G-3), `--layout-max` (G-6), and the kept `--weight-*` and `--focus-offset`. Every colour, spacing, radius, size and border value is identical, character for character |
-| 2 | The seven type classes | `.display` renders 40px, line 48px, weight 700; isolation test green | **Pass, with one deviation.** The classes sit in `base.css` and not in a new `type.css` (see gap G-10). They read the type tokens only |
+| 2 | The seven type classes | `.display` renders 40px, line 48px, weight 700; isolation test green | **Pass.** The classes first sat in `base.css` because the bundle test pinned seven component files (G-10); after the owner's decision they moved to `design/components/type.css`, as planned. They read the type tokens only |
 | 3 | Every component on the new tokens and the design system look | No old token name under `/design/`; no `left`, `right`, `-top`, `-bottom`; every used token defined | **Pass.** Both searches return nothing. The isolation test counts 70 defined tokens and 65 in use, all defined |
 | 4 | The screens render with the new look; the bundle builds | New look on all three screens; diff under `/design/` only; no hex or px under `/screens/`; `dir="rtl"` and `lang="he"` on the root | **Pass.** Screenshots in Chromium before and after (desktop 1280px, phone 390px) show the stone canvas, the clay primary action and the new chips on veto, traveler and admin. `git diff --stat` for the code commit lists nine files, all under `/design/`. The search for hex colours and px or font sizes under `/screens/` returns nothing. `index.html` and the built bundle both open with `<html lang="he" dir="rtl">` (G-4). Measured on the traveler screen: Ask 72px, End 72px; the body font resolves to the approved stack at 17px |
 | 5 | Full suite and this report | All green | **Pass.** See section 2 |
@@ -55,17 +55,19 @@ The suite went red once during the work: `bundle.test.js` failed "seven componen
 | File | Change |
 |---|---|
 | `design/tokens.css` | The light theme values; header comment rewritten to name the source, the approval and the deviations |
-| `design/components/base.css` | Canvas ground, body type on `body` only (the page root size stays the browser default, as G-1 requires), headings, the seven type classes, the 2px focus ring, `.num` |
+| `design/components/base.css` | Canvas ground, body type on `body` only (the page root size stays the browser default, as G-1 requires), headings, the 2px focus ring, `.num` |
+| `design/components/type.css` | New: the seven type classes, from the type tokens (added after the G-10 decision, commit `fc56909`) |
 | `design/components/button.css` | `touch-min` on every button; primary on clay; approve and reject on their signal pairs; disabled on `surface-sunk`; `.btn--touch` at `touch-walk`; `.btn--disc` defined and unused; the transition removed |
 | `design/components/field.css` | 2px `line-strong` borders, `touch-min` height, label and caption type |
 | `design/components/status.css` | Chips that differ by border shape (draft dashed, pending solid, approved plain, rejected double); pending on the info pair; neutral gate strip with a dashed or solid lock |
 | `design/components/message.css` | Notices on the signal pairs; warn dashed on the warn pair; the full screen notice in `body-large` on canvas |
 | `design/components/panel.css` | Cards on surface without a shadow; the app bar on surface; `.layout` on `--layout-max` |
 | `design/components/table.css` | One divider colour; `touch-min` on list rows; hover and open rows on canvas |
-| `design/components/index.css` | Comment only |
+| `design/components/index.css` | Imports `type.css` after `base.css` |
+| `tests/structure/bundle.test.js` | One assertion: no longer pins seven component files (G-10, owner's decision). The check that every component file enters the bundle stays |
 | `docs/doc-design-01-v1-plan.md`, `docs/doc-design-01-v1-report.md` | The plan and this report |
 
-No file outside `/design/` and `docs/` changed. No screen, `index.html`, `tools/`, test, core, service, connector, automation, registry, map or CLAUDE.md file changed.
+Outside `/design/` and `docs/`, one file changed: `tests/structure/bundle.test.js`, by the owner's decision on G-10. No screen, `index.html`, `tools/`, core, service, connector, automation, registry, map or CLAUDE.md file changed.
 
 ## 5. Maintenance and technical debt
 
@@ -91,10 +93,10 @@ The G labels below were minted in the plan, outside the gap registry. The regist
 | G-9 | More than one clay element per view on the admin screen | `screens/admin/index.js:293`, `:475`, `:498` | **Open.** Needs the RoleSwitch pattern in the admin screen |
 | G-10 | **New.** `bundle.test.js` pins the number of component files at seven, so a new component file breaks the suite. The plan's `type.css` could not be added | `tests/structure/bundle.test.js:137`; plan section 5 task 2 | **Closed 27.09.2026** by the owner's decision: the assertion no longer pins a count, the check that every component file enters the bundle stays, and the type classes moved to `design/components/type.css` |
 
-Open gaps: G-2, G-5, G-7, G-9 and G-10. By prompt 3, a report with gaps runs prompt 4 before more code. None of the open gaps blocks the light theme itself: each is a follow up that touches a screen, a tool or a test, which this task did not.
+Open gaps: G-2, G-5, G-7 and G-9 (gaps 70, 73, 75, 77), and gap 79. By prompt 3, a report with gaps runs prompt 4 before more code. None of the open gaps blocks the light theme itself: each is a follow up that touches a screen, a tool or a test, which this task did not.
 
-## 7. What I need from you
+## 7. Decisions, 27.09.2026
 
-1. Approval of this report, and of the code commit, before a merge to main.
-2. A decision on G-10 (keep the classes in `base.css`, or change the test).
-3. Whether G-2, G-5, G-7 and G-9 go to prompt 4 now, or wait.
+1. The report and the code are approved. The branch was merged to main in `ab95ccb`, and the GitHub Pages deploy of that commit succeeded (run 6).
+2. G-10: the test may change. Done in `fc56909`; the suite stayed green (53 files, 1824 assertions).
+3. Prompt 4 runs now, for gaps 70, 73, 75, 77 and the new gap 79: `doc-design-01-v1-gap-decisions.md`, awaiting approval.
