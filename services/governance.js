@@ -28,6 +28,7 @@ import {
   SYSTEM,
   distanceMeters,
   lockReadiness,
+  mouInEffect,
   nextCorpusVersion,
   siteReopensOn,
   withinBounds,
@@ -371,6 +372,13 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
      * אינו נמסר עוברים פריטי "כולם" בלבד. זהו הכיוון הזהיר, והוא
      * מדווח כפער: ברירת מחדל שמוסרת תוכן למבוגרים בלבד למי שלא אמר
      * מי הוא היא בדיוק מה ש-F-06 בא למנוע.
+     *
+     * **BL-03, מקור תחת הסכם בתוקף** (ממצא 6, משימה 6 בתוכנית שלב
+     * 8): "שליפה ומסירה ... ממקור תחת הסכם בתוקף". השליפה של BE-04
+     * סיננה כך מאז שלב 4, והמסירה לא: פריט approved ממקור בלי הסכם
+     * בתוקף נמסר בהגעה לתחנה, ולא נמסר בתשובה לשאלה. הסינון כאן זהה
+     * לזה של candidatePool ב-BE-04, באותה פונקציה של הליבה, כדי
+     * ששליפה ומסירה לא יסננו אחרת.
      */
     listApprovedByStop: ({ payload = {} }) => {
       const items = repository.listItems({
@@ -378,10 +386,16 @@ export function create({ repository, newId = defaultNewId, now = defaultNow } = 
         stop_id: payload.stop_id,
         status: 'approved',
       });
-      const audience = payload.audience ?? EVERYONE;
-      const allowed = items.filter(
-        (item) => item.audience === audience || item.audience === EVERYONE,
+      const at = now();
+      const covered = new Set(
+        repository.listMou()
+          .filter((mou) => mouInEffect(mou, at))
+          .flatMap((mou) => mou.scope ?? []),
       );
+      const audience = payload.audience ?? EVERYONE;
+      const allowed = items
+        .filter((item) => covered.has(item.source_id))
+        .filter((item) => item.audience === audience || item.audience === EVERYONE);
 
       // העוגנים חוזרים עם הפריטים, מפני שמפה 3.2 קובעת ש-FE-04 קורא
       // "CONTENT_ITEMS ו-GEO_ANCHORS **דרך BE-05**". בלעדיהם FE-04

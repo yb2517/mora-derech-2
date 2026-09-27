@@ -546,6 +546,12 @@ const ITEM = {
     item_id: 'i-all', site_id: 's-1', stop_id: 'st-1', status: 'approved',
     source_id: 'src-1', text: 'טקסט', audience: 'כולם',
   });
+  // BL-03 (משימה 6 בתוכנית שלב 8): המסירה דורשת מקור תחת הסכם
+  // בתוקף, ולכן הבלוק הזה, שבודק את K1 ואת BL-21, רושם הסכם על src-1.
+  repository.data.mou.push({
+    mou_id: 'mou-1', institute_id: 'inst-1', scope: ['src-1'],
+    signed_at: '2026-09-01', valid_until: '2027-09-01',
+  });
   const handle = create(options(repository));
   const ask = (payload) => handle(envelope('listApprovedByStop', payload, 'module-delivery'));
 
@@ -562,6 +568,58 @@ const ITEM = {
   check('ועם audience מפורש הוא עובר',
     ask({ site_id: 's-1', stop_id: 'st-1', audience: 'מבוגרים בלבד' }).data.items.map((row) => row.item_id),
     ['i-adults', 'i-all']);
+}
+
+// --- listApprovedByStop: BL-03 מוחל על המסירה (ממצא 6, משימה 6 בתוכנית שלב 8) ---
+//
+// מפה BL-03: "שליפה ומסירה ... ממקור תחת הסכם בתוקף". בדיקת הקבלה של
+// משימה 6: פריט approved ממקור בלי הסכם בתוקף אינו חוזר; עם הסכם
+// בתוקף, חוזר. השעון של הבדיקה עומד על 14.09.2026 (options).
+
+{
+  const stopItems = (repository) => create(options(repository))(
+    envelope('listApprovedByStop', { site_id: 's-1', stop_id: 'st-2' }, 'module-delivery'),
+  );
+
+  const bare = fakeRepository();
+  const none = stopItems(bare);
+  check('BL-03: בלי אף הסכם, הבקשה מצליחה', none.ok, true);
+  check('BL-03: ופריט approved ממקור בלי הסכם אינו חוזר', none.data.items, []);
+  check('BL-03: וגם העוגן שלו אינו חוזר', none.data.anchors, []);
+
+  const otherSource = fakeRepository();
+  otherSource.data.mou.push({
+    mou_id: 'mou-a', institute_id: 'inst-1', scope: ['src-1'],
+    signed_at: '2026-09-01', valid_until: '2027-09-01',
+  });
+  check('BL-03: הסכם בתוקף על מקור אחר אינו מכסה את הפריט',
+    stopItems(otherSource).data.items, []);
+
+  const expired = fakeRepository();
+  expired.data.mou.push({
+    mou_id: 'mou-b', institute_id: 'inst-1', scope: ['src-2'],
+    signed_at: '2026-01-01', valid_until: '2026-09-01',
+  });
+  check('BL-03: הסכם שפג לפני היום אינו מכסה', stopItems(expired).data.items, []);
+
+  const noDate = fakeRepository();
+  noDate.data.mou.push({
+    mou_id: 'mou-c', institute_id: 'inst-1', scope: ['src-2'], signed_at: '2026-09-01',
+  });
+  check('BL-03: הסכם בלי תאריך תוקף אינו מכסה', stopItems(noDate).data.items, []);
+
+  const covered = fakeRepository();
+  covered.data.mou.push({
+    mou_id: 'mou-d', institute_id: 'inst-1', scope: ['src-2'],
+    signed_at: '2026-09-01', valid_until: '2027-09-01',
+  });
+  const response = stopItems(covered);
+  check('BL-03: עם הסכם בתוקף על המקור, הפריט חוזר',
+    response.data.items.map((row) => row.item_id), ['i-approved']);
+  check('BL-03: והעוגן שלו חוזר איתו',
+    response.data.anchors.map((row) => row.anchor_id), ['a-approved']);
+  check('BL-03: ופריט rejected באותה תחנה עדיין אינו חוזר',
+    response.data.items.some((row) => row.item_id === 'i-rejected'), false);
 }
 
 // getItem מחזיר את העוגן: מפה 4.4 נותנת ל-screen-content את getItem
