@@ -591,8 +591,8 @@ dom.restore();
     };
   }
 
-  // משפט פרטיות סינתטי של הבדיקה: הטבלה עדיין ממתינה לנוסח (פער 31),
-  // והבדיקה צריכה משפט שני כדי להראות שהוא אינו נאמר אחרי הדילוג.
+  // משפט פרטיות סינתטי של הבדיקה, כדי שהטענה "המשפט השני אינו נאמר"
+  // לא תהיה תלויה בנוסח שבטבלה.
   const PRIVACY = 'משפט פרטיות סינתטי של הבדיקה.';
   const SAFETY = referenceFile.values.safety_opening_text;
   const withPrivacy = { ...reference, privacy_opening_text: PRIVACY };

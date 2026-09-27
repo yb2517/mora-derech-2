@@ -22,6 +22,8 @@ const KEYS_IN_MAP_2_4 = [
   // מפתח, ו-BL-12 אוסר ערך משתנה בקוד.
   'note_max_chars',
   'fallback_text', 'unavailable_text', 'voice_id', 'voice_rate',
+  // מפה גרסה 3.12, פער 73: טבלת ההגייה של CONN-02.
+  'speech_substitutions',
   'stale_session_minutes', 'interaction_types',
   'm01_threshold', 'm02_threshold', 'sample_min', 'sample_max',
   'enforce_gate_b', 'error_human_text', 'crossing_clear_seconds',
@@ -72,7 +74,9 @@ const DECIDED_IN_MAP = {
 // מהרשימה בהכרעה 5 של תוכנית שלב 5 (15.09.2026): בורר השפה he
 // והקצב 0.95, מהחילוץ מאב הטיפוס. privacy_opening_text ירד ממנה
 // 17.09.2026: הנוסח, שנגזר מ-PRD סעיף 25, אושר בידי בעלת הפרויקט.
-const EXPECTED_EMPTY = ['model_tier'];
+// speech_substitutions נוסף ריק במשימה 9 של שלב 8: הערכים ממתינים
+// לאישור בעלת הפרויקט (מפה 2.4 בנוסח 3.12, פער 73).
+const EXPECTED_EMPTY = ['speech_substitutions', 'model_tier'];
 
 check('משפט הפרטיות אושר ואינו ריק', typeof values.privacy_opening_text === 'string' && values.privacy_opening_text.length > 0, true);
 check('משפט הפרטיות מגלה את זיהוי הדיבור של הטלפון (PRD סעיף 25)', values.privacy_opening_text.includes('זיהוי הדיבור'), true);
@@ -82,9 +86,9 @@ check('voice_rate הוא הקצב מאב הטיפוס', values.voice_rate, 0.95)
 
 // --- המפתחות מול 2.4 ---
 
-check('2.4 מונה שלושים מפתחות', KEYS_IN_MAP_2_4.length, 30);
+check('2.4 מונה שלושים ואחד מפתחות', KEYS_IN_MAP_2_4.length, 31);
 check('מפתח אחד נוסף בהכרעה', KEYS_ADDED_BY_DECISION.length, 1);
-check('הטבלה מונה שלושים ואחד מפתחות', Object.keys(values).length, 31);
+check('הטבלה מונה שלושים ושניים מפתחות', Object.keys(values).length, 32);
 check('המפתחות והסדר כמצופה', Object.keys(values), EXPECTED_ORDER);
 
 check(

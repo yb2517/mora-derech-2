@@ -266,7 +266,7 @@
     const voice = createTts({
       engine: globalThis.speechSynthesis ?? null,
       Utterance: globalThis.SpeechSynthesisUtterance ?? null,
-      reference: referenceFor(['voice_id', 'voice_rate']),
+      reference: referenceFor(['voice_id', 'voice_rate', 'speech_substitutions']),
     });
     const microphone = createStt({
       Recognition: globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition ?? null,

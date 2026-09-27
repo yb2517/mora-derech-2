@@ -6,13 +6,16 @@
 //
 //   node tests/unit/tts.test.js
 
-import { create, sentences } from '../../connectors/tts.js';
+import { create, sentences, pronounce } from '../../connectors/tts.js';
 import { fakeSpeechEngine, flush } from '../helpers/device.js';
 import { createChecker } from '../helpers/assert.js';
 
 const { check, report } = createChecker('CONN-02 tts');
 
-const REFERENCE = { voice_id: 'he', voice_rate: 0.95 };
+// טבלת ההגייה כאן סינתטית, של הבדיקה (משימה 9 בתוכנית שלב 8): הערכים
+// של המערכת ממתינים לאישור בעלת הפרויקט, והבדיקה אינה תלויה בהם.
+const TABLE = [['ה-16', 'השש עשרה'], ['ג\'נרלי', 'דזנרלי']];
+const REFERENCE = { voice_id: 'he', voice_rate: 0.95, speech_substitutions: TABLE };
 const HEBREW = { name: 'Carmit', lang: 'he-IL' };
 const ENGLISH = { name: 'Samantha', lang: 'en-US' };
 
@@ -203,6 +206,45 @@ check('משפט ארוך בלי סימן פיסוק נשאר קטע אחד', sen
   };
   const response = await tts.speak('ראשון. שני.');
   check('שגיאה שאינה ביטול אינה עוצרת את הרצף', [response.ok, device.spoken.map((u) => u.text)], [true, ['ראשון.', 'שני.']]);
+}
+
+// ---------------------------------------------------------------------
+// טבלת ההגייה וכלל הגרשיים (מפה 3.3 שורת CONN-02 ו-2.4, פער 73; משימה
+// 9 בתוכנית שלב 8)
+// ---------------------------------------------------------------------
+
+check('צה"ל נאמר בלי הסימן', pronounce('כיכר צה"ל', []), 'כיכר צהל');
+check('גם בגרשיים העבריים', pronounce('כיכר צה״ל', []), 'כיכר צהל');
+check('וגרש בתוך מילה יורד', pronounce('העות\'מאני', []), 'העותמאני');
+check('ה-16 נאמר במילים, לפי הטבלה', pronounce('במאה ה-16 על ידי', TABLE), 'במאה השש עשרה על ידי');
+check('הטבלה קודמת לכלל: ג\'נרלי לפי הטבלה ולא בהסרת הגרש', pronounce('בניין ג\'נרלי', TABLE), 'בניין דזנרלי');
+check('מירכאות בקצה מילה אינן בתוך מילה ואינן יורדות', pronounce('מרפסת "משיקולי".', []), 'מרפסת "משיקולי".');
+check('הזוג הארוך קודם לקצר שמוכל בו',
+  pronounce('שנות ה-2000', [['ה-20', 'העשרים'], ['ה-2000', 'האלפיים']]), 'שנות האלפיים');
+check('זוג פגום אינו מופעל ואינו מפיל', pronounce('טקסט.', [['טקסט'], 'שורה', null]), 'טקסט.');
+
+{
+  const { tts, device, events } = build();
+  const written = 'במאה ה-16 נבנה בניין ג\'נרלי ליד כיכר צה"ל.';
+  await tts.speak(written);
+  check('המנוע מקבל את הטקסט הנאמר',
+    device.spoken.map((u) => u.text).join(' '), 'במאה השש עשרה נבנה בניין דזנרלי ליד כיכר צהל.');
+  check('והמסך מקבל את הטקסט הכתוב, כמו במקור', events.find((e) => e.name === 'start').text, written);
+  check('גם בסיום', events.find((e) => e.name === 'end').text, written);
+}
+
+{
+  const { tts, device } = build({ reference: { voice_id: 'he', voice_rate: 0.95 } });
+  const response = await tts.speak('שלום.');
+  check('מפתח חסר: E-REF-EMPTY', [response.ok, response.error.code], [false, 'E-REF-EMPTY']);
+  check('עם שם המפתח', response.error.data.key, 'speech_substitutions');
+  check('ואין השמעה מומצאת', device.spoken.length, 0);
+}
+
+{
+  const { tts, device } = build({ reference: { voice_id: 'he', voice_rate: 0.95, speech_substitutions: 'צה"ל=צהל' } });
+  const response = await tts.speak('שלום.');
+  check('טבלה שאינה רשימה: E-REF-EMPTY, ואין השמעה', [response.error?.code, device.spoken.length], ['E-REF-EMPTY', 0]);
 }
 
 // ---------------------------------------------------------------------

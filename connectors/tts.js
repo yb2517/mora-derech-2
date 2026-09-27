@@ -55,6 +55,34 @@ function defaultSchedule() {
   };
 }
 
+// גרש וגרשיים בתוך מילה: בין שתי אותיות עבריות, בכתיב של המקלדת
+// (' ו-") ובכתיב העברי (׳ ו-״). אחרי טבלת ההגייה הם אינם נאמרים (מפה
+// 3.3 שורת CONN-02, פער 73).
+const INNER_MARKS = /(?<=[\u05D0-\u05EA])['"\u05F3\u05F4](?=[\u05D0-\u05EA])/g;
+
+/**
+ * הטקסט הנאמר, מהטקסט הכתוב (מפה 3.3 שורת CONN-02 ו-2.4, פער 73;
+ * משימה 9 בתוכנית שלב 8).
+ *
+ * קודם טבלת ההגייה, speech_substitutions: זוגות "כתוב, נהגה" שצוות
+ * התוכן עורך מחוץ לזמן ריצה (BL-09). ההחלפה היא של מחרוזת מדויקת,
+ * והארוך קודם, כדי שזוג קצר לא יחתוך באמצע זוג ארוך שמכיל אותו. אחר
+ * כך גרש וגרשיים שנשארו בתוך מילה יורדים. הטקסט שעל המסך אינו עובר
+ * כאן: הוא נשאר המקור.
+ *
+ * @param {string} text הטקסט הכתוב.
+ * @param {[string, string][]} substitutions הטבלה.
+ * @returns {string}
+ */
+export function pronounce(text, substitutions = []) {
+  const pairs = (Array.isArray(substitutions) ? substitutions : [])
+    .filter((pair) => Array.isArray(pair) && typeof pair[0] === 'string' && pair[0] !== '' && typeof pair[1] === 'string')
+    .sort((a, b) => b[0].length - a[0].length);
+  let out = String(text ?? '');
+  for (const [written, spoken] of pairs) out = out.split(written).join(spoken);
+  return out.replace(INNER_MARKS, '');
+}
+
 /**
  * חלוקה לקטעים בגבול משפט. משפט ארוך במיוחד נשאר קטע אחד: חיתוך
  * באמצע משפט היה נשמע, וזה בדיוק מה שהכלל אוסר.
@@ -71,8 +99,9 @@ export function sentences(text) {
  * @param {object} [options.engine] מנוע הדיבור: getVoices, speak,
  *   cancel, ואירוע voiceschanged. בדפדפן: window.speechSynthesis.
  * @param {Function} [options.Utterance] מחלקת ההיגד של המנוע.
- * @param {object} options.reference voice_id ו-voice_rate, מוזרקים
- *   מטבלת ה-reference בהרכבה. ערך חסר מחזיר E-REF-EMPTY ואינו מומצא.
+ * @param {object} options.reference voice_id, voice_rate ו-speech_substitutions,
+ *   מוזרקים מטבלת ה-reference בהרכבה. ערך חסר מחזיר E-REF-EMPTY ואינו
+ *   מומצא.
  * @param {() => number} [options.clock] השעון במילישניות, למשך.
  * @param {object} [options.schedule] setTimeout מוזרק, לבדיקות.
  */
@@ -200,8 +229,16 @@ export function create({
     if (voiceId.missing) return voiceId.missing;
     const rate = ref('voice_rate');
     if (rate.missing) return rate.missing;
+    // טבלת ההגייה: בלעדיה אין השמעה, ואין השמעה מומצאת (חוק ברזל 5).
+    // טבלה שאינה רשימה היא ערך שאינו קיים, לא טבלה ריקה.
+    const table = ref('speech_substitutions');
+    if (table.missing) return table.missing;
+    if (!Array.isArray(table.value)) return failed('E-REF-EMPTY', { key: 'speech_substitutions' });
 
+    // spoken הוא הטקסט הכתוב: הוא עובר באירועים למסך ובתשובה. מה
+    // שנשלח למנוע הוא said, אחרי טבלת ההגייה.
     const spoken = String(text ?? '').trim();
+    const said = pronounce(spoken, table.value);
 
     if (!available()) {
       emit('unavailable', { text: spoken });
@@ -229,7 +266,7 @@ export function create({
     return new Promise((resolve) => {
       const current = {
         text: spoken,
-        parts: sentences(spoken),
+        parts: sentences(said),
         started_at: clock(),
         resolve,
       };
