@@ -1,10 +1,10 @@
 /* DESIGN-01: הפאנל. המכולה שכל מסך בנוי ממנה. */
 
+/* כרטיס על הקנבס. בלי הצללה: הצללה שמורה לרכיב צף בלבד */
 .panel {
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-line);
+  background: var(--surface);
+  border: var(--border-hair) solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-panel);
 }
 
 .panel__head {
@@ -12,37 +12,50 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: var(--border-width) solid var(--color-line);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border-hair) solid var(--line);
 }
 
-.panel__body { padding: var(--space-md); }
+.panel__body { padding: var(--space-4); }
 
-.panel__body--sunken { background: var(--color-surface-sunken); }
+/* גוף שקוע: על הקנבס ולא על surface-sunk, כדי שטקסט משני יישאר קריא */
+.panel__body--sunken { background: var(--canvas); }
 
 .panel__foot {
-  padding: var(--space-sm) var(--space-md);
-  border-top: var(--border-width) solid var(--color-line);
+  padding: var(--space-3) var(--space-4);
+  border-block-start: var(--border-hair) solid var(--line);
 }
 
-/* פס הכותרת של המערכת, משותף לכל המסכים */
+/* פס הכותרת של המערכת, משותף לכל המסכים. שם המערכת בכתב, כי אין
+ * עדיין סמל */
 .app-bar {
-  background: var(--color-ink);
-  color: var(--color-text-inverse);
-  padding: var(--space-md) var(--space-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--space-4);
+  border-block-end: var(--border-hair) solid var(--line);
 }
 
-.app-bar__title { font-size: var(--font-xl); }
-.app-bar__note { color: var(--color-page); font-size: var(--font-sm); }
+.app-bar__title {
+  font-size: var(--type-heading-size);
+  line-height: var(--type-heading-line);
+  font-weight: var(--weight-bold);
+}
 
-/* פריסת המסך: עמודה ראשית ועמודת צד שנערמת במסך צר */
+.app-bar__note {
+  color: var(--ink-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+/* פריסת המסך: עמודה ראשית ועמודת צד שנערמת במסך צר. הרוחב הוא
+ * --layout-max; שורת הקריאה שבתוכו מוגבלת ב-measure (G-6) */
 .layout {
-  max-width: var(--measure);
-  margin: 0 auto;
-  padding: var(--space-lg);
+  max-width: var(--layout-max);
+  margin-inline: auto;
+  padding: var(--space-5) var(--space-4);
   display: grid;
-  gap: var(--space-lg);
+  gap: var(--space-5);
 }
 
 .layout--wide { max-width: none; }
@@ -56,11 +69,11 @@
 /* ציטוט טקסט המקור, בפאנל הווטו ובמסך התוכן */
 .quote {
   margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface);
-  border-inline-start: var(--border-width-focus) solid var(--color-line-strong);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-inline-start: var(--border-control) solid var(--line-strong);
   max-width: var(--measure);
-  line-height: var(--line-reading);
+  line-height: var(--type-body-line);
 }
 
 /* ספירות לצד כותרת הפאנל, למשל ספירת הפריטים לפי מצב. יושבות בתוך
@@ -68,7 +81,8 @@
 .panel__counts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
-  font-size: var(--font-sm);
+  gap: var(--space-2);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
   font-weight: var(--weight-regular);
 }

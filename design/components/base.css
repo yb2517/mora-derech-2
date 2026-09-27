@@ -1,6 +1,10 @@
-/* DESIGN-01: הבסיס. ברירות המחצה של המסמך, לפני כל רכיב.
+/* DESIGN-01: הבסיס. ברירות המחדל של המסמך, לפני כל רכיב.
  *
  * אין כאן אף ערך עיצוב: הכול var() מתוך tokens.css.
+ *
+ * גודל הגופן של שורש הדף אינו נקבע כאן בכוונה: שלושה ערכים בערכה
+ * כתובים ב-rem (G-1), והם שווים לערכי ה-px המאושרים רק בגודל ברירת
+ * המחדל של הדפדפן. גוף הדף מקבל את סגנון body.
  */
 
 *,
@@ -10,46 +14,80 @@
 html,
 body {
   margin: 0;
-  background: var(--color-page);
-  color: var(--color-text);
-  font-family: var(--font-family);
-  font-size: var(--font-md);
-  line-height: var(--line-body);
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
 }
 
-h1, h2, h3 {
-  margin: 0;
-  line-height: var(--line-tight);
-  font-weight: var(--weight-bold);
+body {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
 }
 
-h1 { font-size: var(--font-xl); }
-h2 { font-size: var(--font-lg); }
-h3 { font-size: var(--font-md); }
+h1, h2, h3 { margin: 0; }
 
-p { margin: 0 0 var(--space-md); max-width: var(--measure); }
-p:last-child { margin-bottom: 0; }
+h1 {
+  font-size: var(--type-title-size);
+  line-height: var(--type-title-line);
+  font-weight: var(--type-title-weight);
+}
+
+h2,
+h3 {
+  font-size: var(--type-heading-size);
+  line-height: var(--type-heading-line);
+  font-weight: var(--type-heading-weight);
+}
+
+p { margin: 0; margin-block-end: var(--space-4); max-width: var(--measure); }
+p:last-child { margin-block-end: 0; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 
 /* מיקוד נראה בכל רכיב אינטראקטיבי. המקלדת היא ממשק, לא חריג */
 :focus-visible {
-  outline: var(--border-width-focus) solid var(--color-focus);
+  outline: var(--border-control) solid var(--focus);
   outline-offset: var(--focus-offset);
 }
 
+/* שבעת סגנונות הטקסט של ערכת האור, מהנספח של doc-design-01-v1-apply-light.
+ * כל מידה ומשקל נקראים מ-tokens.css (G-3), והרכיבים קוראים את אותם
+ * מאפיינים ישירות. display פעם אחת במסך, לשם התחנה; body-large לכל מה
+ * שנקרא בהליכה; caption הוא הגודל הקטן ביותר שמותר. יושבים כאן ולא
+ * בקובץ משלהם, מפני שבדיקת האריזה מונה שבעה קובצי רכיבים */
+.display { font-family: var(--font-sans); font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
+.title { font-family: var(--font-sans); font-size: var(--type-title-size); line-height: var(--type-title-line); font-weight: var(--type-title-weight); }
+.heading { font-family: var(--font-sans); font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
+.body-large { font-family: var(--font-sans); font-size: var(--type-body-large-size); line-height: var(--type-body-large-line); font-weight: var(--type-body-large-weight); }
+.body { font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
+.label { font-family: var(--font-sans); font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
+.caption { font-family: var(--font-sans); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); }
+
 /* טקסט שנקרא בלבד: כותרת מסך, הסבר, נוסח שגיאה */
-.text-muted { color: var(--color-text-muted); }
-.text-sm { font-size: var(--font-sm); }
-.text-xs { font-size: var(--font-xs); }
+.text-muted { color: var(--ink-muted); }
+
+.text-sm,
+.text-xs {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+/* מספר, שעה או אחוז בתוך טקסט עברי: נקרא משמאל לימין ומבודד מהטקסט
+ * שסביבו. המסכים עוד אינם עוטפים בו מספרים (G-7) */
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
 
 /* נגיש לקורא מסך, מוסתר מהעין */
 .visually-hidden {
   position: absolute;
-  width: var(--border-width);
-  height: var(--border-width);
-  margin: calc(var(--border-width) * -1);
+  width: var(--border-hair);
+  height: var(--border-hair);
+  margin: calc(var(--border-hair) * -1);
   padding: 0;
   overflow: hidden;
   clip-path: inset(50%);
