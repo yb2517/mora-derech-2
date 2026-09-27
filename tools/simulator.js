@@ -33,6 +33,39 @@ function ok(data) {
   return { ok: true, data };
 }
 
+// מרחק יחסי בין שתי נקודות, להשוואה בלבד: מעלות אורך מכווצות לפי
+// קו הרוחב. אינו מטרים, ואינו המרחק של AUTO-01.
+function spread(from, to) {
+  const dLat = to.lat - from.lat;
+  const dLng = (to.lng - from.lng) * Math.cos((from.lat * Math.PI) / 180);
+  return dLat * dLat + dLng * dLng;
+}
+
+/**
+ * סדר הסיור: הנקודות לפי סדר התחנות במסלול (site.stops), ובתוך
+ * תחנה לפי העמוד במקור, שהוא סדר הקריאה בחוברת. שתי נקודות באותה
+ * תחנה ובאותו עמוד: הקרובה יותר לתחילת המסלול קודמת, מפני שהסיור
+ * מתרחק מנקודת ההתחלה. זה כלל של הכלי ולא של המערכת: לפריט אין שדה
+ * סדר במפה 2.1.
+ *
+ * בלי הסדר הזה הנקודות יוצאות בסדר המזהים, ובמסד הענן המזהים
+ * אקראיים: הלחצן הראשון בפאנל לא היה תחילת הסיור.
+ *
+ * @param {Array<{stop_id, page, lat, lng}>} points
+ * @param {string[]} stops סדר התחנות של המסלול.
+ */
+export function routeOrder(points = [], stops = []) {
+  const position = (stopId) => {
+    const index = stops.indexOf(stopId);
+    return index === -1 ? Number.POSITIVE_INFINITY : index;
+  };
+  const page = (point) => (Number.isFinite(point.page) ? point.page : Number.POSITIVE_INFINITY);
+  const byStopAndPage = (a, b) => (position(a.stop_id) - position(b.stop_id)) || (page(a) - page(b));
+  const start = [...points].sort(byStopAndPage)[0];
+  return [...points].sort((a, b) => byStopAndPage(a, b)
+    || (spread(start, a) - spread(start, b)));
+}
+
 // דגל הסשן שמסך המטייל רושם כשהסימולטור הוא מקור הדגימות (מפה 2.1
 // שורת SESSIONS, BL-16). השם יושב כאן, ליד מי שהוא מסמן.
 export const SESSION_FLAG = 'simulator';
@@ -73,11 +106,13 @@ export function create({ clock = () => Date.now() } = {}) {
     flag: SESSION_FLAG,
 
     /**
-     * המסלול להליכה: רשימת נקודות { stop_id, lat, lng, name }. בדרך
-     * כלל עוגני המסלול, בסדר התחנות.
+     * המסלול להליכה: רשימת נקודות { stop_id, page, lat, lng, name },
+     * בדרך כלל עוגני המסלול. עם stops הן נטענות בסדר הסיור
+     * (routeOrder); בלעדיו, בסדר שבו נמסרו.
      */
-    load(points = []) {
-      route = points.map((point) => ({ ...point }));
+    load(points = [], { stops = null } = {}) {
+      const ordered = Array.isArray(stops) ? routeOrder(points, stops) : points;
+      route = ordered.map((point) => ({ ...point }));
       return ok({ points: route.length });
     },
 
