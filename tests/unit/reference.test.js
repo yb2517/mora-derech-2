@@ -74,14 +74,18 @@ const DECIDED_IN_MAP = {
 // מהרשימה בהכרעה 5 של תוכנית שלב 5 (15.09.2026): בורר השפה he
 // והקצב 0.95, מהחילוץ מאב הטיפוס. privacy_opening_text ירד ממנה
 // 17.09.2026: הנוסח, שנגזר מ-PRD סעיף 25, אושר בידי בעלת הפרויקט.
-// speech_substitutions נוסף ריק במשימה 9 של שלב 8: הערכים ממתינים
-// לאישור בעלת הפרויקט (מפה 2.4 בנוסח 3.12, פער 73).
-const EXPECTED_EMPTY = ['speech_substitutions', 'model_tier'];
+// speech_substitutions ירד מהרשימה 27.09.2026: 19 הזוגות אושרו בידי
+// בעלת הפרויקט (מפה 2.4 בנוסח 3.12, פער 73; docs/doc-stage-08-speech-table.md).
+const EXPECTED_EMPTY = ['model_tier'];
 
 check('משפט הפרטיות אושר ואינו ריק', typeof values.privacy_opening_text === 'string' && values.privacy_opening_text.length > 0, true);
 check('משפט הפרטיות מגלה את זיהוי הדיבור של הטלפון (PRD סעיף 25)', values.privacy_opening_text.includes('זיהוי הדיבור'), true);
 
 check('voice_id הוא בורר שפה, לפי הכרעה 5 של שלב 5', values.voice_id, 'he');
+check('טבלת ההגייה אושרה: 19 זוגות', Array.isArray(values.speech_substitutions) && values.speech_substitutions.length, 19);
+check('כל זוג הוא כתוב ונהגה, שתי מחרוזות',
+  values.speech_substitutions.every((pair) => Array.isArray(pair) && pair.length === 2 && pair.every((x) => typeof x === 'string' && x !== '')),
+  true);
 check('voice_rate הוא הקצב מאב הטיפוס', values.voice_rate, 0.95);
 
 // --- המפתחות מול 2.4 ---

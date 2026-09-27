@@ -9,6 +9,8 @@
 import { create, sentences, pronounce } from '../../connectors/tts.js';
 import { fakeSpeechEngine, flush } from '../helpers/device.js';
 import { createChecker } from '../helpers/assert.js';
+import referenceFile from '../../data/reference.json' with { type: 'json' };
+import corpus from '../../data/corpus/jaffa-01.json' with { type: 'json' };
 
 const { check, report } = createChecker('CONN-02 tts');
 
@@ -252,6 +254,22 @@ check('זוג פגום אינו מופעל ואינו מפיל', pronounce('טק
   const { tts, device } = build({ reference: { voice_id: 'he', voice_rate: 0.95, speech_substitutions: 'צה"ל=צהל' } });
   const response = await tts.speak('שלום.');
   check('טבלה שאינה רשימה: E-REF-EMPTY, ואין השמעה', [response.error?.code, device.spoken.length], ['E-REF-EMPTY', 0]);
+}
+
+// הטבלה שאושרה (27.09.2026), על 19 הטקסטים של הקורפוס: אחרי הטבלה
+// והכלל נשארים רק גרשים אחרי ג, ז או צ (פער 76), ולא נשארת צורה של
+// אות, מקף ומספר.
+{
+  const approved = referenceFile.values.speech_substitutions;
+  const said = corpus.items.map((item) => pronounce(item.text, approved)).join(' ');
+  const inner = [...new Set(said.match(/[\u05D0-\u05EA]['"\u05F3\u05F4][\u05D0-\u05EA]/g) ?? [])];
+  check('הטבלה המאושרת: הסימנים שנשארו בתוך מילה הם גרש אחרי ג, ז או צ בלבד',
+    inner.filter((m) => !/^[גזצ]['\u05F3]/.test(m)), []);
+  check('ואין אות, מקף ומספר', said.match(/[\u05D0-\u05EA]-\d/g), null);
+  check('"מתי נבנה" במאה ה-16 נאמר במילים', pronounce('במאה ה-16', approved), 'במאה השש עשרה');
+  check('פסוק נאמר בשמות האותיות', pronounce('(בראשית מ"ט, כד)', approved), '(בראשית מם טת, כף דלת)');
+  check('ח\'טאב נאמר חיטאב', pronounce('עומר אבן ח\'טאב', approved), 'עומר אבן חיטאב');
+  check('ג\'נרלי נאמר כמות שהוא', pronounce('בניין ג\'נרלי', approved), 'בניין ג\'נרלי');
 }
 
 // ---------------------------------------------------------------------
