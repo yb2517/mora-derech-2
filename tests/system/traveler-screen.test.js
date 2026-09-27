@@ -391,9 +391,10 @@ dom.restore();
   };
 
   let heard = { ok: true, data: { text: 'שאלה בקול' } };
+  let listens = 0;
   const microphone = {
     available: () => true,
-    listen: async () => heard,
+    listen: async () => { listens += 1; return heard; },
     stop: () => ({ ok: true, data: { stopped: false } }),
   };
 
@@ -455,6 +456,43 @@ dom.restore();
   byLabel5('שאלה').click();
   await settle();
   check('ביטול בידי המשפחה: לא נרשם דבר', repository.listInteractions({ session_id: session5.session_id }).length, rows5.length);
+
+  // --- Enter בשדה ההקלדה (ממצא 1, משימה 5 בתוכנית שלב 8) ---
+  // usecase-f-04 צעד 2, החלופה של הקלדה, ואב הטיפוס: Enter שולח כמו
+  // הכפתור, ושאלה ריקה אינה נשלחת.
+
+  {
+    const input = stage5Dom.host.querySelector('input');
+    const asks = () => sent5.filter((e) => e.module === 'BE-03' && e.action === 'ask').length;
+    const asksBefore = asks();
+    const listensBefore = listens;
+
+    input.type('');
+    input.press('Enter');
+    await settle();
+    check('Enter בשדה ריק אינו שולח שאלה', asks(), asksBefore);
+    check('ואינו פותח את המיקרופון', listens, listensBefore);
+
+    input.type('   ');
+    input.press('Enter');
+    await settle();
+    check('Enter בשדה של רווחים בלבד אינו שולח', asks(), asksBefore);
+
+    input.type('מה יש בתחנה הזאת');
+    input.press('a');
+    await settle();
+    check('מקש אחר אינו שולח', asks(), asksBefore);
+
+    input.press('Enter');
+    await settle();
+    const typed = sent5.filter((e) => e.module === 'BE-03' && e.payload?.question === 'מה יש בתחנה הזאת');
+    check('Enter בשדה עם טקסט שולח ask אחד', asks(), asksBefore + 1);
+    check('את הטקסט שהוקלד, כמו הכפתור', typed.length, 1);
+    check('עם הקשר הסשן והתחנה, כמו הכפתור',
+      [typed[0]?.payload.session_id, typed[0]?.payload.stop_id], [session5.session_id, 'stop-demo-a']);
+    check('ובלי לפתוח את המיקרופון', listens, listensBefore);
+    check('והשדה מתרוקן אחרי התשובה', stage5Dom.host.querySelector('input').value, '');
+  }
 
   // --- הודעה מהמכשיר אחרי ההתחלה, דרך ההרכבה ---
 

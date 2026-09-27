@@ -549,6 +549,20 @@ export function create({ host, from, reference, send, voice = null, microphone =
     const input = field.querySelector('input');
     input.value = view.question;
     input.addEventListener('input', () => { view.question = input.value; });
+    // Enter שולח את מה שהוקלד, כמו הכפתור (ממצא 1, משימה 5 בתוכנית
+    // שלב 8; usecase-f-04 צעד 2, החלופה של הקלדה, ואב הטיפוס: keydown
+    // על Enter).
+    // שדה ריק אינו שולח ואינו פותח מיקרופון: אב הטיפוס מתעלם משאלה
+    // ריקה, והמיקרופון נפתח רק בכפתור. Enter בזמן הרכבת תווים
+    // (isComposing) שייך למקלדת ולא לשאלה.
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault?.();
+      const typed = String(input.value ?? '').trim();
+      if (typed === '') return;
+      view.question = input.value;
+      submitQuestion(typed);
+    });
     children.push(field);
 
     const askButton = createElement('button', { class: 'btn btn--primary btn--touch', type: 'button' }, 'שאלה');
