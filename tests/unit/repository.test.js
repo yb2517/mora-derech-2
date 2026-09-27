@@ -390,6 +390,25 @@ function liveDriver() {
   check('הזריעה בכל טעינה אינה נוגעת ביומן', again.listAudit().map((r) => r.request_id), ['req-086']);
 }
 
+// --- מפתח reference חסר מגיע מהזריעה, ומפתח קיים אינו נדרס (פער 88) ---
+//
+// הכרעת בעלת הפרויקט 27.09.2026. דפדפן שביקר לפני שנוסף מפתח (כמו
+// speech_substitutions בשלב 8) מקבל אותו בטעינה הבאה; ערך שנכתב בזמן
+// ריצה, כמו enforce_gate_b ב-set_enforce, נשאר.
+
+{
+  const storage = memoryStorage();
+  const { speech_substitutions: added, ...older } = seed.reference;
+  const before = createBrowserDriver({ storage, seed: { ...seed, reference: older } });
+  check('ביקור לפני המפתח: אין speech_substitutions',
+    'speech_substitutions' in before.readTable('reference'), false);
+  before.setRefKey('enforce_gate_b', true);
+
+  const after = createRepository(createBrowserDriver({ storage, seed }));
+  check('בטעינה הבאה המפתח החסר מגיע', after.getRef('speech_substitutions'), added);
+  check('וערך שנכתב בזמן ריצה אינו נדרס', after.getRef('enforce_gate_b'), true);
+}
+
 // --- מבחן ההחלפה: דרייבר אחר, אותו ממשק, אפס שינוי ב-index.js ---
 
 {

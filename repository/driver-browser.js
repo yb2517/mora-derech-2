@@ -98,6 +98,21 @@ export function createBrowserDriver({ storage = globalThis.localStorage, seed = 
   for (const name of REGISTRY) {
     if (seed[name] !== undefined) write(name, seed[name]);
   }
+
+  // טבלת ה-reference שכבר באחסון מקבלת מהזריעה את המפתחות שחסרים בה,
+  // ומפתח קיים אינו נדרס (פער 88, הכרעת בעלת הפרויקט 27.09.2026). היא
+  // אינה נזרעת מחדש כולה, מפני שהיא נכתבת בזמן ריצה (set_enforce של
+  // BE-06). זה הכלל של כלי הייבוא במסד החי: מפתח שנוסף בשלב מגיע גם
+  // לדפדפן שכבר ביקר, וערך שנכתב בזמן ריצה נשאר.
+  const storedReference = read(REFERENCE);
+  if (storedReference !== undefined && seed[REFERENCE] !== undefined) {
+    const missing = Object.keys(seed[REFERENCE])
+      .filter((key) => !Object.prototype.hasOwnProperty.call(storedReference, key));
+    if (missing.length > 0) {
+      for (const key of missing) storedReference[key] = seed[REFERENCE][key];
+      write(REFERENCE, storedReference);
+    }
+  }
   for (const name of TABLE_NAMES) {
     if (read(name) !== undefined) continue;
     if (seed[name] !== undefined) {
