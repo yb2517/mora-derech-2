@@ -71,8 +71,13 @@ const UNKNOWN = 'לא ידוע';
  * @param {object} [options.device] מה שההרכבה יודעת על המכשיר:
  *   flags() לדגלי הסשן שאינם של המסך (simulator), position() לדגימה
  *   האחרונה של AUTO-01, direction(from, to) לרוח השמיים.
+ * @param {boolean} [options.testMode] מצב בדיקה בכתובת (מפה 4.3, פער 83):
+ *   לחצן שעוצר את השמעת משפטי הפתיחה. בלי מצב בדיקה אין לחצן, ומשפט
+ *   הבטיחות נשמע במלואו (usecase-f-13 צעד 1).
  */
-export function create({ host, from, reference, send, voice = null, microphone = null, device = null }) {
+export function create({
+  host, from, reference, send, voice = null, microphone = null, device = null, testMode = false,
+}) {
   const view = {
     site: null,
     resumed: false,
@@ -81,6 +86,8 @@ export function create({ host, from, reference, send, voice = null, microphone =
     question: '',
     answer: null,
     nowSpeaking: null,
+    opening: false,
+    openingSkipped: false,
     listening: false,
     battery: BATTERY.OK,
     blockedSite: null,
@@ -198,8 +205,25 @@ export function create({ host, from, reference, send, voice = null, microphone =
   async function speakOpening() {
     const safety = reference?.safety_opening_text;
     const privacy = reference?.privacy_opening_text;
+    view.opening = true;
+    view.openingSkipped = false;
+    render();
     if (typeof safety === 'string' && safety !== '') await speak(safety);
-    if (typeof privacy === 'string' && privacy !== '') await speak(privacy);
+    if (!view.openingSkipped && typeof privacy === 'string' && privacy !== '') await speak(privacy);
+    view.opening = false;
+    render();
+  }
+
+  /**
+   * הדילוג על משפטי הפתיחה, במצב בדיקה בלבד (מפה 4.3, פער 83; משימה 8
+   * בתוכנית שלב 8). ההשמעה נעצרת, והמשפט הבא אינו נאמר. הטקסט נשאר
+   * מוצג, והסשן ממשיך.
+   */
+  function skipOpening() {
+    view.openingSkipped = true;
+    view.opening = false;
+    stopVoice();
+    render();
   }
 
   async function end() {
@@ -215,6 +239,8 @@ export function create({ host, from, reference, send, voice = null, microphone =
     view.session = null;
     view.answer = null;
     view.nowSpeaking = null;
+    view.opening = false;
+    view.openingSkipped = false;
     view.resumed = false;
     view.notices.clear();
     view.sessionFlags.clear();
@@ -523,6 +549,22 @@ export function create({ host, from, reference, send, voice = null, microphone =
       children.push(createElement('p', { class: 'text-sm text-muted' }, view.nowSpeaking));
     }
 
+    // מצב בדיקה בלבד (מפה 4.3, פער 83): לחצן הדילוג, כל עוד משפטי
+    // הפתיחה נשמעים. אחרי דילוג שני המשפטים נשארים כתובים על המסך.
+    if (testMode && view.opening) {
+      const skip = createElement('button', { class: 'btn btn--touch', type: 'button' }, 'דילוג על משפטי הפתיחה');
+      skip.addEventListener('click', skipOpening);
+      children.push(createElement('div', { class: 'btn-row' }, [skip]));
+    }
+    if (testMode && view.openingSkipped) {
+      for (const key of ['safety_opening_text', 'privacy_opening_text']) {
+        const text = reference?.[key];
+        if (typeof text === 'string' && text !== '' && text !== view.nowSpeaking) {
+          children.push(createElement('p', { class: 'text-sm text-muted' }, text));
+        }
+      }
+    }
+
     if (view.answer) {
       // BE-03 מחזיר spoken: מה שיישמע, כפי ש-BE-04 החזיר אותו
       // ובלי ניסוח מחדש (BL-13). הוא מוצג גם כטקסט, תמיד: בהיעדר
@@ -549,6 +591,20 @@ export function create({ host, from, reference, send, voice = null, microphone =
     const input = field.querySelector('input');
     input.value = view.question;
     input.addEventListener('input', () => { view.question = input.value; });
+    // Enter שולח את מה שהוקלד, כמו הכפתור (ממצא 1, משימה 5 בתוכנית
+    // שלב 8; usecase-f-04 צעד 2, החלופה של הקלדה, ואב הטיפוס: keydown
+    // על Enter).
+    // שדה ריק אינו שולח ואינו פותח מיקרופון: אב הטיפוס מתעלם משאלה
+    // ריקה, והמיקרופון נפתח רק בכפתור. Enter בזמן הרכבת תווים
+    // (isComposing) שייך למקלדת ולא לשאלה.
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault?.();
+      const typed = String(input.value ?? '').trim();
+      if (typed === '') return;
+      view.question = input.value;
+      submitQuestion(typed);
+    });
     children.push(field);
 
     const askButton = createElement('button', { class: 'btn btn--primary btn--touch', type: 'button' }, 'שאלה');

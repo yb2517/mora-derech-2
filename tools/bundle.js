@@ -29,13 +29,15 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const ENTRY_HTML = 'index.html';
 const DEFAULT_OUT = join('dist', 'mora-derech-2.html');
 
-// שלוש טבלאות הנתונים, בדיוק כפי ש-TABLE_SOURCES בנקודת הכניסה
-// מונה אותן. הן נכנסות לקובץ כבלוקים, ונקודת הכניסה כבר מעדיפה
-// בלוק על פני fetch.
+// טבלאות הנתונים, בדיוק כפי ש-TABLE_SOURCES בנקודת הכניסה מונה
+// אותן. הן נכנסות לקובץ כבלוקים, ונקודת הכניסה כבר מעדיפה בלוק על
+// פני fetch. allow_list_test נכנסת כבלוק כמו האחרות, ונקודת הכניסה
+// קוראת אותה רק במצב בדיקה (מפה 4.3, פער 82).
 const TABLES = {
   modules: 'registry/modules.json',
   allow_list: 'registry/allow-list.json',
   reference: 'data/reference.json',
+  allow_list_test: 'registry/allow-list-test.json',
 };
 
 // בלוק ההגדרות (decision-05 סעיף 3, משימה 13.4 בתוכנית חלק ב):

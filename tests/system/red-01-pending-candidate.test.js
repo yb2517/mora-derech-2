@@ -14,6 +14,7 @@
 //   node tests/system/red-01-pending-candidate.test.js
 
 import { createChecker } from '../helpers/assert.js';
+import { corpusItems } from '../helpers/corpus-pool.js';
 
 const { check, report } = createChecker('אדומה F-05: פריט pending במאגר המועמדים');
 
@@ -49,6 +50,13 @@ const approved = {
   text: 'טקסט מאושר שאין בו שום דבר יוצא דופן.',
 };
 
+// המאגר המאושר כולל גם את 19 הטקסטים של הקורפוס (משימה 4 בתוכנית שלב
+// 8): המנוע הדו שלבי דורש מונח ייחודי, כזה שמופיע בפחות מעשירית
+// ממשפטי המאגר. בלי מאגר בגודל אמיתי, גם הפריט אחרי אישורו לא היה
+// נשלף, והחצי השני של הבדיקה, זה שמוכיח שהיא ספציפית, לא היה מודד דבר.
+const corpus = corpusItems({ site_id: 'site-red', source_id: 'src-red', prefix: 'corpus-' });
+const APPROVED_IDS = ['item-approved', ...corpus.map((item) => item.item_id)].sort();
+
 // ההזרקה עצמה: פריט שהחוקר לא אישר, שיושב במאגר לצד המאושר.
 const injected = [
   { ...approved, item_id: 'item-pending', status: 'pending', name: 'פריט ממתין', text: `כאן עמדה ${SMOKING_GUN} עתיקה.` },
@@ -63,7 +71,7 @@ const seed = {
   sites: [site],
   sources: [source],
   rights_mou: [mou],
-  content_items: [approved, ...injected],
+  content_items: [approved, ...corpus, ...injected],
 };
 
 const repository = createRepository(createBrowserDriver({ storage: memoryStorage(), seed }));
@@ -87,9 +95,11 @@ const retrieve = (payload) => send({
   // הטענה האדומה עצמה, בשלוש צורות. שלושתן חייבות להחזיק.
   check(
     'הפריט שאינו מאושר אינו נכנס למאגר המועמדים',
-    response.data.considered.map((row) => row.item_id),
-    ['item-approved'],
+    response.data.considered.map((row) => row.item_id).sort(),
+    APPROVED_IDS,
   );
+  check('המילה אינה בשום פריט מאושר, ולכן כל אזכור שלה הוא דליפה',
+    [approved, ...corpus].some((item) => item.text.includes(SMOKING_GUN)), false);
   check('המילה שמופיעה רק בפריט שאינו מאושר אינה בתשובה',
     response.data.answer.includes(SMOKING_GUN), false);
   check('התשובה היא הימנעות', response.data.is_fallback, true);
@@ -121,7 +131,7 @@ const retrieve = (payload) => send({
   const response = await retrieve({ question: `${SMOKING_GUN} עתיקה`, site_id: 'site-red' });
 
   check('המועמדים שנשקלו הם המאושרים בלבד',
-    response.data.considered.map((row) => row.item_id), ['item-approved']);
+    response.data.considered.map((row) => row.item_id).sort(), APPROVED_IDS);
   check('ולא הוחזר ציון לפריט שאינו מאושר',
     response.data.considered.some((row) => row.item_id.includes('pending')), false);
 }

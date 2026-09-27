@@ -6,13 +6,18 @@
 //
 //   node tests/unit/tts.test.js
 
-import { create, sentences } from '../../connectors/tts.js';
+import { create, sentences, pronounce } from '../../connectors/tts.js';
 import { fakeSpeechEngine, flush } from '../helpers/device.js';
 import { createChecker } from '../helpers/assert.js';
+import referenceFile from '../../data/reference.json' with { type: 'json' };
+import corpus from '../../data/corpus/jaffa-01.json' with { type: 'json' };
 
 const { check, report } = createChecker('CONN-02 tts');
 
-const REFERENCE = { voice_id: 'he', voice_rate: 0.95 };
+// טבלת ההגייה כאן סינתטית, של הבדיקה (משימה 9 בתוכנית שלב 8): הערכים
+// של המערכת ממתינים לאישור בעלת הפרויקט, והבדיקה אינה תלויה בהם.
+const TABLE = [['ה-16', 'השש עשרה'], ['ח\'טאב', 'חיטאב']];
+const REFERENCE = { voice_id: 'he', voice_rate: 0.95, speech_substitutions: TABLE };
 const HEBREW = { name: 'Carmit', lang: 'he-IL' };
 const ENGLISH = { name: 'Samantha', lang: 'en-US' };
 
@@ -203,6 +208,91 @@ check('משפט ארוך בלי סימן פיסוק נשאר קטע אחד', sen
   };
   const response = await tts.speak('ראשון. שני.');
   check('שגיאה שאינה ביטול אינה עוצרת את הרצף', [response.ok, device.spoken.map((u) => u.text)], [true, ['ראשון.', 'שני.']]);
+}
+
+// ---------------------------------------------------------------------
+// טבלת ההגייה וכלל הגרשיים (מפה 3.3 שורת CONN-02 ו-2.4, פער 84; משימה
+// 9 בתוכנית שלב 8)
+// ---------------------------------------------------------------------
+
+check('צה"ל נאמר בלי הסימן', pronounce('כיכר צה"ל', []), 'כיכר צהל');
+check('גם בגרשיים העבריים', pronounce('כיכר צה״ל', []), 'כיכר צהל');
+check('וגרש בתוך מילה יורד', pronounce('העות\'מאני', []), 'העותמאני');
+check('ה-16 נאמר במילים, לפי הטבלה', pronounce('במאה ה-16 על ידי', TABLE), 'במאה השש עשרה על ידי');
+check('הטבלה קודמת לכלל: ח\'טאב לפי הטבלה ולא בהסרת הגרש', pronounce('אבן ח\'טאב', TABLE), 'אבן חיטאב');
+// פער 87, מפה 3.13: גרש אחרי ג, ז או צ משנה את הצליל, ונשאר.
+check('ג\' נשאר: הקול מבטא אותו כראוי', pronounce('בניין ג\'נרלי', []), 'בניין ג\'נרלי');
+check('ז\' נשאר', pronounce('ז\'בוטינסקי', []), 'ז\'בוטינסקי');
+check('צ\' נשאר', pronounce('מסקוצ\'ברייט', []), 'מסקוצ\'ברייט');
+check('גם בגרש העברי', pronounce('ג׳נרלי', []), 'ג׳נרלי');
+check('גרש אחרי אות אחרת יורד', pronounce('אל-ח\'ליל', []), 'אל-חליל');
+check('וגרשיים אחרי ג, ז או צ יורדים: החריג הוא לגרש בלבד', pronounce('מג"ד', []), 'מגד');
+check('מירכאות בקצה מילה אינן בתוך מילה ואינן יורדות', pronounce('מרפסת "משיקולי".', []), 'מרפסת "משיקולי".');
+check('הזוג הארוך קודם לקצר שמוכל בו',
+  pronounce('שנות ה-2000', [['ה-20', 'העשרים'], ['ה-2000', 'האלפיים']]), 'שנות האלפיים');
+check('זוג פגום אינו מופעל ואינו מפיל', pronounce('טקסט.', [['טקסט'], 'שורה', null]), 'טקסט.');
+
+{
+  const { tts, device, events } = build();
+  const written = 'במאה ה-16 נבנה ליד כיכר צה"ל, מול עומר אבן ח\'טאב.';
+  await tts.speak(written);
+  check('המנוע מקבל את הטקסט הנאמר',
+    device.spoken.map((u) => u.text).join(' '), 'במאה השש עשרה נבנה ליד כיכר צהל, מול עומר אבן חיטאב.');
+  check('והמסך מקבל את הטקסט הכתוב, כמו במקור', events.find((e) => e.name === 'start').text, written);
+  check('גם בסיום', events.find((e) => e.name === 'end').text, written);
+}
+
+{
+  const { tts, device } = build({ reference: { voice_id: 'he', voice_rate: 0.95 } });
+  const response = await tts.speak('שלום.');
+  check('מפתח חסר: E-REF-EMPTY', [response.ok, response.error.code], [false, 'E-REF-EMPTY']);
+  check('עם שם המפתח', response.error.data.key, 'speech_substitutions');
+  check('ואין השמעה מומצאת', device.spoken.length, 0);
+}
+
+{
+  const { tts, device } = build({ reference: { voice_id: 'he', voice_rate: 0.95, speech_substitutions: 'צה"ל=צהל' } });
+  const response = await tts.speak('שלום.');
+  check('טבלה שאינה רשימה: E-REF-EMPTY, ואין השמעה', [response.error?.code, device.spoken.length], ['E-REF-EMPTY', 0]);
+}
+
+// הטבלה שאושרה (27.09.2026), על 19 הטקסטים של הקורפוס: אחרי הטבלה
+// והכלל נשארים רק גרשים אחרי ג, ז או צ (פער 87), ולא נשארת צורה של
+// אות, מקף ומספר.
+{
+  const approved = referenceFile.values.speech_substitutions;
+  const said = corpus.items.map((item) => pronounce(item.text, approved)).join(' ');
+  const inner = [...new Set(said.match(/[\u05D0-\u05EA]['"\u05F3\u05F4][\u05D0-\u05EA]/g) ?? [])];
+  check('הטבלה המאושרת: הסימנים שנשארו בתוך מילה הם גרש אחרי ג, ז או צ בלבד',
+    inner.filter((m) => !/^[גזצ]['\u05F3]/.test(m)), []);
+  check('ואין אות, מקף ומספר', said.match(/[\u05D0-\u05EA]-\d/g), null);
+  check('"מתי נבנה" במאה ה-16 נאמר במילים', pronounce('במאה ה-16', approved), 'במאה השש עשרה');
+  check('פסוק נאמר בשמות האותיות', pronounce('(בראשית מ"ט, כד)', approved), '(בראשית מם טת, כף דלת)');
+  check('ח\'טאב נאמר חיטאב', pronounce('עומר אבן ח\'טאב', approved), 'עומר אבן חיטאב');
+  check('ג\'נרלי נאמר כמות שהוא', pronounce('בניין ג\'נרלי', approved), 'בניין ג\'נרלי');
+}
+
+// ---------------------------------------------------------------------
+// שם הקול שנבחר, לקריאה בלבד (מפה 3.3 שורת CONN-02, פער 82; משימה 7
+// בתוכנית שלב 8, תוספת 27.09.2026)
+// ---------------------------------------------------------------------
+
+{
+  const ENHANCED = { name: 'Carmit (Enhanced)', lang: 'he-IL' };
+  const { tts, device } = build({ voices: [ENGLISH, HEBREW, ENHANCED] });
+  check('שם הקול שנבחר: העברי הראשון ברשימת המכשיר', tts.selectedVoice(), { name: 'Carmit', lang: 'he-IL' });
+  await tts.speak('שלום.');
+  check('והוא הקול שנשמע בפועל', device.spoken[0].voice, tts.selectedVoice().name);
+  check('הקריאה אינה משנה את הבחירה', tts.selectedVoice(), { name: 'Carmit', lang: 'he-IL' });
+  check('והערך לקריאה בלבד', Object.isFrozen(tts.selectedVoice()), true);
+}
+
+{
+  const { tts } = build({ voices: [ENGLISH] });
+  check('בלי קול עברי: אין שם', tts.selectedVoice(), null);
+  check('בלי מנוע: אין שם', create({ reference: REFERENCE }).selectedVoice(), null);
+  const { tts: noRef } = build({ reference: { voice_rate: 0.95 } });
+  check('בלי voice_id בטבלה: אין שם, ואין בחירה מומצאת', noRef.selectedVoice(), null);
 }
 
 report();

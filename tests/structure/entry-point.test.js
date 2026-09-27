@@ -104,6 +104,22 @@ check(
   [],
 );
 
+// --- 3ב. מצב בדיקה בכתובת (מפה 4.3, פערים 82 ו-83; תוכנית שלב 8 משימה 7) ---
+
+check('קוראת את הפרמטר mode, ומצב בדיקה הוא הערך test בלבד',
+  /searchParams\.get\('mode'\)\s*===\s*'test'/.test(code), true);
+check('מכירה את קובץ שורות הבדיקה', code.includes('registry/allow-list-test.json'), true);
+check('וטוענת אותו רק במצב בדיקה',
+  /TEST_MODE\s*\?[^;]*loadTable\('allow_list_test'\)/.test(code), true);
+check('ואינה טוענת אותו בשום מקום אחר',
+  (code.match(/loadTable\('allow_list_test'\)/g) ?? []).length, 1);
+check('בלי מצב בדיקה רשימת המותר היא קובץ הייצור כמות שהוא',
+  /:\s*production;/.test(code), true);
+check('פאנל הסימולטור: בהרכבת הפיתוח, או במצב בדיקה',
+  /simulator && \(development \|\| TEST_MODE\) && traveler/.test(code), true);
+check('שם הקול מגיע לפאנל רק במצב בדיקה', /voice:\s*TEST_MODE \? voice : null/.test(code), true);
+check('ומסך המטייל מקבל את מצב הבדיקה, ללחצן הדילוג (פער 83)', /equipment:\s*\{[^}]*testMode:\s*TEST_MODE/.test(code), true);
+
 // --- 3א. בוחרת מסך לפי הפרמטר screen, ומשווה אותו לנתונים (מפה 4.3, פער 63) ---
 
 check('קוראת את הפרמטר screen מהכתובת', code.includes("searchParams.get('screen')"), true);
