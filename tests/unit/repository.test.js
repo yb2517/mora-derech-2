@@ -366,6 +366,30 @@ function liveDriver() {
   );
 }
 
+// --- טבלאות CORE-03 נכתבות מהזריעה בכל טעינה (פער 86) ---
+//
+// הכרעת בעלת הפרויקט 27.09.2026, דרך א. מפה 4.3: שורות הסימולטור
+// מתווספות רק במצב בדיקה, ובלעדיו אין שום שינוי. בדפדפן שכבר ביקר,
+// רשימת המותר היא של הטעינה הנוכחית ולא של הביקור הראשון, בשני
+// הכיוונים. שאר הטבלאות נשארות כפי שנכתבו.
+
+{
+  const storage = memoryStorage();
+  const extra = { from: 'tool-simulator', module: 'FE-04', action: 'arrive' };
+  const testSeed = { ...seed, allow_list: { ...seed.allow_list, rows: [...seed.allow_list.rows, extra] } };
+  const rows = (s) => createRepository(createBrowserDriver({ storage, seed: s })).listAllowed().length;
+
+  const normal = seed.allow_list.rows.length;
+  check('ביקור רגיל ראשון: רשימת הזריעה', rows(seed), normal);
+  check('ואחריו מצב בדיקה: השורה הנוספת מגיעה', rows(testSeed), normal + 1);
+  check('ואחריו ביקור רגיל: השורה הנוספת יורדת', rows(seed), normal);
+
+  const withAudit = createRepository(createBrowserDriver({ storage, seed }));
+  withAudit.appendAudit({ request_id: 'req-086', phase: 'request' });
+  const again = createRepository(createBrowserDriver({ storage, seed }));
+  check('הזריעה בכל טעינה אינה נוגעת ביומן', again.listAudit().map((r) => r.request_id), ['req-086']);
+}
+
 // --- מבחן ההחלפה: דרייבר אחר, אותו ממשק, אפס שינוי ב-index.js ---
 
 {
