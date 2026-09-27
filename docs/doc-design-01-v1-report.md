@@ -1,0 +1,98 @@
+# DESIGN-01 v1: the report on applying the light theme
+
+Status: **draft, awaiting approval**. Date: 2026-09-27.
+Type: build mechanism prompt 3, closing `doc-design-01-v1-plan.md`.
+Branch: `claude/light-theme-design-module-iswaxn`. Code commit: `14bcd2d`.
+Approval: gaps G-1 to G-8 of the plan, approved by the owner on 27.09.2026 as proposed.
+Verified against the repository, not the conversation: every result below comes from a command run on the branch after the change.
+
+## 1. The tasks and their acceptance checks
+
+| # | Task | Acceptance check | Result |
+|---|---|---|---|
+| 1 | The appendix values in `tokens.css`, one `:root` block | Isolation test and structure test 05 green; the values match the appendix | **Pass.** A line diff of the appendix block against the new `:root` block shows only the approved differences: `--radius-lg` as `1.25rem` (G-1), the 21 `--type-*` tokens (G-3), `--layout-max` (G-6), and the kept `--weight-*` and `--focus-offset`. Every colour, spacing, radius, size and border value is identical, character for character |
+| 2 | The seven type classes | `.display` renders 40px, line 48px, weight 700; isolation test green | **Pass, with one deviation.** The classes sit in `base.css` and not in a new `type.css` (see gap G-10). They read the type tokens only |
+| 3 | Every component on the new tokens and the design system look | No old token name under `/design/`; no `left`, `right`, `-top`, `-bottom`; every used token defined | **Pass.** Both searches return nothing. The isolation test counts 70 defined tokens and 65 in use, all defined |
+| 4 | The screens render with the new look; the bundle builds | New look on all three screens; diff under `/design/` only; no hex or px under `/screens/`; `dir="rtl"` and `lang="he"` on the root | **Pass.** Screenshots in Chromium before and after (desktop 1280px, phone 390px) show the stone canvas, the clay primary action and the new chips on veto, traveler and admin. `git diff --stat` for the code commit lists nine files, all under `/design/`. The search for hex colours and px or font sizes under `/screens/` returns nothing. `index.html` and the built bundle both open with `<html lang="he" dir="rtl">` (G-4). Measured on the traveler screen: Ask 72px, End 72px; the body font resolves to the approved stack at 17px |
+| 5 | Full suite and this report | All green | **Pass.** See section 2 |
+
+## 2. The test suite, by level
+
+Run: `node tests/run-all.js` on the branch after commit `14bcd2d`.
+
+| Level | Files | Assertions passed | Failed |
+|---|---|---|---|
+| Unit | 22 | 1198 | 0 |
+| Interfaces | 8 | 151 | 0 |
+| Structure | 12 | 145 | 0 |
+| System | 11 | 330 | 0 |
+| **Total** | **53** | **1824** | **0** |
+
+The eight structure tests of the map 6.4: 8 of 8 pass. The three red tests (F-05, F-08, F-09): the protection holds in all three.
+
+Tests that bear on this change directly:
+
+| Test | Result |
+|---|---|
+| `design-isolation.test.js` (the stage 2 acceptance test: one file holds design values) | 10 passed, 0 failed; 9 design files, 70 tokens, 65 in use, 4 screen files |
+| `reference-values.test.js` (structure test 05) | 6 passed, 0 failed |
+| `bundle.test.js` | 33 passed, 0 failed |
+
+The suite went red once during the work: `bundle.test.js` failed "seven component files: expected 7, got 8" when `type.css` was added. The classes moved into `base.css` and the suite returned to green without any test change (G-10).
+
+## 3. The structure tests that bear on this change
+
+| Test | Result |
+|---|---|
+| Data connection in one file | Pass |
+| AI provider call in one file | Pass |
+| Error codes identical to the map | Pass |
+| One direction of dependency | Pass |
+| A design value lives in one file (`design/tokens.css`) | Pass |
+
+## 4. Files and changes
+
+| File | Change |
+|---|---|
+| `design/tokens.css` | The light theme values; header comment rewritten to name the source, the approval and the deviations |
+| `design/components/base.css` | Canvas ground, body type on `body` only (the page root size stays the browser default, as G-1 requires), headings, the seven type classes, the 2px focus ring, `.num` |
+| `design/components/button.css` | `touch-min` on every button; primary on clay; approve and reject on their signal pairs; disabled on `surface-sunk`; `.btn--touch` at `touch-walk`; `.btn--disc` defined and unused; the transition removed |
+| `design/components/field.css` | 2px `line-strong` borders, `touch-min` height, label and caption type |
+| `design/components/status.css` | Chips that differ by border shape (draft dashed, pending solid, approved plain, rejected double); pending on the info pair; neutral gate strip with a dashed or solid lock |
+| `design/components/message.css` | Notices on the signal pairs; warn dashed on the warn pair; the full screen notice in `body-large` on canvas |
+| `design/components/panel.css` | Cards on surface without a shadow; the app bar on surface; `.layout` on `--layout-max` |
+| `design/components/table.css` | One divider colour; `touch-min` on list rows; hover and open rows on canvas |
+| `design/components/index.css` | Comment only |
+| `docs/doc-design-01-v1-plan.md`, `docs/doc-design-01-v1-report.md` | The plan and this report |
+
+No file outside `/design/` and `docs/` changed. No screen, `index.html`, `tools/`, test, core, service, connector, automation, registry, map or CLAUDE.md file changed.
+
+## 5. Maintenance and technical debt
+
+1. **Muted text never sits on `surface-sunk`.** The design README forbids `ink-muted` there. Three places that used the sunk ground and hold muted text now use `canvas` instead: the open list row, the list row hover, and `.panel__body--sunken`. The gate strip moved to `surface` for the same reason.
+2. **The dark and night blocks** can be added later as `[data-theme="dark"]` and `[data-theme="night"]` in `tokens.css` without touching a component. Nothing in the components reads a light-only value.
+3. **Two spacing gaps seen on screen, present before this change:** on the traveler screen the no-voice notice sits directly on the privacy line, and on the admin screen the exit point button touches the message above it. Both come from the screen markup, not from DESIGN-01.
+4. **Heebo was not installed in the test browser**, so the screenshots show the fallback stack rendering, which is the case the instruction requires to work.
+
+## 6. The gaps
+
+| # | Gap | Reference | State |
+|---|---|---|---|
+| G-1 | Three appendix values collide with structure test 05 | `tests/structure/reference-values.test.js`; appendix | Closed: written in rem, approved |
+| G-2 | Heebo cannot load in the single file bundle | `tools/bundle.js`; decision-04 b1 | **Open.** The stack is applied; loading Heebo from Google Fonts on GitHub Pages needs an owner decision and a change outside `/design/` |
+| G-3 | Type classes cannot hold px outside `tokens.css` | `design-isolation.test.js` part 1 | Closed: 21 type tokens, approved |
+| G-4 | Screen roots do not carry `dir` and `lang` themselves | `index.html:2` | Closed: the document root counts, approved |
+| G-5 | The 96px question disc needs a screen class | `screens/traveler/index.js:554` | **Open.** `.btn--disc` is ready; the traveler screen needs one class added to the Ask button |
+| G-6 | `--measure` held two meanings | `design/components/panel.css` | Closed: `--layout-max`, approved |
+| G-7 | Numbers LTR inside Hebrew need screen markup | the three screens | **Open.** `.num` is ready; the screens do not use it yet |
+| G-8 | Pending moves from amber to the info pair | `status.css`, `message.css` | Closed: approved |
+| G-9 | More than one clay element per view on the admin screen | `screens/admin/index.js:293`, `:475`, `:498` | **Open.** Needs the RoleSwitch pattern in the admin screen |
+| G-10 | **New.** `bundle.test.js` pins the number of component files at seven, so a new component file breaks the suite. The plan's `type.css` could not be added | `tests/structure/bundle.test.js:137`; plan section 5 task 2 | Worked around inside `/design/`: the type classes sit in `base.css`. **Decision needed:** keep them there, or allow a one line change to the test so that a component file can be added |
+
+Open gaps: G-2, G-5, G-7, G-9 and G-10. By prompt 3, a report with gaps runs prompt 4 before more code. None of the open gaps blocks the light theme itself: each is a follow up that touches a screen, a tool or a test, which this task did not.
+
+## 7. What I need from you
+
+1. Approval of this report, and of the code commit, before a merge to main.
+2. A decision on G-10 (keep the classes in `base.css`, or change the test).
+3. Whether G-2, G-5, G-7 and G-9 go to prompt 4 now, or wait.
