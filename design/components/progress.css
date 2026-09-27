@@ -1,0 +1,52 @@
+/* DESIGN-01: מחוון ההתקדמות במסלול (RouteProgress של ערכת העיצוב;
+ * שלב 9, פער 93). נקודות לאורך המסלול, שזורמות מימין לשמאל עם כיוון
+ * הדף, ומתחתן אותו מצב במילים.
+ *
+ * תחנה שהושגה מתמלאת ב-ink, והתחנה האחרונה שהושגה היא נקודה גדולה
+ * יותר בחימר. מה שלפנינו הוא טבעת ריקה. שלושת המצבים נבדלים בגודל
+ * ובמילוי ולא בצבע לבדו, כדי שייקראו גם בראיית לילה */
+
+.route-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-4);
+}
+
+.route-progress__track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunk);
+}
+
+.route-progress__dot {
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
+  border: var(--border-control) solid var(--line-strong);
+  border-radius: var(--radius-full);
+  background: transparent;
+}
+
+.route-progress__dot--done {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.route-progress__dot--current {
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  border-color: var(--clay-edge);
+  background: var(--clay);
+}
+
+.route-progress__label {
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+}

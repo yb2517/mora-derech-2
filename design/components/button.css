@@ -84,3 +84,37 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* מתג הערכה (ThemeSwitcher של ערכת העיצוב; שלב 9, פער 92): שלוש
+ * אפשרויות בפס אחד. האפשרות הנבחרת מסומנת ב-aria-pressed, ונבדלת
+ * במשטח, בקו ובמשקל, ולא בצבע לבדו, כדי שתיקרא גם בראיית לילה. כל
+ * האפשרויות ב-ink ולא ב-ink-muted, לפי תיקון ראיית הלילה של ערכת
+ * העיצוב */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunk);
+}
+
+.segmented[hidden] { display: none; }
+
+.segmented__option {
+  min-height: var(--touch-min);
+  padding-inline: var(--space-4);
+  border: var(--border-control) solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--weight-regular);
+}
+
+.segmented__option[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  font-weight: var(--weight-bold);
+}
