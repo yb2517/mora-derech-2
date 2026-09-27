@@ -607,7 +607,8 @@ export function create({
     });
     children.push(field);
 
-    const askButton = createElement('button', { class: 'btn btn--primary btn--touch', type: 'button' }, 'שאלה');
+    // דיסקה של question-disc, ולא כפתור הליכה רחב (פער 73, מפה 3.15 שורת DESIGN-01).
+    const askButton = createElement('button', { class: 'btn btn--primary btn--disc', type: 'button' }, 'שאלה');
     askButton.addEventListener('click', onQuestion);
 
     const endButton = createElement('button', { class: 'btn btn--touch', type: 'button' }, 'סיום הטיול');

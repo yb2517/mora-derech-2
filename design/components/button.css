@@ -68,14 +68,18 @@
   font-weight: var(--weight-bold);
 }
 
-/* כפתור השאלה כדיסקה. מוגדר כאן ואינו בשימוש עדיין: המסך יעבור אליו
- * בשינוי נפרד (פער 73) */
+/* כפתור השאלה כדיסקה, המגע היחיד שמותר בהליכה מלבד הסיום (פער 73,
+ * QuestionButton במערכת העיצוב) */
 .btn--disc {
+  flex: none;
   width: var(--question-disc);
   height: var(--question-disc);
   padding: 0;
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-raised);
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line);
+  font-weight: var(--weight-bold);
 }
 
 .btn-row {
