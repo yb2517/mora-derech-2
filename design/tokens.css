@@ -13,10 +13,9 @@
  * שלוש ערכות, כולן מאושרות: הבהירה ב-:root, והכהה וראיית הלילה בבלוקי
  * [data-theme="dark"] ו-[data-theme="night"] בסוף הקובץ (שלב 9, הכרעה D1,
  * 27.09.2026; מפה 3.3 שורת DESIGN-01, פער 92). הערכים הועתקו כלשונם
- * מ-tokens.json של ערכת העיצוב. ערכה אחרת מחליפה צבעים וצל בלבד: שמות
- * המאפיינים זהים בשלוש, ואף רכיב אינו יודע איזו ערכה פעילה. בראיית
- * לילה ink-muted הוא 3.8:1, חריג מתועד בערכת העיצוב: לטקסט גדול או
- * משני בלבד.
+ * מ-tokens.json של ערכת העיצוב; ערכי ראיית הלילה הם אפשרות B, שערכת
+ * העיצוב עודכנה אליה ב-27.09.2026. ערכה אחרת מחליפה צבעים וצל בלבד: שמות
+ * המאפיינים זהים בשלוש, ואף רכיב אינו יודע איזו ערכה פעילה.
  *
  * שלוש סטיות מהנספח, כולן בהכרעת בעלת הפרויקט 27.09.2026
  * (doc-design-01-v1-plan סעיף 4; המספרים לפי רישום הפערים):
@@ -148,29 +147,32 @@
 }
 
 [data-theme="night"] {
-  /* colour: night vision theme: red and near black only, no white, blue, green or yellow, approved 27.09.2026 (stage 9, D1) */
-  --canvas: #0A0000;
-  --surface: #1A0503;
-  --surface-sunk: #240805;
-  --stone: #2E0905;
-  --ink: #D6503A;
-  --ink-muted: #B8402C;
-  --ink-disabled: #6A1E14;
-  --line: #3A0C07;
-  --line-strong: #A83C29;
-  --clay: #5C160C;
-  --clay-pressed: #48100A;
-  --clay-edge: #A83C29;
-  --on-clay: #F07A63;
-  --focus: #F07A63;
-  --signal-ok: #D6503A;
-  --signal-ok-bg: #1A0503;
-  --signal-info: #D6503A;
-  --signal-info-bg: #1A0503;
-  --signal-warn: #E0604A;
-  --signal-warn-bg: #240805;
-  --signal-danger: #E0604A;
-  --signal-danger-bg: #240805;
-  --scrim: #0A0000;
+  /* ראיית לילה, אפשרות B (אדום עמוק), כפי שערכת העיצוב עודכנה 27.09.2026:
+     אדום טהור על שחור טהור, בלי ירוק ובלי כחול בשום ערך, ובלי צל. הרקע
+     #000000, כך שפיקסלי OLED כבויים. הטקסט 3.4 עד 3.5:1, חריג מתועד
+     בערכת העיצוב: עומד בסף לטקסט גדול בלבד. גבולות וטבעת המיקוד 3:1 ומעלה */
+  --canvas: #000000;
+  --surface: #0A0000;
+  --surface-sunk: #100000;
+  --stone: #1A0000;
+  --ink: #C80000;
+  --ink-muted: #940000;
+  --ink-disabled: #440000;
+  --line: #1C0000;
+  --line-strong: #BA0000;
+  --clay: #1E0000;
+  --clay-pressed: #140000;
+  --clay-edge: #BA0000;
+  --on-clay: #C80000;
+  --focus: #E00000;
+  --signal-ok: #C80000;
+  --signal-ok-bg: #0A0000;
+  --signal-info: #C80000;
+  --signal-info-bg: #0A0000;
+  --signal-warn: #C80000;
+  --signal-warn-bg: #0A0000;
+  --signal-danger: #C80000;
+  --signal-danger-bg: #0A0000;
+  --scrim: #000000;
   --shadow-raised: none;
 }
