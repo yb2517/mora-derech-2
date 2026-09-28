@@ -187,6 +187,23 @@
 
   function setTheme(theme) {
     document.documentElement.dataset.theme = theme;
+    paintBrowserBar();
+  }
+
+  // צבע סרגל הדפדפן (מפה 4.3, פער 98): צבע הרקע של הערכה הפעילה,
+  // --canvas, נקרא מ-tokens.css אחרי שהערכה הוחלה. אין כאן ערך צבע:
+  // ערכה שמשתנה בקובץ הערכה משנה גם את הסרגל. דפדפן שאינו מכבד את
+  // theme-color מציג את הסרגל כדרכו.
+  function paintBrowserBar() {
+    const canvas = globalThis.getComputedStyle?.(document.documentElement).getPropertyValue('--canvas').trim();
+    if (!canvas) return;
+    let bar = document.querySelector('meta[name="theme-color"]');
+    if (!bar) {
+      bar = document.createElement('meta');
+      bar.setAttribute('name', 'theme-color');
+      document.head.append(bar);
+    }
+    bar.setAttribute('content', canvas);
   }
 
   function deviceTheme() {

@@ -141,6 +141,17 @@ check('וחוזר בסיום הסשן ובחסימת הסוללה, שסוגרת 
   /on\('session:end', \(\) => \{ themeControl\.hidden = false; \}\)/.test(code)
     && /on\('battery:block', \(\) => \{ themeControl\.hidden = false; \}\)/.test(code), true);
 
+// --- 3ג2. צבע סרגל הדפדפן (מפה 4.3, פער 98) ---
+
+check('כל החלת ערכה צובעת גם את סרגל הדפדפן',
+  /function setTheme\(theme\) \{[^}]*dataset\.theme = theme;\s*paintBrowserBar\(\);/.test(code), true);
+check('הצבע נקרא מ---canvas של הערכה הפעילה',
+  /getComputedStyle[^;]*getPropertyValue\('--canvas'\)/.test(code), true);
+check('ונכתב לתגית theme-color',
+  /meta\[name="theme-color"\]/.test(code) && /setAttribute\('content', canvas\)/.test(code), true);
+check('אין ערך צבע בנקודת הכניסה: הצבע בא מ-tokens.css בלבד',
+  /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(code), false);
+
 // --- 3ד. מחוון ההתקדמות: ההרכבה מוסרת את התחנות ואת ההגעה (מפה 4.1, פער 93) ---
 
 check('ההרכבה מוסרת למסך המטייל את רשימת תחנות המסלול',
