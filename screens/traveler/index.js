@@ -35,11 +35,21 @@
 // נרשם בלי מגע, גם כשהמכשיר כבה במסך החסימה, ונשירה מסוללה אינה
 // נספרת כנשירה מחוסר עניין.
 
-import { createElement, panel, humanError, num } from '../view.js';
+import { createElement, createIcon, panel, humanError, num } from '../view.js';
 
 // שני מצבי הסוללה, לפי F-13 תיקון 1. הנוהל דו שלבי: התראה, ואז
 // חסימה. החידוש מותנה בחצייה חזרה של סף החידוש.
 const BATTERY = { OK: 'ok', WARNED: 'warned', BLOCKED: 'blocked' };
+
+// כפתור השאלה בקול, בשלושת מצביו (פער 99; רכיב QuestionButton של ערכת
+// העיצוב). התווית מתחת לדיסקה היא גם השם הנגיש של הכפתור. הנוסחים אושרו
+// בידי בעלת הפרויקט 05.10.2026 (D2), מפני שנוסחי ערכת העיצוב אינם מקור
+// לטקסט בלי אישור (מסמך הבנייה סעיף 1).
+const QUESTION_STATE = Object.freeze({
+  idle: { label: 'לחצו ושאלו', icon: 'mic' },
+  listening: { label: 'מקשיב…', icon: 'wave' },
+  processing: { label: 'מחפש תשובה…', icon: 'dots' },
+});
 
 // קודים שהם הודעת מכשיר, ולא כשל פעולה. לפי 2.2 הם נאמרים פעם אחת
 // לסשן: משפחה שמקבלת את אותה הודעה בכל תחנה מפסיקה להקשיב.
@@ -90,6 +100,7 @@ export function create({
     opening: false,
     openingSkipped: false,
     listening: false,
+    processing: false,
     battery: BATTERY.OK,
     blockedSite: null,
     blockedSession: null,
@@ -264,6 +275,18 @@ export function create({
     const question = String(text ?? '').trim();
     if (question === '') return;
 
+    // מרגע שהשאלה נשלחה ועד שהתשובה מגיעה, הכפתור אומר "מחפש תשובה…".
+    view.processing = true;
+    render();
+    try {
+      return await sendQuestion(question);
+    } finally {
+      view.processing = false;
+      render();
+    }
+  }
+
+  async function sendQuestion(question) {
     // ההקשר נשלח עם השאלה: מזהה הסשן למען היומן, המסלול למען
     // השליפה, והתחנה הנוכחית כשהיא ידועה. התחנה מגיעה מ-AUTO-01 דרך
     // ההרכבה; בלי מיקום היא ריקה, וזה מצב תקין (usecase-f-04 זרימה ב).
@@ -304,7 +327,12 @@ export function create({
   async function onQuestion() {
     const typed = view.question.trim();
     if (typed !== '') return submitQuestion(typed);
-    if (!microphone || typeof microphone.listen !== 'function' || !microphone.available()) return;
+    // בלי מתאם מוזרק אין מיקרופון בכלל. מתאם שקיים אבל אין לו מנוע זיהוי
+    // נקרא בכל זאת: הוא מחזיר E-MIC-NOT-ALLOWED, והמסך מציג את הנוסח
+    // המאושר, "אפשר להקליד את השאלה" (פער 99, D1). עד פער 99 המסך חזר
+    // כאן בשקט, והכפתור נראה שבור.
+    if (!microphone || typeof microphone.listen !== 'function') return;
+    if (view.listening || view.processing) return;
 
     // שאלה בקול עוצרת את מה שמדבר: המשפחה מדברת, המערכת מקשיבה.
     stopVoice();
@@ -642,9 +670,9 @@ export function create({
     // הקלדה פותח את המיקרופון. השדה נשאר בשביל מי שמעדיף להקליד
     // ובשביל מכשיר בלי הרשאה (usecase-f-04 צעד 2).
     const field = createElement('div', { class: 'field' }, [
-      createElement('label', { class: 'field__label', for: 'traveler-question' }, 'שאלה'),
+      // תווית השדה נבדלת מתווית הכפתור (פער 99, D3; QuestionInput).
+      createElement('label', { class: 'field__label', for: 'traveler-question' }, 'או כתבו שאלה'),
       createElement('input', { class: 'field__control', id: 'traveler-question', type: 'text' }),
-      view.listening ? createElement('span', { class: 'field__hint' }, 'מקשיב') : null,
     ]);
     const input = field.querySelector('input');
     input.value = view.question;
@@ -666,13 +694,25 @@ export function create({
     children.push(field);
 
     // דיסקה של question-disc, ולא כפתור הליכה רחב (פער 73, מפה 3.15 שורת DESIGN-01).
-    const askButton = createElement('button', { class: 'btn btn--primary btn--disc', type: 'button' }, 'שאלה');
+    // בתוכה אייקון המצב, ומתחתיה התווית במילים (פער 99, D2).
+    const state = view.listening ? QUESTION_STATE.listening
+      : (view.processing ? QUESTION_STATE.processing : QUESTION_STATE.idle);
+    const askButton = createElement('button', {
+      class: 'btn btn--primary btn--disc',
+      type: 'button',
+      'aria-label': state.label,
+      'aria-pressed': String(view.listening),
+    }, [createIcon(state.icon)]);
     askButton.addEventListener('click', onQuestion);
+    const question = createElement('div', { class: 'question' }, [
+      askButton,
+      createElement('span', { class: 'question__label', 'aria-hidden': 'true' }, state.label),
+    ]);
 
     const endButton = createElement('button', { class: 'btn btn--touch', type: 'button' }, 'סיום הטיול');
     endButton.addEventListener('click', end);
 
-    children.push(createElement('div', { class: 'btn-row' }, [askButton, endButton]));
+    children.push(createElement('div', { class: 'btn-row' }, [question, endButton]));
 
     return panel('הטיול פעיל', createElement('div', {}, children));
   }

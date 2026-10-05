@@ -156,3 +156,31 @@
   border-color: var(--line-strong);
   font-weight: var(--weight-bold);
 }
+
+/* כפתור השאלה בקול (QuestionButton של ערכת העיצוב; פער 99): הדיסקה
+ * ומתחתיה התווית של המצב, במילים, כדי שהמצב לא ייקרא מהאייקון לבדו */
+.question {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.question__label {
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+}
+
+/* אייקון קווי (Icon של ערכת העיצוב): 24 על 24, קו של border-control,
+ * קצוות מעוגלים, והצבע מהטקסט שסביבו */
+.icon {
+  inline-size: var(--icon-md);
+  block-size: var(--icon-md);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--border-control);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

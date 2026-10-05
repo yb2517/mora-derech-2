@@ -118,6 +118,10 @@ check('בלי מצב בדיקה רשימת המותר היא קובץ הייצו
 check('פאנל הסימולטור: בהרכבת הפיתוח, או במצב בדיקה',
   /simulator && \(development \|\| TEST_MODE\) && traveler/.test(code), true);
 check('שם הקול מגיע לפאנל רק במצב בדיקה', /voice:\s*TEST_MODE \? voice : null/.test(code), true);
+check('בפאנל לחצן "עצירת הקול", שקורא ל-stop של מתאם הקול (פער 100)',
+  /button\('עצירת הקול', \(\) => voice\.stop\(\)\)/.test(code), true);
+check('והוא בתוך הבלוק של שם הקול, שקיים רק במצב בדיקה',
+  /if \(voice\) \{[\s\S]*?voiceLine[\s\S]*?button\('עצירת הקול'[\s\S]*?\n    \}/.test(code), true);
 check('ומסך המטייל מקבל את מצב הבדיקה, ללחצן הדילוג (פער 83)', /equipment:\s*\{[^}]*testMode:\s*TEST_MODE/.test(code), true);
 
 // --- 3ג. מתג הערכה (מפה 4.3 ו-3.3 שורת DESIGN-01, פער 92; תוכנית שלב 9 משימה 2) ---

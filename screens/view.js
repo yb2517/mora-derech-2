@@ -12,6 +12,8 @@
 // הטקסט נכתב תמיד ב-textContent ולעולם לא ב-innerHTML: תוכן הפריט
 // מגיע מהמכון, והוא נתון ולא סימון.
 
+import { ICON_SHAPES, ICON_VIEWBOX } from './icons.js';
+
 /**
  * @param {string} tag
  * @param {Record<string, string>} attributes
@@ -89,4 +91,32 @@ export function humanError(table, error) {
   return text.replace(/\[[^\]]+\]/g, (placeholder) => (
     index < values.length ? String(values[index++]) : placeholder
   ));
+}
+
+// --- אייקונים (פער 99) ---
+//
+// הצורות ב-icons.js, מועתקות כלשונן מערכת העיצוב. הצבע בא מ-currentColor
+// והמידה ממחלקת icon של DESIGN-01, ולכן האייקון מתחלף עם הערכה, גם
+// בראיית לילה.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgElement(tag) {
+  return typeof document.createElementNS === 'function'
+    ? document.createElementNS(SVG_NS, tag)
+    : document.createElement(tag);
+}
+
+/** אייקון קווי מערכת העיצוב. מוסתר מקורא המסך: המשמעות במילים לצידו. */
+export function createIcon(name) {
+  const svg = svgElement('svg');
+  svg.setAttribute('class', 'icon');
+  svg.setAttribute('viewBox', ICON_VIEWBOX);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('data-icon', name);
+  for (const [tag, attributes] of ICON_SHAPES[name] ?? []) {
+    const part = svgElement(tag);
+    for (const [key, value] of Object.entries(attributes)) part.setAttribute(key, value);
+    svg.append(part);
+  }
+  return svg;
 }

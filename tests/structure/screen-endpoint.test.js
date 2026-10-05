@@ -40,9 +40,10 @@ const FORBIDDEN = [
 //
 // screens/view.js הוא תשתית מסך ולא מסך: הוא בונה אלמנטים עם
 // מחלקות של DESIGN-01, ואינו שולח מעטפות. שלושה עותקים שלו היו
-// שלושה מקומות שיכולים להיפרד.
+// שלושה מקומות שיכולים להיפרד. screens/icons.js מחזיק את צורות
+// האייקונים שלו (פער 99): נתונים בלבד, בלי מעטפה ובלי פונה.
 const CONTRACT = ['core/contract.js', 'core/errors.js'];
-const SHARED = ['screens/view.js'];
+const SHARED = ['screens/view.js', 'screens/icons.js'];
 
 function collectScreenFiles(dir) {
   const found = [];

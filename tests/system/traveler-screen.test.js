@@ -104,7 +104,10 @@ const settle = async () => {
   for (let i = 0; i < 3; i += 1) await new Promise((resolve) => { setTimeout(resolve, 0); });
 };
 const buttons = () => dom.host.querySelectorAll('button');
-const byLabel = (label) => buttons().find((b) => b.textContent.trim() === label);
+// השם הנגיש של לחצן: aria-label כשיש, ואחרת הטקסט. כפתור השאלה הוא
+// אייקון, ושמו בתווית (פער 99).
+const nameOf = (b) => b.getAttribute('aria-label') ?? b.textContent.trim();
+const byLabel = (label) => buttons().find((b) => nameOf(b) === label);
 
 // --- לפני הסשן: משפט הבטיחות, ומגע אחד ---
 
@@ -112,7 +115,7 @@ check('משפט הבטיחות מוצג מהטבלה', dom.host.textContent.incl
 
 // UX-01: לפני היציאה יש מגע אחד, תחילת הסשן. כל כפתור נוסף כאן
 // הוא מגע שלא אושר.
-check('מגע אחד לפני היציאה', buttons().map((b) => b.textContent.trim()), ['התחלת הטיול']);
+check('מגע אחד לפני היציאה', buttons().map(nameOf), ['התחלת הטיול']);
 
 // משפט הפרטיות אין לו מפתח בטבלה, ולכן המסך מציג ערך חסר ואינו
 // ממציא נוסח. זהו הפער שמדווח בדוח השלב.
@@ -133,13 +136,13 @@ check('והוא פתוח', repository.listSessions()[0].ended_at, null);
 check('כל בקשה יצאה בשם הפונה של המסך', [...new Set(sent.map((e) => e.from))], [caller]);
 
 // UX-01 בהליכה: סיום הסשן, ועוד כפתור השאלה כהפרה המתועדת.
-check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim()), ['שאלה', 'סיום הטיול']);
+check('שני מגעים בהליכה', buttons().map(nameOf), ['לחצו ושאלו', 'סיום הטיול']);
 
 // --- שאלה ותשובה ---
 
 {
   dom.host.querySelector('input').type('מה קרה כאן');
-  byLabel('שאלה').click();
+  byLabel('לחצו ושאלו').click();
   await settle();
 
   // המסך שולח למודול השיחה, ומודול השיחה שולח לשליפה: שתי המעטפות
@@ -170,7 +173,7 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
 {
   // השאלה של בדיקת הקבלה של שלב 8 (CLAUDE.md סעיף 6).
   dom.host.querySelector('input').type('מתי נבנה שער יפו?');
-  byLabel('שאלה').click();
+  byLabel('לחצו ושאלו').click();
   await settle();
 
   const quoted = dom.host.querySelector('.quote').textContent;
@@ -193,7 +196,7 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
     : null);
 
   dom.host.querySelector('input').type('שאלה שתיכשל');
-  byLabel('שאלה').click();
+  byLabel('לחצו ושאלו').click();
   await settle();
   intercept = null;
 
@@ -216,7 +219,7 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
 
   for (let i = 0; i < 3; i += 1) {
     dom.host.querySelector('input').type(`שאלה ${i}`);
-    byLabel('שאלה').click();
+    byLabel('לחצו ושאלו').click();
     await settle();
   }
   intercept = null;
@@ -236,7 +239,7 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
 
   for (let i = 0; i < 2; i += 1) {
     dom.host.querySelector('input').type(`שאלה על מיקום ${i}`);
-    byLabel('שאלה').click();
+    byLabel('לחצו ושאלו').click();
     await settle();
   }
   intercept = null;
@@ -260,7 +263,7 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
   await screen.setBatteryLevel(warn);
   await settle();
   check('בסף ההתראה מוצגת התראה', dom.host.querySelectorAll('.message--warn').length, 1);
-  check('ההתראה אינה חוסמת', Boolean(byLabel('שאלה')), true);
+  check('ההתראה אינה חוסמת', Boolean(byLabel('לחצו ושאלו')), true);
 
   // שורת ה-Unit של FE-05 במפה 6.1: סוללה של ארבעה אחוזים.
   await screen.setBatteryLevel(4);
@@ -290,7 +293,7 @@ check('שני מגעים בהליכה', buttons().map((b) => b.textContent.trim(
 
   await screen.setBatteryLevel(resume + 1);
   await settle();
-  check('מעל סף החידוש המסך חוזר', Boolean(byLabel('שאלה')), true);
+  check('מעל סף החידוש המסך חוזר', Boolean(byLabel('לחצו ושאלו')), true);
 
   // החידוש פותח סשן חדש שמצביע על זה שנחסם.
   const resumedSession = repository.listSessions().find((row) => row.ended_at === null);
@@ -422,7 +425,7 @@ dom.restore();
     withDevice.on(name, (detail) => events.push([name, detail?.session?.session_id ?? detail?.session_id ?? null]));
   }
   const buttons5 = () => stage5Dom.host.querySelectorAll('button');
-  const byLabel5 = (label) => buttons5().find((b) => b.textContent.trim() === label);
+  const byLabel5 = (label) => buttons5().find((b) => nameOf(b) === label);
 
   // --- תחילת הסשן: הדגלים, משפט הבטיחות בקול, אירוע מחזור החיים ---
 
@@ -438,11 +441,11 @@ dom.restore();
   check('בלי קול עברי: ההודעה מוצגת פעם אחת', stage5Dom.host.querySelectorAll('.message')
     .filter((m) => m.textContent === referenceFile.values.error_human_text['E-NO-HEBREW-VOICE']).length, 1);
   check('ומה שהיה נאמר מוצג כטקסט', stage5Dom.host.textContent.includes(referenceFile.values.safety_opening_text), true);
-  check('שני מגעים בהליכה, גם עם מיקרופון', buttons5().map((b) => b.textContent.trim()), ['שאלה', 'סיום הטיול']);
+  check('שני מגעים בהליכה, גם עם מיקרופון', buttons5().map(nameOf), ['לחצו ושאלו', 'סיום הטיול']);
 
   // --- שאלה בקול: הכפתור בלי הקלדה פותח את המיקרופון ---
 
-  byLabel5('שאלה').click();
+  byLabel5('לחצו ושאלו').click();
   await settle();
   const askedByVoice = sent5.filter((e) => e.module === 'BE-03').at(-1);
   check('התמלול נשלח כשאלה, כמות שהוא', askedByVoice.payload.question, 'שאלה בקול');
@@ -453,14 +456,14 @@ dom.restore();
 
   const before = repository.listInteractions({ session_id: session5.session_id }).length;
   heard = { ok: false, error: { code: 'E-SPEECH-NOT-RECOGNIZED', data: {} } };
-  byLabel5('שאלה').click();
+  byLabel5('לחצו ושאלו').click();
   await settle();
   const rows5 = repository.listInteractions({ session_id: session5.session_id });
   check('שקט: נרשם attempt_failed ולא initiated', rows5.slice(before).map((r) => r.type), ['attempt_failed']);
   check('והנוסח לאדם מוצג', stage5Dom.host.textContent.includes(referenceFile.values.error_human_text['E-SPEECH-NOT-RECOGNIZED']), true);
 
   heard = { ok: false, aborted: true, error: null };
-  byLabel5('שאלה').click();
+  byLabel5('לחצו ושאלו').click();
   await settle();
   check('ביטול בידי המשפחה: לא נרשם דבר', repository.listInteractions({ session_id: session5.session_id }).length, rows5.length);
 
@@ -557,7 +560,7 @@ dom.restore();
   check('הסשן המקושר נסגר עם הדגלים', repository.getSession(resumed5).flags.sort(),
     ['ended_on_battery', 'no_hebrew_voice', 'no_location', 'simulator']);
   check('אירוע session:end יצא', events.at(-1), ['session:end', resumed5]);
-  check('מגע אחד אחרי הסיום', buttons5().map((b) => b.textContent.trim()), ['התחלת הטיול']);
+  check('מגע אחד אחרי הסיום', buttons5().map(nameOf), ['התחלת הטיול']);
 }
 
 // ---------------------------------------------------------------------
@@ -693,6 +696,82 @@ dom.restore();
   check('בלי רשימת תחנות מההרכבה: אין מחוון', bareDom.host.querySelector('.route-progress'), null);
   check('ו-reachStop אינו נספר', bare.reachStop('stop-01'), false);
   bareDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'סיום הטיול')?.click();
+  await settle();
+}
+
+// ---------------------------------------------------------------------
+// כפתור השאלה בקול (פער 99; doc-gap-99-question-button.md, D1 עד D3).
+// המקור: usecase-f-04 צעד 1 ("הקליטה פתוחה, חיווי קולי או ויזואלי"),
+// מפה 4.5 (E-MIC-NOT-ALLOWED, CONN-01), ורכיב QuestionButton של ערכת
+// העיצוב: שלושה מצבים, אייקון ותווית.
+// ---------------------------------------------------------------------
+
+{
+  const { create: createStt } = await import('../../connectors/stt.js');
+  const errorText = referenceFile.values.error_human_text;
+
+  // מיקרופון שהקליטה שלו נמשכת עד שהבדיקה משחררת אותה, ושליחה ל-BE-03
+  // שמוחזקת, כדי לראות את שני המצבים שבאמצע.
+  let releaseListen = null;
+  let releaseAsk = null;
+  const heldMic = {
+    available: () => true,
+    listen: () => new Promise((resolve) => { releaseListen = resolve; }),
+    stop: () => ({ ok: true, data: {} }),
+  };
+  const held = async (envelope) => {
+    if (envelope.module === 'BE-03') {
+      await new Promise((resolve) => { releaseAsk = resolve; });
+    }
+    return realSend(envelope);
+  };
+  const qDom = installDom();
+  create({ host: qDom.host, from: caller, reference, send: held, microphone: heldMic });
+  const qButtons = () => qDom.host.querySelectorAll('button');
+  const disc = () => qButtons().find((b) => b.classList.includes('btn--disc'));
+  const label = () => qDom.host.querySelector('.question__label')?.textContent ?? null;
+  const icon = () => disc()?.querySelector('svg')?.getAttribute('data-icon') ?? null;
+  qButtons().find((b) => b.textContent.trim() === 'התחלת הטיול').click();
+  await settle();
+
+  check('במנוחה: "לחצו ושאלו", עם אייקון מיקרופון', [label(), icon(), disc().getAttribute('aria-label')],
+    ['לחצו ושאלו', 'mic', 'לחצו ושאלו']);
+  check('לשדה תווית משלו: "או כתבו שאלה"', qDom.host.querySelector('.field__label')?.textContent, 'או כתבו שאלה');
+
+  disc().click();
+  await settle();
+  check('בזמן הקליטה: "מקשיב…", אייקון גל, והכפתור לחוץ', [label(), icon(), disc().getAttribute('aria-pressed')],
+    ['מקשיב…', 'wave', 'true']);
+  disc().click();
+  await settle();
+  check('לחיצה נוספת בזמן הקליטה אינה פותחת קליטה שנייה', label(), 'מקשיב…');
+
+  releaseListen({ ok: true, data: { text: 'מתי נבנה שער יפו?' } });
+  await settle();
+  check('אחרי שהשאלה נשלחה: "מחפש תשובה…", אייקון שלוש נקודות', [label(), icon()], ['מחפש תשובה…', 'dots']);
+
+  releaseAsk();
+  await settle();
+  check('התשובה הגיעה: חזרה ל"לחצו ושאלו"', label(), 'לחצו ושאלו');
+  qButtons().find((b) => b.textContent.trim() === 'סיום הטיול').click();
+  await settle();
+
+  // דפדפן בלי מנוע זיהוי דיבור: המתאם האמיתי, בלי Recognition.
+  const noEngineDom = installDom();
+  const envelopes = [];
+  const counted = async (envelope) => { envelopes.push(envelope); return realSend(envelope); };
+  const noEngine = createStt({ Recognition: null });
+  create({ host: noEngineDom.host, from: caller, reference, send: counted, microphone: noEngine });
+  noEngineDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'התחלת הטיול').click();
+  await settle();
+  const before = envelopes.length;
+  noEngineDom.host.querySelectorAll('button').find((b) => b.classList.includes('btn--disc')).click();
+  await settle();
+  check('בלי מנוע זיהוי: מוצג הנוסח המאושר של E-MIC-NOT-ALLOWED (D1)',
+    noEngineDom.host.textContent.includes(errorText['E-MIC-NOT-ALLOWED']), true);
+  check('ולא נשלחה שאלה', envelopes.slice(before).filter((e) => e.module === 'BE-03').length, 0);
+  check('והכפתור חזר למנוחה', noEngineDom.host.querySelector('.question__label')?.textContent, 'לחצו ושאלו');
+  noEngineDom.host.querySelectorAll('button').find((b) => b.textContent.trim() === 'סיום הטיול')?.click();
   await settle();
 }
 

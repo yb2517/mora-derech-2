@@ -101,6 +101,13 @@ const COINCIDENCES = [
     key: 'm02_threshold',
     reason: 'משקל מילה נרדפת במנוע, 0.7, מאב הטיפוס; קבוע לשוני של המנוע (הכרעה 1 בתוכנית שלב 8), ולא סף M-02',
   },
+  // קואורדינטות של אייקוני ערכת העיצוב (פער 99), בתיבה של 24 על 24. הקובץ
+  // מחזיק צורות בלבד, ולכן הפטור לקובץ הזה ולמפתחות האלה בלבד.
+  ...['delivery_gap_s', 'battery_warn_percent', 'battery_resume_percent', 'exit_margin_m'].map((key) => ({
+    path: 'screens/icons.js',
+    key,
+    reason: 'קואורדינטה בציור אייקון מערכת העיצוב (מיקרופון, גל), ולא ערך משתנה',
+  })),
 ];
 const isCoincidence = (path, key) => COINCIDENCES.some((row) => row.path === path && row.key === key);
 

@@ -600,6 +600,15 @@
       showVoice();
       if (voice.available()) voice.voicesLoaded().then(showVoice);
       body.append(voiceLine);
+
+      // עצירת הקול (מפה 4.3, פער 100): עוצרת את ההשמעה הנוכחית דרך stop של
+      // CONN-02, המופע המשותף, כך שגם פריט שנמסר בהגעה וגם תשובה נעצרים.
+      // ההשמעה הבאה מתנגנת כרגיל: זו עצירה, לא השתקה. מצב בדיקה בלבד,
+      // כמו שם הקול.
+      const stopRow = document.createElement('div');
+      stopRow.className = 'btn-row';
+      stopRow.append(button('עצירת הקול', () => voice.stop()));
+      body.append(stopRow);
     }
 
     const toggleField = document.createElement('div');
